@@ -1,0 +1,63 @@
+name: finishd
+description: "A Flutter movie app that lets users track watched movies, see trending shows, and join communities."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # UI & Icons
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.2.1
+
+  # API / Networking
+  http: ^1.2.0
+  tmdb_api: ^2.2.3
+  cached_network_image: ^3.4.1
+
+  # State Management
+  provider: ^6.1.2
+
+  # Navigation / Animations
+  go_router: ^14.1.4
+  animations: ^2.0.8
+
+  # Utilities
+  url_launcher: ^6.3.0
+  share_plus: ^10.0.2
+  connectivity_plus: ^6.0.3
+
+  # Video Player for trailers
+  youtube_player_flutter: ^9.1.3
+
+  # Native Splash Screen
+  flutter_native_splash: ^2.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/icon.png
+    - assets/Posters.png
+    - assets/icon2.png
+    - assets/glogo.png
+    - assets/apple.png
+    - assets/FinishdIcon.png
+
+
+flutter_native_splash:
+  color: "#1A8927"          # background color
+  image: assets/FinishdIcon.png   # logo for splash
+  android_12:
+    image: assets/FinishdIcon.png
+    color: "#1A8927"
