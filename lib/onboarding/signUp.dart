@@ -9,10 +9,10 @@ class SignUpScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+    
       appBar: AppBar(
         // Makes the AppBar clear with white background
-        backgroundColor: Colors.white,
+        
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -106,9 +106,10 @@ class SignUpScreen extends StatelessWidget {
                   height: 55,
                   child: ElevatedButton(
                     onPressed: () {
-                      // Handle registration logic
+                     Navigator.pushReplacementNamed(context, 'genre');
                     },
                     style: ElevatedButton.styleFrom(
+                      
                       backgroundColor: Color(0xFF1A8927),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),

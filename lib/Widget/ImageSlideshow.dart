@@ -1,84 +1,162 @@
+import 'package:finishd/MovieDetails/movie_details_screen.dart';
+import 'package:finishd/provider/MovieProvider.dart';
+import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'dart:async';
+import 'package:finishd/Model/trending.dart';
+import 'package:provider/provider.dart';
 
-class ImageSlideshow extends StatefulWidget {
-  final Function(int)? changedIndex; // callback when slide changes
+class MovieBannerWidget extends StatelessWidget {
+  final MediaItem movie;
+  final List<String> genere;
+  final VoidCallback onWatchTrailerPressed;
 
-  const ImageSlideshow({super.key, this.changedIndex});
+  MovieBannerWidget({
+    super.key,
+    required this.movie,
+    required this.genere,
+    required this.onWatchTrailerPressed,
+  });
 
   @override
-  State<ImageSlideshow> createState() => _ImageSlideshowState();
+  Widget build(BuildContext context) {
+    final imageUrl = movie.backdropPath != null
+        ? "https://image.tmdb.org/t/p/w780${movie.backdropPath}"
+        : "https://image.tmdb.org/t/p/w500${movie.posterPath}";
+
+    return Container(
+      margin: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: CachedNetworkImage(
+              imageUrl: imageUrl,
+              fit: BoxFit.cover,
+            ),
+          ),
+
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.7),
+                    Colors.transparent
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          Positioned(
+            bottom: 20,
+            left: 20,
+            right: 20,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  movie.title ?? "",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 6),
+
+                Text(
+                  genere.take(2).join(" • "),
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                ElevatedButton(
+                  onPressed: onWatchTrailerPressed,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                  ),
+                  child: Text("Watch Trailer"),
+                ),
+              ],
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}
+class BannerCarousel extends StatefulWidget {
+  final List<MediaItem> movies;
+  final Trending movieApi;
+
+  const BannerCarousel({super.key, required this.movies, required this.movieApi});
+
+  @override
+  _BannerCarouselState createState() => _BannerCarouselState();
 }
 
-class _ImageSlideshowState extends State<ImageSlideshow> {
-  final List<String> imageUrls = [
-    'https://image.tmdb.org/t/p/w500/9Gtg2DzBhmYamXBS1hKAhiwbBKS.jpg',
-    'https://image.tmdb.org/t/p/w500/8UlWHLMpgZm9bx6QYh0NFoq67TZ.jpg',
-    'https://image.tmdb.org/t/p/w500/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg',
-  ];
-
-  int _currentPage = 0;
-  final PageController _controller = PageController();
-  Timer? _timer;
+class _BannerCarouselState extends State<BannerCarousel> {
+  late PageController _controller;
+  int _currentIndex = 0;
 
   @override
   void initState() {
     super.initState();
+    _controller = PageController(viewportFraction: 1);
+    _autoScroll();
+  }
 
-    // Auto-slide every 3 seconds
-    _timer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      if (_controller.hasClients) {
-        _currentPage = (_currentPage + 1) % imageUrls.length;
-
-        // Notify parent widget about page change
-        if (widget.changedIndex != null) {
-          widget.changedIndex!(_currentPage);
-        }
-
-        _controller.animateToPage(
-          _currentPage,
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
-        );
-      }
+  void _autoScroll() {
+    Future.doWhile(() async {
+      await Future.delayed(const Duration(seconds: 4));
+      if (!mounted) return false;
+      _currentIndex = (_currentIndex + 1) % widget.movies.length;
+      _controller.animateToPage(
+        _currentIndex,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOut,
+      );
+      return true;
     });
   }
 
   @override
-  void dispose() {
-    _timer?.cancel();
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-
+        final provider = Provider.of<MovieProvider>(context, listen: false);
     return SizedBox(
-      height: screenWidth * 0.55,
+      height: 250,
+      width: double.infinity,
       child: PageView.builder(
         controller: _controller,
-        itemCount: imageUrls.length,
+        itemCount: widget.movies.length,
         itemBuilder: (context, index) {
-          return CachedNetworkImage(
-            imageUrl: imageUrls[index],
-            width: double.infinity,
-            height: screenWidth * 0.55,
-            fit: BoxFit.cover,
-            placeholder: (context, url) =>
-                const Center(child: CircularProgressIndicator()),
-            errorWidget: (context, url, error) =>
-                const Icon(Icons.error, color: Colors.red),
+          final movie = widget.movies[index];
+          final genres = widget.movieApi.getGenreNames(movie.genreIds);
+          return MovieBannerWidget(
+            movie: movie,
+            genere: genres.take(2).toList(),
+            onWatchTrailerPressed: () {
+               provider.selectItem(provider.movies, index);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const GenericDetailsScreen(),
+                                  ),
+                                );
+            },
           );
-        },
-        // If you want to detect manual swipes too:
-        onPageChanged: (index) {
-          setState(() => _currentPage = index);
-          if (widget.changedIndex != null) {
-            widget.changedIndex!(index);
-          }
         },
       ),
     );

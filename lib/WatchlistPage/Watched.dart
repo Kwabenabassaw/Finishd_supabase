@@ -1,4 +1,39 @@
+
+import 'package:finishd/WatchlistPage/WatchingCard.dart';
 import 'package:flutter/material.dart';
+  final List<Map<String, dynamic>> _movieList = [
+    {
+      'posterTitle': 'RAINMAKER',
+      'posterSubtitle': 'SEASON 1 | MUSIC BY CLINTON SHORTER',
+      'controlTitle': 'The Rainmaker 2025',
+      'episodeInfo': 'Season 1_EP07',
+      'backgroundImage': 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=2525&auto=format&fit=crop',
+      'duration': '2:30:05',
+      'currentTime': '00:36:14',
+      'initialSliderValue': 0.3,
+    },
+    {
+      'posterTitle': 'DUNE: PROPHECY',
+      'posterSubtitle': 'ORIGINAL SERIES | MAX',
+      'controlTitle': 'Dune: Prophecy',
+      'episodeInfo': 'Season 1_EP01',
+      'backgroundImage': 'https://images.unsplash.com/photo-1541963463532-d68292c34b19?q=80&w=2576&auto=format&fit=crop', // Desert aesthetic
+      'duration': '0:58:12',
+      'currentTime': '00:12:05',
+      'initialSliderValue': 0.15,
+    },
+    {
+      'posterTitle': 'YELLOWSTONE',
+      'posterSubtitle': 'SEASON 5 PART 2',
+      'controlTitle': 'Yellowstone',
+      'episodeInfo': 'Season 5_EP09',
+      'backgroundImage': 'https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=2670&auto=format&fit=crop', // Western aesthetic
+      'duration': '1:02:30',
+      'currentTime': '00:55:00',
+      'initialSliderValue': 0.85,
+    },
+  ];
+
 
 class Watched extends StatefulWidget {
   const Watched({super.key});
@@ -12,108 +47,14 @@ class _WatchedState extends State<Watched> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Container(
-        margin: const EdgeInsets.all(12),
-        child: GridView.count(
-          crossAxisCount: 1,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          
-          padding: const EdgeInsets.all(8),
-          children: List.generate(10, (index) {
-            return Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-
-              ),
-              elevation: 4,
-              color: Colors.white,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // ✅ Movie Image
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(12),
-                    ),
-                    child: Image.network(
-                      'https://image.tmdb.org/t/p/w500/9Gtg2DzBhmYamXBS1hKAhiwbBKS.jpg',
-                      fit: BoxFit.cover,
-                      height: 220,
-                      width: double.infinity,
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                                     
-                      children: [ 
-                        Text(
-                          "Doctor Strange in the Multiverse of Madness",
-                          textAlign: TextAlign.left,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                       const Spacer(),
-                        Icon(Icons.play_circle_fill_rounded,size: 30,color: Colors.green,applyTextScaling: true,)
-                      ],
-                    ),
-                  )
-                ,
-
-
-                 
-                  Column(
-                    children: [
-                          Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    child: LinearProgressIndicator(
-                      value: 0.6, // between 0.0 and 1.0
-                      color: Colors.green,
-                      backgroundColor: Colors.grey[300],
-                      minHeight: 8,
-                      borderRadius: BorderRadius.all(Radius.circular(10)),
-                    ),
-                    
-                  ),
-                 
-               Row(
-                  children: [
-                    Padding(padding: 
-                    const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
-                    child: 
-                    const Text(
-                    "00:36:14/2:30:05",
-                    textAlign:TextAlign.start,
-                    style: TextStyle(color: Colors.black54,fontSize: 10),
-
-                  ),
-                   
-                    
-                    )
-                  ],
-               ),
-               
-                    ],
-                  ),
-                 
-              
-
-
-                  // ✅ Optional progress percentage text
-                 
-                 
-                ],
-                
-              ),
-            );
-          }),
-        ),
+        body: ListView.builder(
+        itemCount: _movieList.length,
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: MovieCard(movieData: _movieList[index]),
+          );
+        },
       ),
     );
   }

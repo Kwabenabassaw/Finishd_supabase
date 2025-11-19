@@ -55,4 +55,57 @@ class TvService {
       return null;
     }
   }
+
+  Future<String?> getMovieTrailerKey(movieid) async {
+    try {
+      final videos = await tmdb.v3.movies.getVideos(movieid);
+      final videoResults = List.from(videos['results'] ?? []);
+      if (videoResults.isEmpty) return null;
+
+      // Find YouTube trailer
+       final trailer = videoResults.firstWhere(
+      (video) =>
+          video['site'] == 'YouTube' &&
+          video['type'] == 'Trailer' &&
+          video['key'] != null,
+      orElse: () => null,
+    );
+
+    if (trailer == null) return null;
+
+    return trailer['key']; // YouTube key
+
+    }
+    catch(e){
+      print('❌ Error fetching trailer key: $e');
+      return null;
+    }
+
+  }
+  Future<String?> getTVShowTrailerKey(showId) async {
+  try {
+    final videos = await tmdb.v3.tv.getVideos(showId);
+
+    final List<dynamic> videoResults = videos['results'] ?? [];
+
+    if (videoResults.isEmpty) return null;
+
+    // Find the first YouTube trailer
+    final trailer = videoResults.firstWhere(
+      (video) =>
+          video['site'] == 'YouTube' &&
+          video['type'] == 'Trailer' &&
+          video['key'] != null,
+      orElse: () => null,
+    );
+
+    if (trailer == null) return null;
+
+    return trailer['key']; // Return YouTube key
+  } catch (e) {
+    print('❌ Error fetching TV trailer key: $e');
+    return null;
+  }
+}
+
 }

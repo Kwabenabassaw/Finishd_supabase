@@ -1,16 +1,33 @@
+import 'package:finishd/Discover/Search.dart';
 import 'package:finishd/Mainpage/Discover.dart';
 import 'package:finishd/Mainpage/Home.dart';
 import 'package:finishd/Mainpage/Messages.dart';
 import 'package:finishd/Mainpage/Profile.dart';
 import 'package:finishd/Mainpage/Watchlist.dart';
+import 'package:finishd/provider/MovieProvider.dart';
+
 import 'package:finishd/SplashScreen/splash_screen.dart';
+import 'package:finishd/onboarding/CategoriesTypeMove.dart';
 import 'package:finishd/onboarding/Login.dart';
+import 'package:finishd/onboarding/Welcome.dart';
 import 'package:finishd/onboarding/landing.dart';
+import 'package:finishd/onboarding/showSelectionScreen.dart';
 import 'package:finishd/onboarding/signUp.dart';
+import 'package:finishd/onboarding/streamingService.dart';
+import 'package:finishd/settings/settimgPage.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => MovieProvider()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -19,37 +36,27 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+
     return MaterialApp(
      debugShowCheckedModeBanner: false,
       title: 'Finishd',
 theme: ThemeData(
   useMaterial3: true,
-  primaryColor: const Color(0xFF1A8927),
-  colorScheme: ColorScheme.fromSeed(
-    seedColor: const Color(0xFF1A8927),
-    brightness: Brightness.light,
-  ).copyWith(
-    primary: const Color(0xFF1A8927),
-    secondary: const Color(0xFF1A8927),
-  ),
+brightness: Brightness.light,
+  
+scaffoldBackgroundColor: Colors.white,
 
-  // 🟩 AppBar
   appBarTheme: const AppBarTheme(
-    backgroundColor: Color(0xFF1A8927),
-    foregroundColor: Colors.white,
-  ),
-
-  // 🟩 Text styles
-  textTheme: const TextTheme(
-    bodyLarge: TextStyle(color: Colors.black87, fontSize: 16),
-    bodyMedium: TextStyle(color: Colors.black87),
-    titleLarge: TextStyle(
-      color: Color(0xFF1A8927),
-      fontWeight: FontWeight.bold,
+    backgroundColor: Colors.white,
+    foregroundColor: Colors.black,
+    elevation: 0,
+    centerTitle: true,
+    titleTextStyle: TextStyle(
+      color: Colors.black,
       fontSize: 20,
+      fontWeight: FontWeight.bold,
     ),
   ),
-
   // 🟩 Elevated Buttons
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ElevatedButton.styleFrom(
@@ -63,25 +70,29 @@ theme: ThemeData(
     ),
   ),
 
-  // 🟩 Text Buttons
-  textButtonTheme: TextButtonThemeData(
-    style: TextButton.styleFrom(
-      foregroundColor: const Color(0xFF1A8927),
-    ),
-  ),
-
+  
   // 🟩 Bottom Navigation Bar
   bottomNavigationBarTheme: const BottomNavigationBarThemeData(
     selectedItemColor: Color(0xFF1A8927),
     unselectedItemColor: Colors.grey,
   ),
+
 ),
+
+      
       initialRoute: '/',
       routes: {
         '/': (context) => const SplashScreen(),
-        '/home': (context) => const LandingScreen(),
+        '/home': (context) =>LandingScreen(),
         '/signup': (context) => SignUpScreen(),
-        '/login': (context) => Login()
+        '/login': (context) => Login(),
+        'genre': (context) => GenreSelectionScreen(),
+        'showSelect' : (context) => ShowSelectionScreen(),
+        'streaming': (context) => ServiceSelectionScreen(),
+        'welcome' : (context) => CompletionScreen(),
+        'homepage': (context) => HomePage(),
+        'Search_discover': (context) => SearchScreen(),
+        'settings':(context)=> SettingsScreen(),
       }
     );
   }

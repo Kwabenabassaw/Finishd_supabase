@@ -1,170 +1,107 @@
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:finishd/Model/shows.dart';
-import 'package:finishd/tmbd/fetch_trialler.dart';
+import 'package:finishd/LoadingWidget/Tvshowscreenloader.dart';
+import 'package:finishd/Model/MovieDetails.dart';
+import 'package:finishd/Model/trending.dart';
+import 'package:finishd/Model/tvdetail.dart';
+import 'package:finishd/MovieDetails/MovieScreen.dart';
+import 'package:finishd/MovieDetails/Tvshowscreen.dart';
+import 'package:finishd/provider/MovieProvider.dart';
+import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:flutter/material.dart';
-import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import 'package:provider/provider.dart';
 
-class MovieDetailsScreen extends StatefulWidget {
-  final Welcome movie;
-
-  const MovieDetailsScreen({super.key, required this.movie});
+class GenericDetailsScreen extends StatefulWidget {
+  const GenericDetailsScreen({super.key});
 
   @override
-  State<MovieDetailsScreen> createState() => _MovieDetailsScreenState();
+  State<GenericDetailsScreen> createState() => _GenericDetailsScreenState();
 }
 
-class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
-  String? _youtubeKey;
-  bool _isPlaying = false;
-  late YoutubePlayerController _controller;
+Trending api = Trending();
+
+class _GenericDetailsScreenState extends State<GenericDetailsScreen> {
+  bool isTV = false;
+
+  MovieProvider get provider =>
+      Provider.of<MovieProvider>(context, listen: false);
 
   @override
-  void dispose() {
-    if (_isPlaying) _controller.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    provider.clearDetails();
+    loadDetails();
   }
 
-  Future<void> _playTrailer() async {
-    final TvService trailerService = TvService();
-    final key = await trailerService.getTvShowTrailerKey(
-      widget.movie.name ?? "",
-    );
+  Future<void> loadDetails() async {
+    /// 🔥 Get item from search result OR normal selection
+    final item = provider.selectedSearchAsMediaItem ?? provider.selectedItem;
 
-    if (key != null) {
-      _controller = YoutubePlayerController(
-        initialVideoId: key,
-        flags: const YoutubePlayerFlags(autoPlay: true, mute: false),
-      );
+    if (item == null) return;
 
-      setState(() {
-        _youtubeKey = key;
-        _isPlaying = true;
-      });
+    MovieDetails? movie;
+    TvShowDetails? show;
+
+    if (item.mediaType == "movie") {
+      movie = await api.fetchMovieDetails(item.id);
+      isTV = false;
+    } else if (item.mediaType == "tv") {
+      show = await api.fetchDetailsTvShow(item.id);
+      isTV = true;
     }
+
+    if (show != null) provider.setShowDetail(show);
+    if (movie != null) provider.setMovieDetail(movie);
+
+    if (mounted) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+    final provider = Provider.of<MovieProvider>(context);
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text(widget.movie.name ?? "Unknown Movie"),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: const [
-          Icon(Icons.favorite_border, color: Colors.black),
-          SizedBox(width: 16),
-          Icon(Icons.share_outlined, color: Colors.black),
-          SizedBox(width: 12),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // If _isPlaying is true, show YouTubePlayer
-                  _isPlaying && _youtubeKey != null
-                      ? YoutubePlayer(
-                          controller: _controller,
-                          showVideoProgressIndicator: true,
-                        )
-                      : CachedNetworkImage(
-                          imageUrl: widget.movie.image?.original ?? "",
-                          width: double.infinity,
-                          height: screenWidth * 0.55,
-                          fit: BoxFit.cover,
-                        ),
-                  if (!_isPlaying)
-                    ElevatedButton(
-                      onPressed: _playTrailer,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        shape: const CircleBorder(),
-                      ),
-                      child: const Icon(
-                        Icons.play_circle_fill,
-                        color: Colors.white,
-                        size: 64,
-                      ),
-                    ),
-                ],
-              ),
+    /// 🔥 Prefer search selection ONLY if user came from search page
+    final item = provider.selectedSearchAsMediaItem ?? provider.selectedItem;
+
+    if (item == null) {
+      return const Scaffold(
+        body: Center(child: Text("No item selected")),
+      );
+    }
+
+    return WillPopScope(
+      onWillPop: () async {
+        /// 🔥 Clear search selection ONLY when navigating back
+        provider.clearSearchSelection();
+        return true;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          automaticallyImplyLeading: true,
+          title: Text(item.title ?? "Details"),
+          centerTitle: true,
+          actions: const [
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8),
+              child: Icon(Icons.favorite_border),
             ),
-            const SizedBox(height: 16),
-            // Continue your other widgets here (title, info, cast, etc.)
-            Text(
-              widget.movie.name.toString(),
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8),
+              child: Icon(Icons.share),
             ),
-            Row(
-              children: [
-                ...(widget.movie.genres ?? []).map((genre) => Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: Text(genre),
-                    )).toList(),
-              ],
-            ),
-
-           
-            Text(widget.movie.summary.toString() ?? "null"),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [ 
-
-            ], ),
-            const SizedBox(height: 12),
-
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Recommended by Friends",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    "None of your friends have recommended this movie yet",
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1A8927),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text("Invite Friends to Recommend"),
-                    ),
-                  ),
-                ],
-              ),
+            Padding(
+              padding: EdgeInsets.only(right: 16),
+              child: Icon(Icons.ios_share),
             ),
           ],
         ),
+
+        /// 🔥 Show Movie or TV details correctly
+        body: isTV
+            ? (provider.showDetail != null
+                ? ShowDetailsScreen(movie: provider.showDetail!)
+                : const ShowDetailsShimmer())
+            : (provider.movieDetail != null
+                ? MovieDetailsScreen(movie: provider.movieDetail!)
+                : const ShowDetailsShimmer()),
       ),
     );
   }

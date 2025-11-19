@@ -9,10 +9,10 @@ class Login extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+
       appBar: AppBar(
         // Makes the AppBar clear with white background
-        backgroundColor: Colors.white,
+        
         elevation: 0,
       ),
       body: SingleChildScrollView(

@@ -1,3 +1,4 @@
+import 'package:finishd/profile/profileScreen.dart';
 import 'package:flutter/material.dart';
 
 
@@ -11,6 +12,13 @@ class Profile extends StatefulWidget {
 class _ProfileState extends State<Profile> {
   @override
   Widget build(BuildContext context) {
-    return Container();
+    return ProfileScreen(
+      userProfile:UserProfile(
+    name: 'Jill Doe',
+    email: 'jill.doe@gmail.com',
+  )
+    );
+
   }
+
 }

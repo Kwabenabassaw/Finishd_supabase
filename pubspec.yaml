@@ -14,7 +14,7 @@ dependencies:
   # UI & Icons
   cupertino_icons: ^1.0.8
   google_fonts: ^6.2.1
-
+ 
   # API / Networking
   http: ^1.2.0
   tmdb_api: ^2.2.3
@@ -37,6 +37,8 @@ dependencies:
 
   # Native Splash Screen
   flutter_native_splash: ^2.4.0
+  redacted: ^1.0.13
+  shimmer: ^3.0.0
 
 dev_dependencies:
   flutter_test:
@@ -53,6 +55,8 @@ flutter:
     - assets/glogo.png
     - assets/apple.png
     - assets/FinishdIcon.png
+
+    
 
 
 flutter_native_splash:
