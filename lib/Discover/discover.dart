@@ -1,3 +1,4 @@
+import 'package:finishd/Mainpage/Discover.dart';
 import 'package:finishd/Model/trending.dart';
 import 'package:finishd/MovieDetails/movie_details_screen.dart';
 import 'package:finishd/provider/MovieProvider.dart';
@@ -5,6 +6,7 @@ import 'package:finishd/Widget/ImageSlideshow.dart';
 import 'package:finishd/Widget/community_avatar.dart';
 import 'package:finishd/Widget/loading.dart';
 import 'package:finishd/Widget/movie_card.dart';
+import 'package:finishd/tmbd/fetchDiscover.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:finishd/Model/trendingmovies.dart';
@@ -12,7 +14,8 @@ import 'package:finishd/Model/trendingshow.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
 
 
-
+  final Trending movieApi = Trending();
+  final Fetchdiscover getDiscover = Fetchdiscover();
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
 
@@ -21,7 +24,7 @@ class ExploreScreen extends StatefulWidget {
 }
 
 class _ExploreScreenState extends State<ExploreScreen> {
-  final Trending movieApi = Trending();
+
   bool isLoading = true;
   String? error;
 
@@ -39,9 +42,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
       final shows = List<MediaItem>.from(await movieApi.fetchTrendingShow());
       final popular = List<MediaItem>.from(await movieApi.fetchpopularMovies());
       final upcoming = List<MediaItem>.from(await movieApi.fetchUpcoming());
+      final discover = List<MediaItem>.from(await getDiscover.fetchDiscover());
 
       final provider = Provider.of<MovieProvider>(context, listen: false);
-      
+      provider.setDiscover( discover);
       provider.setMovies(movies);
       provider.setShows(shows);
       provider.setPopular(popular);
@@ -100,7 +104,43 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         CommunityAvatarList(),
                       
                       ),
-                    
+                     const Text(
+                        "Discover",
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16,),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.28,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: provider.discover.length,
+                          itemBuilder: (context, index) {
+                            final movie = provider.discover[index];
+                            final genres = movieApi.getGenreNames(movie.genreIds);
+                            final limited = genres.length > 2
+                                ? genres.take(2).toList()
+                                : genres;
+                            return GenericMovieCard<MediaItem>(
+                              item: movie,
+                              titleBuilder: (m) => m.title ?? "No title",
+                              posterBuilder: (m) =>
+                                  "https://image.tmdb.org/t/p/w500${m.posterPath}",
+                              typeBuilder: (m) => limited.join(", "),
+                              onTap: () {
+                                provider.selectItem(provider.discover, index);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const GenericDetailsScreen(),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
                       // Trending Movies
                       const Text(
                         "Trending Movies",

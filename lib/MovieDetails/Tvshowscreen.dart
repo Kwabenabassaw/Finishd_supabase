@@ -72,7 +72,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                               return SizedBox(
                                 height: 200,
                                 child: Image.network(
-                                  "https://image.tmdb.org/t/p/w500${widget.movie.posterPath}",
+                                  "https://image.tmdb.org/t/p/w500${widget.movie.backdropPath}",
                                   fit: BoxFit.cover,
                                   height: 100,
                                   width: double.infinity,

@@ -55,7 +55,7 @@ class SignUpScreen extends StatelessWidget {
 
             // 4. Log In / Sign Up Segmented Control
             const ToggleButtonRow(),
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
 
             // 5. Form Fields
             // First Name and Last Name in a Row
@@ -224,7 +224,7 @@ class SignUpScreen extends StatelessWidget {
 // --- Helper Widgets ---
 
 // Custom Widget for the Labeled Text Fields
-class LabeledTextField extends StatelessWidget {
+class LabeledTextField extends StatefulWidget {
   final String label;
   final String hintText;
   final TextInputType keyboardType;
@@ -239,12 +239,25 @@ class LabeledTextField extends StatelessWidget {
   });
 
   @override
+  State<LabeledTextField> createState() => _LabeledTextFieldState();
+}
+
+class _LabeledTextFieldState extends State<LabeledTextField> {
+  late bool _obscureText;
+
+  @override
+  void initState() {
+    super.initState();
+    _obscureText = widget.isPassword; // Initialize with widget property
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
+          widget.label,
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -253,25 +266,31 @@ class LabeledTextField extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         TextField(
-          
-          obscureText: isPassword,
-          keyboardType: keyboardType,
+          obscureText: _obscureText, // Use the local state
+          keyboardType: widget.keyboardType,
           style: const TextStyle(fontWeight: FontWeight.w500),
           decoration: InputDecoration(
-            hintText: hintText,
+            hintText: widget.hintText,
             hintStyle: const TextStyle(color: Colors.grey),
             contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: Colors.grey),
-              
-               // Hide default border
+              borderSide: const BorderSide(color: Colors.grey),
             ),
             filled: true,
-            fillColor: Colors.white, // Light grey background
-            // Show the visibility icon for password fields
-            suffixIcon: isPassword 
-                ? const Icon(Icons.link, color: Colors.grey)
+            fillColor: Colors.white,
+            suffixIcon: widget.isPassword
+                ? GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _obscureText = !_obscureText; // Toggle local state
+                      });
+                    },
+                    child: Icon(
+                      _obscureText ? Icons.visibility_off : Icons.visibility,
+                      color: Colors.grey,
+                    ),
+                  )
                 : null,
           ),
         ),
@@ -287,9 +306,9 @@ class ToggleButtonRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 50,
+      height: 45,
       decoration: BoxDecoration(
-        color: Color.from(alpha: 0, red: 245, green: 246, blue: 249), // Light grey background
+        color: Color.fromARGB(0, 132, 130, 127), // Light grey background
         borderRadius: BorderRadius.circular(10),
       ),
        child: Row(

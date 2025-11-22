@@ -10,6 +10,8 @@ class MovieProvider extends ChangeNotifier {
   List<MediaItem> _shows = [];
   List<MediaItem> _popular = [];
   List<MediaItem> _upcoming = [];
+  List<MediaItem> _discover = [];
+
 
   // Selected list for navigation (Movies/Shows)
   List<MediaItem> _selectedList = [];
@@ -48,6 +50,11 @@ class MovieProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  List <MediaItem> get discover => _discover;
+  void setDiscover(List<MediaItem> discover) {
+    _discover = discover;
+    notifyListeners();
+  }
   // -------------------- Movie / Show Details --------------------
   MovieDetails? get movieDetail => _movieDetail;
   void setMovieDetail(MovieDetails details) {

@@ -1,9 +1,11 @@
 import 'package:finishd/Discover/Search.dart';
+import 'package:finishd/Home/Search.dart';
 import 'package:finishd/Mainpage/Discover.dart';
 import 'package:finishd/Mainpage/Home.dart';
 import 'package:finishd/Mainpage/Messages.dart';
 import 'package:finishd/Mainpage/Profile.dart';
 import 'package:finishd/Mainpage/Watchlist.dart';
+import 'package:finishd/notification/mainScreent.dart';
 import 'package:finishd/provider/MovieProvider.dart';
 
 import 'package:finishd/SplashScreen/splash_screen.dart';
@@ -93,6 +95,8 @@ scaffoldBackgroundColor: Colors.white,
         'homepage': (context) => HomePage(),
         'Search_discover': (context) => SearchScreen(),
         'settings':(context)=> SettingsScreen(),
+        'homesearch' : (context) => SearchScreenHome(),
+        'notification' : (context) => NotificationScreen()
       }
     );
   }

@@ -1,13 +1,45 @@
 import 'package:flutter/material.dart';
 
 // --- Placeholder for your custom image background widget ---
-class ImageCardBackground extends StatelessWidget {
+class ImageCardBackground extends StatefulWidget {
   const ImageCardBackground({super.key});
+
+  @override
+  State<ImageCardBackground> createState() => _ImageCardBackgroundState();
+}
+
+class _ImageCardBackgroundState extends State<ImageCardBackground>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _animation;
+  @override
+  void initState() {
+    super.initState();
+    super.initState();
+    _controller = AnimationController(
+      duration: Duration(seconds: 3), // animation duration
+      vsync: this,
+    );
+
+    // Slide from right to left
+    _animation = Tween<Offset>(
+      begin: Offset(1.0, 1.0), // Start just outside the right
+      end: Offset(0.0, 0.0), // End at original position
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+
+    _controller.forward(); // Start animation
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     // This is a simplified representation of the complex, layered image wall.
-    // In a real app, you'd use Transform.rotate or a CustomPainter 
+    // In a real app, you'd use Transform.rotate or a CustomPainter
     // to achieve the diagonal, overlapping effect.
     return Container(
       width: double.infinity,
@@ -17,20 +49,19 @@ class ImageCardBackground extends StatelessWidget {
         offset: const Offset(0, -30), // Move slightly up
         child: Transform.rotate(
           angle: 0, // Slight rotation for the dynamic feel
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-Image.asset(
-  'assets/Posters.png',
-  fit: BoxFit.fitHeight,
-  width: 400,
-  height: MediaQuery.of(context).size.height * 0.70,
-),
-             
-            
-             
-             
-            ],
+          child: SlideTransition(
+            position: _animation,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(
+                  'assets/Posters.png',
+                  fit: BoxFit.fitHeight,
+                  width: 400,
+                  height: MediaQuery.of(context).size.height * 0.70,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -45,11 +76,10 @@ class LandingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Define the primary green color from the image
-    const Color primaryGreen = Color(0xFF1E88E5); // Example green color
 
     return Scaffold(
       // Ensure the content goes all the way to the top edge (under the status bar)
-      extendBodyBehindAppBar: true, 
+      extendBodyBehindAppBar: true,
       body: Stack(
         children: [
           // 1. Image Background Layer (Covers the upper half)
@@ -57,7 +87,7 @@ class LandingScreen extends StatelessWidget {
             top: 0,
             left: 0,
             right: 0,
-            child: ImageCardBackground(), 
+            child: ImageCardBackground(),
           ),
 
           // 2. Gradient/Fade Overlay (To darken the images below the text)
@@ -72,9 +102,11 @@ class LandingScreen extends StatelessWidget {
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.black.withOpacity(0.0), // Fades out at the top
-                    Colors.white.withOpacity(0.95), // Becomes white at the bottom
+                    Colors.white.withOpacity(
+                      0.1,
+                    ), // Becomes white at the bottom
                   ],
-                  stops: const [0.6, 1.0], 
+                  stops: const [0.6, 1.0],
                 ),
               ),
             ),
@@ -85,16 +117,16 @@ class LandingScreen extends StatelessWidget {
             alignment: Alignment.bottomCenter,
             child: SingleChildScrollView(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 60.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 40.0,
+                  vertical: 60.0,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // --- Logo (The 'F' icon) ---
-                    Image.asset('assets/icon2.png',
-                    fit: BoxFit.contain,
-                    ),
-                   
-                    
+                    Image.asset('assets/icon2.png', fit: BoxFit.contain),
+
                     const SizedBox(height: 30),
 
                     // --- Title ---
@@ -107,7 +139,7 @@ class LandingScreen extends StatelessWidget {
                         color: Colors.black,
                       ),
                     ),
-                    
+
                     const SizedBox(height: 15),
 
                     // --- Description ---
@@ -120,7 +152,7 @@ class LandingScreen extends StatelessWidget {
                         height: 1.4,
                       ),
                     ),
-                    
+
                     const SizedBox(height: 50),
 
                     // --- Get Started Button ---
@@ -129,10 +161,10 @@ class LandingScreen extends StatelessWidget {
                       height: 55,
                       child: ElevatedButton(
                         onPressed: () {
-                         Navigator.pushNamed(context, '/signup');
+                          Navigator.pushReplacementNamed(context, '/signup');
                         },
                         style: ElevatedButton.styleFrom(
-                         backgroundColor: const Color(0xFF1A8927),
+                          backgroundColor: const Color(0xFF1A8927),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -148,9 +180,9 @@ class LandingScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    
+
                     // Padding for the bottom safe area (home indicator)
-                    const SizedBox(height: 20), 
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),

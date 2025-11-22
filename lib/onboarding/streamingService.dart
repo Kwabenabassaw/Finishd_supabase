@@ -1,4 +1,8 @@
-    import 'package:flutter/material.dart';
+    import 'package:cached_network_image/cached_network_image.dart';
+import 'package:finishd/Model/Watchprovider.dart';
+import 'package:finishd/Model/movieprovider.dart';
+import 'package:finishd/tmbd/getproviders.dart';
+import 'package:flutter/material.dart';
 
 // Define the primary green color
 const Color primaryGreen = Color((0xFF1A8927)); 
@@ -9,18 +13,11 @@ class StreamingService {
   final String logoUrl; // Use asset paths for local images
   StreamingService(this.name, this.logoUrl);
 }
+Getproviders getprovider = Getproviders();
+
 
 // Example list of services (You MUST add these logos to your 'assets' folder)
-final List<StreamingService> services = [
-  StreamingService('Netflix', 'https://upload.wikimedia.org/wikipedia/commons/e/ea/Netflix_Logomark.png'),
-  StreamingService('Hulu', 'https://download.logo.wine/logo/Hulu/Hulu-Logo.wine.png'),
-  StreamingService('Apple TV+', 'https://upload.wikimedia.org/wikipedia/commons/9/99/AppleTV.png'),
-  StreamingService('Disney+', 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Disney%2B_logo.svg/1200px-Disney%2B_logo.svg.png'),
-  StreamingService('Prime Video', 'https://1000logos.net/wp-content/uploads/2022/10/Amazon-Prime-Video-Logo.png'),
-  StreamingService('Max', 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSVY1YgDtoCGkabTHsZntBp6MaRpEX414R0ew&s'),
-  StreamingService('Peacock', 'https://www.freelogovectors.net/wp-content/uploads/2023/09/peacock-logo-freelogovectors.net_.net_.png'),
-  StreamingService('Paramount+', 'https://logowik.com/content/uploads/images/paramount-plus5224.jpg'),
-];
+
 
 
 class ServiceSelectionScreen extends StatefulWidget {
@@ -32,7 +29,8 @@ class ServiceSelectionScreen extends StatefulWidget {
 
 class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
   final Set<String> _selectedServices = {};
-  
+  final Set<int> _selectedServicesID = {};
+  Future<List<WatchProvider>> services = getprovider.getMovieprovide();
   void _toggleServiceSelection(String name) {
     setState(() {
       if (_selectedServices.contains(name)) {
@@ -42,7 +40,15 @@ class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
       }
     });
   }
-
+void _toggleServiceSelectionID(int id) {
+    setState(() {
+      if (_selectedServicesID.contains(id)) {
+        _selectedServicesID.remove(id);
+      } else {
+        _selectedServicesID.add(id);
+      }
+    });
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -90,26 +96,47 @@ class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
                   const SizedBox(height: 25),
 
                   // 4. Service Logo Grid
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 15.0,
-                      mainAxisSpacing: 15.0,
-                      childAspectRatio: 2.0, // Wider aspect ratio for logo tiles
-                    ),
-                    itemCount: services.length,
-                    itemBuilder: (context, index) {
-                      final service = services[index];
-                      final isSelected = _selectedServices.contains(service.name);
+                  FutureBuilder(
+                    future: services,
+                    builder: (context, asyncSnapshot) {
+                      if (asyncSnapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      } else if (asyncSnapshot.hasError) {
+                        return Text('Error: ${asyncSnapshot.error}');
+                      }
+                      final services = asyncSnapshot.data!;
+                      return GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 15.0,
+                          mainAxisSpacing: 15.0,
+                          childAspectRatio: 1.5, // Wider aspect ratio for logo tiles
+                        ),
+                        itemCount: services.length,
+                        itemBuilder: (context, index) {
+                          final service = services[index];
+                          final isSelected = _selectedServices.contains(service.providerName,);
+                          final isSelectedID = _selectedServicesID.contains(service.providerId);
+                          print(_selectedServicesID);
+                          print(_selectedServices);
+                      
+                          return ServiceLogoTile(
+                            service: service,
+                            isSelected: isSelected,
+                            isSelectedID: isSelectedID,
 
-                      return ServiceLogoTile(
-                        service: service,
-                        isSelected: isSelected,
-                        onTap: () => _toggleServiceSelection(service.name),
+                            onTap: () =>{_toggleServiceSelectionID(service.providerId),
+                            _toggleServiceSelection(service.providerName),
+                            print(_selectedServicesID),
+                            print(_selectedServices),
+                            if(_selectedServices.isNotEmpty && _selectedServicesID.isNotEmpty){}
+                            } 
+                          );
+                        },
                       );
-                    },
+                    }
                   ),
                 ],
               ),
@@ -251,14 +278,16 @@ class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
 
 // --- Helper Widget: The Individual Service Logo Tile ---
 class ServiceLogoTile extends StatelessWidget {
-  final StreamingService service;
+  final WatchProvider service;
   final bool isSelected;
+  final bool isSelectedID;
   final VoidCallback onTap;
 
   const ServiceLogoTile({
     super.key,
     required this.service,
     required this.isSelected,
+    required this.isSelectedID,
     required this.onTap,
   });
 
@@ -277,12 +306,14 @@ class ServiceLogoTile extends StatelessWidget {
             width: isSelected ? 2.0 : 1.0,
           ),
         ),
-        child: Image.network(
-          service.logoUrl,
-          fit: BoxFit.contain,
-          // Use color tinting for the Apple TV+ logo if it's a monochrome image
-          
-        ),
+        child: CachedNetworkImage(
+              imageUrl: "https://image.tmdb.org/t/p/w500${service.logoPath}" ,
+              fit: BoxFit.fill,
+              width: double.infinity,
+              height: double.infinity,
+              errorWidget: (context, url, error) => Image.asset("assets/noimage.jpg"),
+           
+            )
       ),
     );
   }

@@ -76,7 +76,14 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Icon(Icons.notifications_none, color: Colors.white, size: 28),
+                  GestureDetector(
+
+                    onTap: () => {
+                      Navigator.pushNamed(context, 'notification')
+                    },
+                    child:const Icon(Icons.notifications_none, color: Colors.white, size: 28), 
+                  )
+                  ,
                   Row(
                     children: [
                       Text(
@@ -109,7 +116,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
-                  const Icon(Icons.search, color: Colors.white, size: 28),
+                  GestureDetector(
+                    onTap: () => Navigator.pushNamed(context, 'homesearch'),
+                     child:  const Icon(Icons.search, color: Colors.white, size: 28),
+                  )
+                  
                 ],
               ),
             ),

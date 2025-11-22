@@ -1,7 +1,18 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:finishd/Discover/discover.dart';
+import 'package:finishd/Model/trending.dart';
+import 'package:finishd/Widget/serviceLogoTileSkeleton.dart';
+import 'package:finishd/tmbd/Search.dart';
+import 'package:finishd/tmbd/fetchDiscover.dart';
+import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:flutter/material.dart';
 
 // Define the primary green color
 const Color primaryGreen = Color(0xFF1E88E5); 
+Fetchdiscover getDiscover = Fetchdiscover();
+SearchDiscover movieapi = SearchDiscover();
+
+
 
 // Data model for a TV show
 class Show {
@@ -11,18 +22,7 @@ class Show {
 }
 
 // Example list of shows (Replace with your actual asset or network paths)
-final List<Show> sampleShows = [
-  Show('The Office', 'https://resizing.flixster.com/-XZAfHZM39UwaGJIFWKAE8fS0ak=/v3/t/assets/p7893514_b_v13_ab.jpg'),
-  Show('Breaking Bad', 'https://www.tallengestore.com/cdn/shop/products/BreakingBad-BryanCranston-Heisenberg-TVShowPoster9_2ef2f86e-9ac1-4f34-998f-1b68d17ce018.jpg?v=1683604410'),
-  Show('Stranger Things', 'https://mediaproxy.tvtropes.org/width/1200/https://static.tvtropes.org/pmwiki/pub/images/stranger_things_53.png'),
-  Show('Game of Thrones', 'https://resizing.flixster.com/-XZAfHZM39UwaGJIFWKAE8fS0ak=/v3/t/assets/p8553063_b_v13_ax.jpg'),
-  Show('Friends', 'https://m.media-amazon.com/images/M/MV5BOTU2YmM5ZjctOGVlMC00YTczLTljM2MtYjhlNGI5YWMyZjFkXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg'),
-  Show('The Last of Us', 'https://resizing.flixster.com/1t3h8KAxIMmKUCU09OoqpfqD6R0=/ems.cHJkLWVtcy1hc3NldHMvdHZzZWFzb24vZjU3YTRlYjItOTAzNC00MzFjLTg0NGQtODA1ZGU2OWY1NzY1LmpwZw=='),
-  Show('The Crown', 'https://m.media-amazon.com/images/M/MV5BNGEwOGI0NWEtNTljNi00OWEyLThjMWMtOTJkOTk5YTM4MDNhXkEyXkFqcGc@._V1_.jpg'),
-  Show('The Mandalorian', 'https://static.wikia.nocookie.net/starwars/images/f/fa/MandoS3Poster.jpg/revision/latest?cb=20230117120740'),
-  Show('Ted Lasso', 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRXQA-M7KgoOyZu8jegQVXERbUKJWVWsRV9Lw&s'),
-  // Add more shows as needed for scrolling
-];
+
 
 
 class ShowSelectionScreen extends StatefulWidget {
@@ -34,6 +34,11 @@ class ShowSelectionScreen extends StatefulWidget {
 
 class _ShowSelectionScreenState extends State<ShowSelectionScreen> {
   final Set<String> _selectedShowTitles = {};
+  final TextEditingController _searchController = TextEditingController();
+String _searchQuery = '';
+ final Future<List<MediaItem>> sampleShows = getDiscover.fetchDiscover() ;
+Future<List<MediaItem>> get search => movieapi.getSearch(_searchQuery);
+
   
   void _toggleShowSelection(String title) {
     setState(() {
@@ -44,6 +49,14 @@ class _ShowSelectionScreenState extends State<ShowSelectionScreen> {
       }
     });
   }
+  
+      Future<List<MediaItem>>? _futureShows;
+
+      @override
+void initState() {
+  super.initState();
+  _futureShows = getDiscover.fetchDiscover(); // Load discover only ONCE
+}
 
   @override
   Widget build(BuildContext context) {
@@ -93,26 +106,40 @@ class _ShowSelectionScreenState extends State<ShowSelectionScreen> {
                   const SizedBox(height: 25),
 
                   // 4. Show Poster Grid
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      crossAxisSpacing: 10.0,
-                      mainAxisSpacing: 10.0,
-                      childAspectRatio: 0.65, // Adjust for poster size (taller than wide)
-                    ),
-                    itemCount: sampleShows.length,
-                    itemBuilder: (context, index) {
-                      final show = sampleShows[index];
-                      final isSelected = _selectedShowTitles.contains(show.title);
+                  FutureBuilder(
+                   
+                    future: _futureShows,
+                    builder: (context, asyncSnapshot) {
+                      final show = asyncSnapshot.data;
+                      if (asyncSnapshot.connectionState == ConnectionState.waiting) {
+                        return const PosterShimmerGrid();
+                      } else if (asyncSnapshot.hasError) {
+                        return Text('Error: ${asyncSnapshot.error}');
+                      }
+                  
 
-                      return ShowPosterTile(
-                        show: show,
-                        isSelected: isSelected,
-                        onTap: () => _toggleShowSelection(show.title),
+                      return GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 10.0,
+                          mainAxisSpacing: 10.0,
+                          childAspectRatio: 0.65, // Adjust for poster size (taller than wide)
+                        ),
+                        itemCount: show!.length,
+                        itemBuilder: (context, index) {
+                          final shows = show[index];
+                          final isSelected = _selectedShowTitles.contains(shows.title);
+                      
+                          return ShowPosterTile(
+                            show: shows,
+                            isSelected: isSelected,
+                            onTap: () => _toggleShowSelection(shows.title),
+                          );
+                        },
                       );
-                    },
+                    }
                   ),
                   // Add extra padding at the bottom of the grid if necessary
                   const SizedBox(height: 20), 
@@ -181,8 +208,21 @@ class _ShowSelectionScreenState extends State<ShowSelectionScreen> {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.grey.shade300),
       ),
-      child: const TextField(
-        decoration: InputDecoration(
+      child: TextField(
+      
+        controller: _searchController,
+        onChanged: (value) {
+          setState(() {
+            _searchQuery = value;
+            if(_searchQuery.isEmpty){
+              _futureShows = getDiscover.fetchDiscover();
+            }else{
+              _futureShows = movieapi.getSearch(_searchQuery);
+            }
+          });
+        },
+        style: const TextStyle(color: Colors.black  ),
+        decoration: const InputDecoration(
           hintText: 'Search for shows...',
           hintStyle: TextStyle(color: Colors.grey),
           prefixIcon: Icon(Icons.search, color: Colors.grey),
@@ -213,6 +253,7 @@ class _ShowSelectionScreenState extends State<ShowSelectionScreen> {
             child: ElevatedButton(
               onPressed: _selectedShowTitles.isNotEmpty ? () {
                 print('Selected Shows: $_selectedShowTitles');
+                
                 Navigator.pushReplacementNamed(context, 'streaming');
               } : null, // Disable if no shows are selected
               style: ElevatedButton.styleFrom(
@@ -256,7 +297,7 @@ class _ShowSelectionScreenState extends State<ShowSelectionScreen> {
 
 // --- Helper Widget: The Individual Show Poster Tile ---
 class ShowPosterTile extends StatelessWidget {
-  final Show show;
+  final MediaItem show;
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -276,11 +317,13 @@ class ShowPosterTile extends StatelessWidget {
           // Poster Image
           ClipRRect(
             borderRadius: BorderRadius.circular(8.0),
-            child: Image.network(
-              show.imageUrl,
+            child: CachedNetworkImage(
+              imageUrl: "https://image.tmdb.org/t/p/w500${show.posterPath}" ,
               fit: BoxFit.cover,
               width: double.infinity,
               height: double.infinity,
+              errorWidget: (context, url, error) => Image.asset("assets/noimage.jpg"),
+           
             ),
           ),
           
