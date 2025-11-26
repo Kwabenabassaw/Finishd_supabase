@@ -15,8 +15,10 @@ class Fetchdiscover {
  Future<List<MediaItem>> fetchDiscover() async {
   try {
     // Fetch movies and TV shows from TMDB
-    Map movieData = await tmdb.v3.discover.getMovies();
-    Map tvData = await tmdb.v3.discover.getTvShows();
+    Map movieData = await tmdb.v3.discover.getMovies( page: 5);
+    Map tvData = await tmdb.v3.discover.getTvShows(
+      page: 5
+    );
 
     // Map movie results to MediaItem
     List<MediaItem> movies = (movieData['results'] as List<dynamic>?)

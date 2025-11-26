@@ -27,8 +27,10 @@ class _GenericDetailsScreenState extends State<GenericDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    provider.clearDetails();
-    loadDetails();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      provider.clearDetails();
+      loadDetails();
+    });
   }
 
   Future<void> loadDetails() async {
@@ -62,9 +64,7 @@ class _GenericDetailsScreenState extends State<GenericDetailsScreen> {
     final item = provider.selectedSearchAsMediaItem ?? provider.selectedItem;
 
     if (item == null) {
-      return const Scaffold(
-        body: Center(child: Text("No item selected")),
-      );
+      return const Scaffold(body: Center(child: Text("No item selected")));
     }
 
     return WillPopScope(
@@ -97,11 +97,11 @@ class _GenericDetailsScreenState extends State<GenericDetailsScreen> {
         /// 🔥 Show Movie or TV details correctly
         body: isTV
             ? (provider.showDetail != null
-                ? ShowDetailsScreen(movie: provider.showDetail!)
-                : const ShowDetailsShimmer())
+                  ? ShowDetailsScreen(movie: provider.showDetail!)
+                  : const ShowDetailsShimmer())
             : (provider.movieDetail != null
-                ? MovieDetailsScreen(movie: provider.movieDetail!)
-                : const ShowDetailsShimmer()),
+                  ? MovieDetailsScreen(movie: provider.movieDetail!)
+                  : const ShowDetailsShimmer()),
       ),
     );
   }

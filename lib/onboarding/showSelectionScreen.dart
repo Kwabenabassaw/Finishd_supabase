@@ -1,18 +1,19 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:finishd/Discover/discover.dart';
 import 'package:finishd/Model/trending.dart';
+import 'package:finishd/Model/user_preferences.dart';
 import 'package:finishd/Widget/serviceLogoTileSkeleton.dart';
+import 'package:finishd/provider/onboarding_provider.dart';
 import 'package:finishd/tmbd/Search.dart';
 import 'package:finishd/tmbd/fetchDiscover.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 // Define the primary green color
-const Color primaryGreen = Color(0xFF1E88E5); 
+const Color primaryGreen = Color(0xFF1E88E5);
 Fetchdiscover getDiscover = Fetchdiscover();
 SearchDiscover movieapi = SearchDiscover();
-
-
 
 // Data model for a TV show
 class Show {
@@ -23,8 +24,6 @@ class Show {
 
 // Example list of shows (Replace with your actual asset or network paths)
 
-
-
 class ShowSelectionScreen extends StatefulWidget {
   const ShowSelectionScreen({super.key});
 
@@ -33,30 +32,19 @@ class ShowSelectionScreen extends StatefulWidget {
 }
 
 class _ShowSelectionScreenState extends State<ShowSelectionScreen> {
-  final Set<String> _selectedShowTitles = {};
+
   final TextEditingController _searchController = TextEditingController();
-String _searchQuery = '';
- final Future<List<MediaItem>> sampleShows = getDiscover.fetchDiscover() ;
-Future<List<MediaItem>> get search => movieapi.getSearch(_searchQuery);
+  String _searchQuery = '';
+  final Future<List<MediaItem>> sampleShows = getDiscover.fetchDiscover();
+  Future<List<MediaItem>> get search => movieapi.getSearch(_searchQuery);
 
-  
-  void _toggleShowSelection(String title) {
-    setState(() {
-      if (_selectedShowTitles.contains(title)) {
-        _selectedShowTitles.remove(title);
-      } else {
-        _selectedShowTitles.add(title);
-      }
-    });
+  Future<List<MediaItem>>? _futureShows;
+
+  @override
+  void initState() {
+    super.initState();
+    _futureShows = getDiscover.fetchDiscover(); // Load discover only ONCE
   }
-  
-      Future<List<MediaItem>>? _futureShows;
-
-      @override
-void initState() {
-  super.initState();
-  _futureShows = getDiscover.fetchDiscover(); // Load discover only ONCE
-}
 
   @override
   Widget build(BuildContext context) {
@@ -91,13 +79,10 @@ void initState() {
                       color: Colors.black,
                     ),
                   ),
-               
+
                   const Text(
                     'Select shows you\'ve enjoyed. We\'ll find similar ones you haven\'t seen yet.',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(fontSize: 15, color: Colors.grey),
                   ),
                   const SizedBox(height: 30),
 
@@ -107,47 +92,63 @@ void initState() {
 
                   // 4. Show Poster Grid
                   FutureBuilder(
-                   
                     future: _futureShows,
                     builder: (context, asyncSnapshot) {
                       final show = asyncSnapshot.data;
-                      if (asyncSnapshot.connectionState == ConnectionState.waiting) {
+                      if (asyncSnapshot.connectionState ==
+                          ConnectionState.waiting) {
                         return const PosterShimmerGrid();
                       } else if (asyncSnapshot.hasError) {
                         return Text('Error: ${asyncSnapshot.error}');
                       }
-                  
 
                       return GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 10.0,
-                          mainAxisSpacing: 10.0,
-                          childAspectRatio: 0.65, // Adjust for poster size (taller than wide)
-                        ),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              crossAxisSpacing: 10.0,
+                              mainAxisSpacing: 10.0,
+                              childAspectRatio:
+                                  0.65, // Adjust for poster size (taller than wide)
+                            ),
                         itemCount: show!.length,
                         itemBuilder: (context, index) {
-                          final shows = show[index];
-                          final isSelected = _selectedShowTitles.contains(shows.title);
-                      
+                          final shows = show![index];
+                          final onboardingProvider =
+                              Provider.of<OnboardingProvider>(
+                                context,
+                                listen: true,
+                              );
+                          final isSelected = onboardingProvider.isMediaSelected(
+                            shows.id,
+                            shows.mediaType,
+                          );
                           return ShowPosterTile(
                             show: shows,
                             isSelected: isSelected,
-                            onTap: () => _toggleShowSelection(shows.title),
+                            onTap: () {
+                              final media = SelectedMedia(
+                                id: shows.id,
+                                title: shows.title,
+                                posterPath: shows.posterPath,
+                                mediaType: shows.mediaType,
+                              );
+                              onboardingProvider.toggleMedia(media);
+                            },
                           );
                         },
                       );
-                    }
+                    },
                   ),
                   // Add extra padding at the bottom of the grid if necessary
-                  const SizedBox(height: 20), 
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
           ),
-          
+
           // --- Fixed Bottom Button Bar ---
           Positioned(
             left: 0,
@@ -172,7 +173,9 @@ void initState() {
                 value: 0.50, // 50% progress for Step 2 of 4
                 minHeight: 8,
                 backgroundColor: Colors.grey.shade200,
-                valueColor: const AlwaysStoppedAnimation<Color>(Color((0xFF1A8927))),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  Color((0xFF1A8927)),
+                ),
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -189,11 +192,7 @@ void initState() {
         const SizedBox(height: 10),
         const Text(
           'Step 2 of 4',
-          style: TextStyle(
-     
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ],
     );
@@ -209,19 +208,18 @@ void initState() {
         border: Border.all(color: Colors.grey.shade300),
       ),
       child: TextField(
-      
         controller: _searchController,
         onChanged: (value) {
           setState(() {
             _searchQuery = value;
-            if(_searchQuery.isEmpty){
+            if (_searchQuery.isEmpty) {
               _futureShows = getDiscover.fetchDiscover();
-            }else{
+            } else {
               _futureShows = movieapi.getSearch(_searchQuery);
             }
           });
         },
-        style: const TextStyle(color: Colors.black  ),
+        style: const TextStyle(color: Colors.black),
         decoration: const InputDecoration(
           hintText: 'Search for shows...',
           hintStyle: TextStyle(color: Colors.grey),
@@ -241,7 +239,8 @@ void initState() {
         left: 25.0,
         right: 25.0,
         top: 15.0,
-        bottom: MediaQuery.of(context).padding.bottom + 15, // Account for safe area
+        bottom:
+            MediaQuery.of(context).padding.bottom + 15, // Account for safe area
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -251,11 +250,23 @@ void initState() {
             width: double.infinity,
             height: 55,
             child: ElevatedButton(
-              onPressed: _selectedShowTitles.isNotEmpty ? () {
-                print('Selected Shows: $_selectedShowTitles');
-                
-                Navigator.pushReplacementNamed(context, 'streaming');
-              } : null, // Disable if no shows are selected
+              onPressed: () {
+                final onboardingProvider = Provider.of<OnboardingProvider>(
+                  context,
+                  listen: false,
+                );
+                final hasSelections =
+                    onboardingProvider.selectedMovies.isNotEmpty ||
+                    onboardingProvider.selectedShows.isNotEmpty;
+
+                if (hasSelections) {
+                  print(
+                    'Selected Movies: ${onboardingProvider.selectedMovies}',
+                  );
+                  print('Selected Shows: ${onboardingProvider.selectedShows}');
+                  Navigator.pushReplacementNamed(context, 'streaming');
+                }
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Color((0xFF1A8927)),
                 disabledBackgroundColor: Color((0xFF1A8927)).withOpacity(0.5),
@@ -318,23 +329,23 @@ class ShowPosterTile extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(8.0),
             child: CachedNetworkImage(
-              imageUrl: "https://image.tmdb.org/t/p/w500${show.posterPath}" ,
+              imageUrl: "https://image.tmdb.org/t/p/w500${show.posterPath}",
               fit: BoxFit.cover,
               width: double.infinity,
               height: double.infinity,
-              errorWidget: (context, url, error) => Image.asset("assets/noimage.jpg"),
-           
+              errorWidget: (context, url, error) =>
+                  Image.asset("assets/noimage.jpg"),
             ),
           ),
-          
+
           // Selection Overlay (A gradient and checkmark)
-          if (isSelected) 
+          if (isSelected)
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8.0),
                   // Semi-transparent overlay to highlight selection
-                  color: Colors.white.withOpacity(0.5), 
+                  color: Colors.white.withOpacity(0.5),
                   border: Border.all(color: Color((0xFF1A8927)), width: 3),
                 ),
               ),
@@ -347,12 +358,8 @@ class ShowPosterTile extends StatelessWidget {
               right: 5,
               child: CircleAvatar(
                 radius: 12,
-                backgroundColor:  Color((0xFF1A8927)),
-                child: Icon(
-                  Icons.check,
-                  size: 16,
-                  color: Colors.white,
-                ),
+                backgroundColor: Color((0xFF1A8927)),
+                child: Icon(Icons.check, size: 16, color: Colors.white),
               ),
             ),
         ],

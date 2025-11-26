@@ -1,4 +1,5 @@
-import 'package:finishd/MovieDetails/movie_details_screen.dart';
+import 'package:finishd/MovieDetails/MovieScreen.dart';
+import 'package:finishd/MovieDetails/Tvshowscreen.dart';
 import 'package:finishd/provider/MovieProvider.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:flutter/material.dart';
@@ -26,17 +27,12 @@ class MovieBannerWidget extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
       clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [
           Positioned.fill(
-            child: CachedNetworkImage(
-              imageUrl: imageUrl,
-              fit: BoxFit.cover,
-            ),
+            child: CachedNetworkImage(imageUrl: imageUrl, fit: BoxFit.cover),
           ),
 
           Positioned.fill(
@@ -45,10 +41,7 @@ class MovieBannerWidget extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
-                  colors: [
-                    Colors.black.withOpacity(0.7),
-                    Colors.transparent
-                  ],
+                  colors: [Colors.black.withOpacity(0.7), Colors.transparent],
                 ),
               ),
             ),
@@ -74,10 +67,7 @@ class MovieBannerWidget extends StatelessWidget {
 
                 Text(
                   genere.take(2).join(" • "),
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
                 ),
 
                 const SizedBox(height: 12),
@@ -91,17 +81,22 @@ class MovieBannerWidget extends StatelessWidget {
                 ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );
   }
 }
+
 class BannerCarousel extends StatefulWidget {
   final List<MediaItem> movies;
   final Trending movieApi;
 
-  const BannerCarousel({super.key, required this.movies, required this.movieApi});
+  const BannerCarousel({
+    super.key,
+    required this.movies,
+    required this.movieApi,
+  });
 
   @override
   _BannerCarouselState createState() => _BannerCarouselState();
@@ -134,7 +129,7 @@ class _BannerCarouselState extends State<BannerCarousel> {
 
   @override
   Widget build(BuildContext context) {
-        final provider = Provider.of<MovieProvider>(context, listen: false);
+    final provider = Provider.of<MovieProvider>(context, listen: false);
     return SizedBox(
       height: 250,
       width: double.infinity,
@@ -147,7 +142,8 @@ class _BannerCarouselState extends State<BannerCarousel> {
           return MovieBannerWidget(
             movie: movie,
             genere: genres.take(2).toList(),
-            onWatchTrailerPressed: () {
+            onWatchTrailerPressed: () async {
+              /*
                provider.selectItem(provider.movies, index);
                                 Navigator.push(
                                   context,
@@ -155,6 +151,72 @@ class _BannerCarouselState extends State<BannerCarousel> {
                                     builder: (_) => const GenericDetailsScreen(),
                                   ),
                                 );
+                */
+              // Show loading indicator
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) =>
+                    const Center(child: CircularProgressIndicator()),
+              );
+
+              try {
+                if (movie.mediaType == 'tv') {
+                  // Fetch full TV show details
+                  final tvDetails = await widget.movieApi.fetchDetailsTvShow(
+                    movie.id,
+                  );
+
+                  // Close loading indicator
+                  if (context.mounted) Navigator.pop(context);
+
+                  if (tvDetails != null && context.mounted) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            ShowDetailsScreen(movie: tvDetails),
+                      ),
+                    );
+                  } else if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Failed to load TV show details'),
+                      ),
+                    );
+                  }
+                } else {
+                  // Default to movie
+                  // Fetch full movie details
+                  final movieDetails = await widget.movieApi.fetchMovieDetails(
+                    movie.id,
+                  );
+
+                  // Close loading indicator
+                  if (context.mounted) Navigator.pop(context);
+
+                  // Navigate to details screen
+                  if (context.mounted) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            MovieDetailsScreen(movie: movieDetails),
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                // Close loading indicator
+                if (context.mounted) Navigator.pop(context);
+
+                // Show error
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to load details: $e')),
+                  );
+                }
+              }
             },
           );
         },

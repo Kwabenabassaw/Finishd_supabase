@@ -1,24 +1,16 @@
-    import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:finishd/Model/Watchprovider.dart';
 import 'package:finishd/Model/movieprovider.dart';
 import 'package:finishd/tmbd/getproviders.dart';
 import 'package:flutter/material.dart';
+import 'package:finishd/Model/user_preferences.dart';
+import 'package:provider/provider.dart';
+import 'package:finishd/provider/onboarding_provider.dart';
 
 // Define the primary green color
-const Color primaryGreen = Color((0xFF1A8927)); 
+const Color primaryGreen = Color((0xFF1A8927));
 
-// Data model for a streaming service
-class StreamingService {
-  final String name;
-  final String logoUrl; // Use asset paths for local images
-  StreamingService(this.name, this.logoUrl);
-}
 Getproviders getprovider = Getproviders();
-
-
-// Example list of services (You MUST add these logos to your 'assets' folder)
-
-
 
 class ServiceSelectionScreen extends StatefulWidget {
   const ServiceSelectionScreen({super.key});
@@ -28,29 +20,10 @@ class ServiceSelectionScreen extends StatefulWidget {
 }
 
 class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
-  final Set<String> _selectedServices = {};
-  final Set<int> _selectedServicesID = {};
-  Future<List<WatchProvider>> services = getprovider.getMovieprovide();
-  void _toggleServiceSelection(String name) {
-    setState(() {
-      if (_selectedServices.contains(name)) {
-        _selectedServices.remove(name);
-      } else {
-        _selectedServices.add(name);
-      }
-    });
-  }
-void _toggleServiceSelectionID(int id) {
-    setState(() {
-      if (_selectedServicesID.contains(id)) {
-        _selectedServicesID.remove(id);
-      } else {
-        _selectedServicesID.add(id);
-      }
-    });
-  }
   @override
   Widget build(BuildContext context) {
+    final onboardingProvider = Provider.of<OnboardingProvider>(context, listen: true);
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -62,17 +35,14 @@ void _toggleServiceSelectionID(int id) {
                 top: 20.0,
                 left: 25.0,
                 right: 25.0,
-                bottom: 160.0, // Space for the fixed bottom bar
+                bottom: 160.0,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 1. Progress Bar and Step (Step 3 of 4, 75%)
                   const SizedBox(height: 25),
                   _buildProgressHeader(),
                   const SizedBox(height: 25),
-
-                  // 2. Title and Subtitle
                   const Text(
                     'Your streaming\nservices',
                     style: TextStyle(
@@ -90,14 +60,10 @@ void _toggleServiceSelectionID(int id) {
                     ),
                   ),
                   const SizedBox(height: 30),
-
-                  // 3. Search Bar
                   _buildSearchBar(),
                   const SizedBox(height: 25),
-
-                  // 4. Service Logo Grid
                   FutureBuilder(
-                    future: services,
+                    future: getprovider.getMovieprovide(),
                     builder: (context, asyncSnapshot) {
                       if (asyncSnapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
@@ -112,37 +78,33 @@ void _toggleServiceSelectionID(int id) {
                           crossAxisCount: 2,
                           crossAxisSpacing: 15.0,
                           mainAxisSpacing: 15.0,
-                          childAspectRatio: 1.5, // Wider aspect ratio for logo tiles
+                          childAspectRatio: 1.5,
                         ),
                         itemCount: services.length,
                         itemBuilder: (context, index) {
                           final service = services[index];
-                          final isSelected = _selectedServices.contains(service.providerName,);
-                          final isSelectedID = _selectedServicesID.contains(service.providerId);
-                          print(_selectedServicesID);
-                          print(_selectedServices);
-                      
+                          final isSelected = onboardingProvider.isProviderSelected(service.providerId);
                           return ServiceLogoTile(
                             service: service,
                             isSelected: isSelected,
-                            isSelectedID: isSelectedID,
-
-                            onTap: () =>{_toggleServiceSelectionID(service.providerId),
-                            _toggleServiceSelection(service.providerName),
-                            print(_selectedServicesID),
-                            print(_selectedServices),
-                            if(_selectedServices.isNotEmpty && _selectedServicesID.isNotEmpty){}
-                            } 
+                            onTap: () {
+                              final provider = SelectedProvider(
+                                providerId: service.providerId,
+                                providerName: service.providerName,
+                                logoPath: service.logoPath ?? '',
+                              );
+                              onboardingProvider.toggleProvider(provider);
+                            },
                           );
                         },
                       );
-                    }
+                    },
                   ),
                 ],
               ),
             ),
           ),
-          
+
           // --- Fixed Bottom Button Bar ---
           Positioned(
             left: 0,
@@ -155,7 +117,6 @@ void _toggleServiceSelectionID(int id) {
     );
   }
 
-  // Helper widget for the top progress header
   Widget _buildProgressHeader() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -164,7 +125,7 @@ void _toggleServiceSelectionID(int id) {
           children: [
             Expanded(
               child: LinearProgressIndicator(
-                value: 0.75, // 75% progress for Step 3 of 4
+                value: 0.75,
                 minHeight: 8,
                 backgroundColor: Colors.grey.shade200,
                 valueColor: const AlwaysStoppedAnimation<Color>(primaryGreen),
@@ -194,7 +155,6 @@ void _toggleServiceSelectionID(int id) {
     );
   }
 
-  // Helper widget for the search bar
   Widget _buildSearchBar() {
     return Container(
       height: 50,
@@ -206,7 +166,7 @@ void _toggleServiceSelectionID(int id) {
       ),
       child: const TextField(
         decoration: InputDecoration(
-          hintText: '', // Placeholder is empty in the image
+          hintText: '',
           hintStyle: TextStyle(color: Colors.grey),
           prefixIcon: Icon(Icons.search, color: Colors.grey),
           border: InputBorder.none,
@@ -216,8 +176,9 @@ void _toggleServiceSelectionID(int id) {
     );
   }
 
-  // Helper widget for the bottom buttons
   Widget _buildBottomButtonBar(BuildContext context) {
+    final onboardingProvider = Provider.of<OnboardingProvider>(context, listen: false);
+
     return Container(
       color: Colors.white,
       padding: EdgeInsets.only(
@@ -229,14 +190,38 @@ void _toggleServiceSelectionID(int id) {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Continue Button
           SizedBox(
             width: double.infinity,
             height: 55,
             child: ElevatedButton(
-              onPressed: () {
-                print('Selected Services: $_selectedServices');
-                Navigator.pushReplacementNamed(context, 'welcome');
+              onPressed: () async {
+                if (onboardingProvider.selectedProviders.isNotEmpty) {
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (context) => const Center(child: CircularProgressIndicator()),
+                  );
+
+                  final success = await onboardingProvider.saveToFirestore();
+
+                  Navigator.of(context).pop();
+
+                  if (success) {
+                    print('Successfully saved preferences!');
+                    print('Selected Genres: ${onboardingProvider.selectedGenres}');
+                    print(
+                        'Selected Movies/Shows: ${onboardingProvider.selectedMovies.length + onboardingProvider.selectedShows.length}');
+                    print('Selected Providers: ${onboardingProvider.selectedProviders}');
+                    Navigator.pushReplacementNamed(context, 'welcome');
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to save preferences: ${onboardingProvider.errorMessage}'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryGreen,
@@ -245,18 +230,26 @@ void _toggleServiceSelectionID(int id) {
                 ),
                 elevation: 0,
               ),
-              child: const Text(
-                'Continue',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
+              child: onboardingProvider.isSaving
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text(
+                      'Continue',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(height: 15),
-          // Skip Button
           TextButton(
             onPressed: () {
               print('Skipped this step');
@@ -276,18 +269,15 @@ void _toggleServiceSelectionID(int id) {
   }
 }
 
-// --- Helper Widget: The Individual Service Logo Tile ---
 class ServiceLogoTile extends StatelessWidget {
   final WatchProvider service;
   final bool isSelected;
-  final bool isSelectedID;
   final VoidCallback onTap;
 
   const ServiceLogoTile({
     super.key,
     required this.service,
     required this.isSelected,
-    required this.isSelectedID,
     required this.onTap,
   });
 
@@ -307,28 +297,13 @@ class ServiceLogoTile extends StatelessWidget {
           ),
         ),
         child: CachedNetworkImage(
-              imageUrl: "https://image.tmdb.org/t/p/w500${service.logoPath}" ,
-              fit: BoxFit.fill,
-              width: double.infinity,
-              height: double.infinity,
-              errorWidget: (context, url, error) => Image.asset("assets/noimage.jpg"),
-           
-            )
+          imageUrl: "https://image.tmdb.org/t/p/w500${service.logoPath}",
+          fit: BoxFit.fill,
+          width: double.infinity,
+          height: double.infinity,
+          errorWidget: (context, url, error) => Image.asset("assets/noimage.jpg"),
+        ),
       ),
     );
   }
 }
-
-// NOTE: Before running, ensure you have set up your 'assets/images/' folder
-// and declared it in pubspec.yaml. 
-/* // pubspec.yaml example:
-flutter:
-  assets:
-    - assets/netflix_logo.png
-    - assets/hulu_logo.png
-    # ... and so on for all logos
-*/
-
-// void main() {
-//   runApp(const MaterialApp(home: ServiceSelectionScreen()));
-// }

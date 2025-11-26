@@ -1,27 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:finishd/provider/onboarding_provider.dart';
 
 // Define the primary green color
-const Color primaryGreen = Color(0xFF1E88E5); 
+const Color primaryGreen = Color(0xFF1E88E5);
 
 // Data model for genres
 class Genre {
   final String name;
   final String emoji;
-  Genre(this.name, this.emoji);
+  final int genreId; // TMDB genre ID
+  Genre(this.name, this.emoji, this.genreId);
 }
 
-// Example genre list
+// Example genre list with TMDB genre IDs
 final List<Genre> genres = [
-  Genre('Drama', '🎭'),
-  Genre('Comedy', '😂'),
-  Genre('Romance', '💖'),
-  Genre('Action', '🔫'),
-  Genre('Horror', '👻'),
-  Genre('Sci-Fi', '🚀'),
-  Genre('Documentary', '🎥'),
-  Genre('Thriller', '🔪'),
+  Genre('Drama', '🎭', 18),
+  Genre('Comedy', '😂', 35),
+  Genre('Romance', '💖', 10749),
+  Genre('Action', '🔫', 28),
+  Genre('Horror', '👻', 27),
+  Genre('Sci-Fi', '🚀', 878),
+  Genre('Documentary', '🎥', 99),
+  Genre('Thriller', '🔪', 53),
 ];
-
 
 class GenreSelectionScreen extends StatefulWidget {
   const GenreSelectionScreen({super.key});
@@ -31,27 +33,15 @@ class GenreSelectionScreen extends StatefulWidget {
 }
 
 class _GenreSelectionScreenState extends State<GenreSelectionScreen> {
-  // Set to store the currently selected genres
-  final Set<String> _selectedGenres = {};
   final int _minSelections = 3;
-
-  void _toggleGenre(String genreName) {
-    setState(() {
-      if (_selectedGenres.contains(genreName)) {
-        _selectedGenres.remove(genreName);
-      } else {
-        _selectedGenres.add(genreName);
-      }
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
-    // Determine if the Continue button should be enabled
-    final bool isContinueEnabled = _selectedGenres.length >= _minSelections;
+    final onboardingProvider = Provider.of<OnboardingProvider>(context);
+    final bool isContinueEnabled =
+        onboardingProvider.selectedGenres.length >= _minSelections;
 
     return Scaffold(
-  
       // Wrap the content in a Column to place it above the bottom button
       body: SafeArea(
         child: Column(
@@ -59,7 +49,10 @@ class _GenreSelectionScreenState extends State<GenreSelectionScreen> {
             // --- Top Content Area ---
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 20.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 25.0,
+                  vertical: 20.0,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -71,7 +64,9 @@ class _GenreSelectionScreenState extends State<GenreSelectionScreen> {
                             value: 0.25, // 25% progress for Step 1 of 4
                             minHeight: 8,
                             backgroundColor: Colors.grey.shade200,
-                            valueColor: const AlwaysStoppedAnimation<Color>(Color((0xFF1A8927))),
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              Color((0xFF1A8927)),
+                            ),
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),
@@ -89,7 +84,6 @@ class _GenreSelectionScreenState extends State<GenreSelectionScreen> {
                     const Text(
                       'Step 1 of 4',
                       style: TextStyle(
-                     
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -110,10 +104,7 @@ class _GenreSelectionScreenState extends State<GenreSelectionScreen> {
                     // 3. Subtitle / Instructions
                     Text(
                       'Pick at least $_minSelections genres you enjoy. This helps us find shows you\'ll actually finish.',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        color: Colors.grey,
-                      ),
+                      style: const TextStyle(fontSize: 15, color: Colors.grey),
                     ),
                     const SizedBox(height: 30),
 
@@ -121,22 +112,29 @@ class _GenreSelectionScreenState extends State<GenreSelectionScreen> {
                     // Using GridView.builder for a consistent 2-column layout
                     GridView.builder(
                       shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(), // Important to scroll with parent
+                      physics:
+                          const NeverScrollableScrollPhysics(), // Important to scroll with parent
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
                         crossAxisSpacing: 15.0,
                         mainAxisSpacing: 15.0,
-                        childAspectRatio: 1.25, // Adjust this ratio for height/width of the tiles
+                        childAspectRatio:
+                            1.25, // Adjust this ratio for height/width of the tiles
                       ),
                       itemCount: genres.length,
                       itemBuilder: (context, index) {
                         final genre = genres[index];
-                        final isSelected = _selectedGenres.contains(genre.name);
+                        final isSelected = onboardingProvider.isGenreSelected(
+                          genre.name,
+                        );
 
                         return GenreChip(
                           genre: genre,
                           isSelected: isSelected,
-                          onTap: () => _toggleGenre(genre.name),
+                          onTap: () => onboardingProvider.toggleGenre(
+                            genre.name,
+                            genre.genreId,
+                          ),
                         );
                       },
                     ),
@@ -144,7 +142,7 @@ class _GenreSelectionScreenState extends State<GenreSelectionScreen> {
                 ),
               ),
             ),
-            
+
             // --- Bottom Navigation Button ---
             Container(
               padding: const EdgeInsets.only(
@@ -156,22 +154,31 @@ class _GenreSelectionScreenState extends State<GenreSelectionScreen> {
               // Optional: Add a subtle shadow/border to separate the button area
               decoration: BoxDecoration(
                 color: Colors.white,
-                border: Border(top: BorderSide(color: Colors.grey.shade200, width: 1.0)),
+                border: Border(
+                  top: BorderSide(color: Colors.grey.shade200, width: 1.0),
+                ),
               ),
               child: SizedBox(
                 width: double.infinity,
                 height: 55,
                 child: ElevatedButton(
-                  onPressed: isContinueEnabled 
+                  onPressed: isContinueEnabled
                       ? () {
                           // Action when Continue is pressed
-                          print('Selected Genres: $_selectedGenres');
+                          print(
+                            'Selected Genres: ${onboardingProvider.selectedGenres}',
+                          );
+                          print(
+                            'Selected Genre IDs: ${onboardingProvider.selectedGenreIds}',
+                          );
                           Navigator.pushReplacementNamed(context, 'showSelect');
                         }
                       : null, // Button is disabled if not enough genres are selected
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Color((0xFF1A8927)),
-                    disabledBackgroundColor: Color((0xFF1A8927)).withOpacity(0.5), // Lighter green when disabled
+                    disabledBackgroundColor: Color(
+                      (0xFF1A8927),
+                    ).withOpacity(0.5), // Lighter green when disabled
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -195,7 +202,6 @@ class _GenreSelectionScreenState extends State<GenreSelectionScreen> {
   }
 }
 
-
 // --- Helper Widget: The Genre Selection Tile ---
 class GenreChip extends StatelessWidget {
   final Genre genre;
@@ -217,7 +223,9 @@ class GenreChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16.0),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.green.shade800.withOpacity(0.1): Colors.white, // Light green fill when selected
+          color: isSelected
+              ? Colors.green.shade800.withOpacity(0.1)
+              : Colors.white, // Light green fill when selected
           borderRadius: BorderRadius.circular(15),
           border: Border.all(
             color: isSelected ? Colors.green.shade800 : Colors.grey.shade300,

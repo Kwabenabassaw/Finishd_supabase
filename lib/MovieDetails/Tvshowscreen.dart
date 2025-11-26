@@ -1,14 +1,13 @@
 import 'package:finishd/LoadingWidget/playerloading.dart';
 import 'package:finishd/Model/tvdetail.dart';
 import 'package:finishd/Widget/Cast_avatar.dart';
+import 'package:finishd/Widget/ScoreDisplay.dart';
 import 'package:finishd/Widget/TvStreamingprovider.dart';
 import 'package:finishd/Widget/TrailerPlayer.dart';
 import 'package:finishd/onboarding/CategoriesTypeMove.dart';
 import 'package:finishd/tmbd/fetch_trialler.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:redacted/redacted.dart';
-
 
 // --- Placeholder/Mock Data Models ---
 // Replace these with your actual TMDB models (Movie, CastMember, Season)
@@ -21,7 +20,6 @@ class TvShow {
 
 TvService tvService = TvService();
 bool loadingService = false;
-
 
 // --- The Main Widget ---
 class ShowDetailsScreen extends StatefulWidget {
@@ -40,7 +38,14 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
       body: CustomScrollView(
         slivers: <Widget>[
           // 1. App Bar and Video Player Placeholder
-
+        SliverAppBar(
+          pinned: true,
+          expandedHeight: 100,
+          flexibleSpace: FlexibleSpaceBar(
+          title: Text(widget.movie.name,style: TextStyle(color: Colors.black  ,fontSize: 20,fontWeight: FontWeight.bold)),
+          centerTitle: true,
+          ),
+        ),
           // 2. The Main Content Body
           SliverList(
             delegate: SliverChildListDelegate([
@@ -58,9 +63,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                           builder: (context, snapshot) {
                             if (snapshot.connectionState ==
                                 ConnectionState.waiting) {
-                              return AnimatedTrailerCoverShimmer(
-                               
-                              );
+                              return AnimatedTrailerCoverShimmer();
                             }
                             if (snapshot.hasError) {
                               return _buildcover(
@@ -72,7 +75,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                               return SizedBox(
                                 height: 200,
                                 child: Image.network(
-                                  "https://image.tmdb.org/t/p/w500${widget.movie.backdropPath}",
+                                  "https://image.tmdb.org/t/p/w500${widget.movie.posterPath}",
                                   fit: BoxFit.cover,
                                   height: 100,
                                   width: double.infinity,
@@ -104,15 +107,11 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                         Text(widget.movie.lastAirDate!),
                       ],
                     ),
-    
 
-
-     Streamingprovider(
-  showId: widget.movie.id.toString(),title: widget.movie.name,
-
-),
-
-
+                    Streamingprovider(
+                      showId: widget.movie.id.toString(),
+                      title: widget.movie.name,
+                    ),
 
                     SizedBox(height: 5),
                     // Genres
@@ -120,9 +119,12 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                       widget.movie.genres.map((genre) => genre.name).join(", "),
                     ),
                     SizedBox(height: 5),
-                    scoreWithLabel(widget.movie.voteAverage),
+                    fancyAnimatedScoreWithLabel(
+                      widget.movie.voteAverage,
+                      label: "User",
+                    ),
 
-                 const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
                     // Streaming Services (Logos)
                     // _buildStreamingServices(),
@@ -134,9 +136,15 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                       style: const TextStyle(fontSize: 16, height: 1.5),
                     ),
                     const SizedBox(height: 25),
-                    const Text('Cast', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                    SizedBox(height: 4,),
-                      CastAvatar(showId:widget.movie.id,),
+                    const Text(
+                      'Cast',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    CastAvatar(showId: widget.movie.id),
                     // const SizedBox(height: 25),
 
                     // Cast Section
@@ -148,7 +156,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                     const SizedBox(height: 25),
 
                     // Seasons/Episodes Section
-                    _buildSeasonsSection(widget.movie.seasons),
+                    _buildSeasonsSection(context, widget.movie.seasons),
                     // const SizedBox(height: 40),
                   ],
                 ),
@@ -167,7 +175,11 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
       children: [
         GestureDetector(
           onTap: () => {},
-          child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 50),
+          child: const Icon(
+            Icons.play_arrow_rounded,
+            color: Colors.white,
+            size: 50,
+          ),
         ),
         Positioned(
           bottom: 0,
@@ -183,7 +195,8 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
               child: Image.network(
                 "https://image.tmdb.org/t/p/w500${poster}",
                 height: MediaQuery.of(context).size.height * 0.24,
-                width: 200,
+                width:
+                    MediaQuery.of(context).size.width * 0.5, // Responsive width
                 fit: BoxFit.cover,
               ),
             ),
@@ -252,11 +265,13 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
   Widget _buildTitleAndRuntime(String title, String runtime) {
     return Row(
       children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            overflow: TextOverflow.clip,
+          ),
         ),
-        const Spacer(),
       ],
     );
   }
@@ -352,7 +367,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
         const SizedBox(height: 15),
         // Mock people profiles
         SizedBox(
-          height: MediaQuery.of(context).size.height * 0.14,
+          height: 100,
           child: ListView(
             scrollDirection: Axis.horizontal,
             children: [
@@ -405,8 +420,12 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     );
   }
 
-  Widget _buildSeasonsSection(List<Season> seasons) {
+  Widget _buildSeasonsSection(BuildContext context, List<Season> seasons) {
     if (seasons.isEmpty) return const SizedBox.shrink();
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth = screenWidth * 0.35 > 140 ? 140.0 : screenWidth * 0.35;
+    final cardHeight = cardWidth * 1.3; // Approx aspect ratio
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -417,7 +436,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
         ),
         const SizedBox(height: 15),
         SizedBox(
-          height: 220, // Height for the season posters
+          height: cardHeight + 40, // Height for the season posters
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: seasons.length,
@@ -425,39 +444,44 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
               final season = seasons[index];
               return Padding(
                 padding: const EdgeInsets.only(right: 15.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: CachedNetworkImage(
-                        imageUrl:
-                            "https://image.tmdb.org/t/p/w500${season.posterPath}",
-                        height: 180,
-                        width: 140,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          color: Colors.grey.shade300,
-                          height: 180,
-                          width: 140,
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          color: Colors.grey,
-                          height: 180,
-                          width: 140,
-                          child: const Icon(Icons.error, color: Colors.white),
+                child: SizedBox(
+                  width: cardWidth,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: CachedNetworkImage(
+                          imageUrl:
+                              "https://image.tmdb.org/t/p/w500${season.posterPath}",
+                          height: cardHeight,
+                          width: cardWidth,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            color: Colors.grey.shade300,
+                            height: cardHeight,
+                            width: cardWidth,
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            color: Colors.grey,
+                            height: cardHeight,
+                            width: cardWidth,
+                            child: const Icon(Icons.error, color: Colors.white),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      season.name,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+                      const SizedBox(height: 6),
+                      Text(
+                        season.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             },

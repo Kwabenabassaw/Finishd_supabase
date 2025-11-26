@@ -1,11 +1,11 @@
 import 'package:finishd/Mainpage/Discover.dart';
 import 'package:finishd/Model/trending.dart';
-import 'package:finishd/MovieDetails/movie_details_screen.dart';
 import 'package:finishd/provider/MovieProvider.dart';
 import 'package:finishd/Widget/ImageSlideshow.dart';
 import 'package:finishd/Widget/community_avatar.dart';
 import 'package:finishd/Widget/loading.dart';
-import 'package:finishd/Widget/movie_card.dart';
+import 'package:finishd/Widget/movie_section.dart';
+import 'package:finishd/tmbd/airingToday.dart';
 import 'package:finishd/tmbd/fetchDiscover.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -13,9 +13,9 @@ import 'package:finishd/Model/trendingmovies.dart';
 import 'package:finishd/Model/trendingshow.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
 
-
-  final Trending movieApi = Trending();
-  final Fetchdiscover getDiscover = Fetchdiscover();
+final Trending movieApi = Trending();
+final Fetchdiscover getDiscover = Fetchdiscover();
+final Airingtoday airingToday = Airingtoday();
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
 
@@ -24,14 +24,13 @@ class ExploreScreen extends StatefulWidget {
 }
 
 class _ExploreScreenState extends State<ExploreScreen> {
-
   bool isLoading = true;
   String? error;
 
   @override
   void initState() {
     super.initState();
-    
+
     movieApi.loadGenres();
     fetchData();
   }
@@ -43,13 +42,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
       final popular = List<MediaItem>.from(await movieApi.fetchpopularMovies());
       final upcoming = List<MediaItem>.from(await movieApi.fetchUpcoming());
       final discover = List<MediaItem>.from(await getDiscover.fetchDiscover());
+      final airingTodayshow = List<MediaItem>.from(await airingToday.fetchAiringToday());
 
       final provider = Provider.of<MovieProvider>(context, listen: false);
-      provider.setDiscover( discover);
+      provider.setDiscover(discover);
       provider.setMovies(movies);
       provider.setShows(shows);
       provider.setPopular(popular);
       provider.setUpcoming(upcoming);
+      provider.setAiringToday(airingTodayshow);
 
       setState(() {
         isLoading = false;
@@ -67,233 +68,79 @@ class _ExploreScreenState extends State<ExploreScreen> {
     final provider = Provider.of<MovieProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Explore'),actions: [
-        Padding(padding:
-        EdgeInsetsGeometry.all(15),
-        child: GestureDetector(
-          onTap: (){
-              Navigator.pushNamed(context, 'Search_discover');
-          },
-          child: Icon(Icons.search,weight: 20,),
-        ),
-         )
-        
-      ],
-      
+      appBar: AppBar(
+        title: const Text('Explore'),
+        actions: [
+          Padding(
+            padding: EdgeInsetsGeometry.all(15),
+            child: GestureDetector(
+              onTap: () {
+                Navigator.pushNamed(context, 'Search_discover');
+              },
+              child: Icon(Icons.search, weight: 20),
+            ),
+          ),
+        ],
       ),
       body: isLoading
           ? const Center(child: ExploreShimmer())
           : error != null
-              ? Center(child: Text('Error: $error'))
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(5),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Carousel Banner
-                     if (provider.movies.isNotEmpty)
-                        BannerCarousel(
-                          movies: provider.movies,
-                          movieApi: movieApi,
-                        ),
-                      const SizedBox(height: 10),
-                      Text("Suggested Communities",style: TextStyle(fontWeight: FontWeight.bold,fontSize: 16, ),),
-                      Padding(padding: 
-                      EdgeInsetsGeometry.all(8),
-                      child: 
-                        CommunityAvatarList(),
-                      
-                      ),
-                     const Text(
-                        "Discover",
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16,),
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        height: MediaQuery.of(context).size.height * 0.28,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: provider.discover.length,
-                          itemBuilder: (context, index) {
-                            final movie = provider.discover[index];
-                            final genres = movieApi.getGenreNames(movie.genreIds);
-                            final limited = genres.length > 2
-                                ? genres.take(2).toList()
-                                : genres;
-                            return GenericMovieCard<MediaItem>(
-                              item: movie,
-                              titleBuilder: (m) => m.title ?? "No title",
-                              posterBuilder: (m) =>
-                                  "https://image.tmdb.org/t/p/w500${m.posterPath}",
-                              typeBuilder: (m) => limited.join(", "),
-                              onTap: () {
-                                provider.selectItem(provider.discover, index);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const GenericDetailsScreen(),
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Trending Movies
-                      const Text(
-                        "Trending Movies",
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16,),
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        height: MediaQuery.of(context).size.height * 0.28,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: provider.movies.length,
-                          itemBuilder: (context, index) {
-                            final movie = provider.movies[index];
-                            final genres = movieApi.getGenreNames(movie.genreIds);
-                            final limited = genres.length > 2
-                                ? genres.take(2).toList()
-                                : genres;
-                            return GenericMovieCard<MediaItem>(
-                              item: movie,
-                              titleBuilder: (m) => m.title ?? "No title",
-                              posterBuilder: (m) =>
-                                  "https://image.tmdb.org/t/p/w500${m.posterPath}",
-                              typeBuilder: (m) => limited.join(", "),
-                              onTap: () {
-                                provider.selectItem(provider.movies, index);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const GenericDetailsScreen(),
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Trending Shows
-                      const Text(
-                        "Trending Shows",
-                        style: TextStyle(fontWeight: FontWeight.bold ,fontSize: 16,),
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        height: MediaQuery.of(context).size.height * 0.28,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: provider.shows.length,
-                          itemBuilder: (context, index) {
-                            final show = provider.shows[index];
-                            final genres = movieApi.getGenreNames(show.genreIds);
-                            final limited = genres.length > 2
-                                ? genres.take(2).toList()
-                                : genres;
-                            return GenericMovieCard<MediaItem>(
-                              item: show,
-                              titleBuilder: (s) => s.title ,
-                              posterBuilder: (s) =>
-                                  "https://image.tmdb.org/t/p/w500${s.posterPath}",
-                              typeBuilder: (s) => limited.join(", "),
-                              onTap: () {
-                                provider.selectItem(provider.shows, index);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const GenericDetailsScreen(),
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Popular
-                      const Text(
-                        "Popular",
-                        style: TextStyle(fontWeight: FontWeight.bold ,fontSize: 16,),
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                         height: MediaQuery.of(context).size.height * 0.28,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: provider.popular.length,
-                          itemBuilder: (context, index) {
-                            final show = provider.popular[index];
-                            final genres = movieApi.getGenreNames(show.genreIds);
-                            final limited = genres.length > 2
-                                ? genres.take(2).toList()
-                                : genres;
-                            return GenericMovieCard<MediaItem>(
-                              item: show,
-                              titleBuilder: (s) => s.title,
-                              posterBuilder: (s) =>
-                                  "https://image.tmdb.org/t/p/w500${s.posterPath}",
-                              typeBuilder: (s) => limited.join(", "),
-                              onTap: () {
-                                provider.selectItem(provider.popular, index);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const GenericDetailsScreen(),
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Upcoming
-                      const Text(
-                        "Upcoming",
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16,),
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        height: MediaQuery.of(context).size.height * 0.28,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: provider.upcoming.length,
-                          itemBuilder: (context, index) {
-                            final show = provider.upcoming[index];
-                            final genres = movieApi.getGenreNames(show.genreIds);
-                            final limited = genres.length > 2
-                                ? genres.take(2).toList()
-                                : genres;
-                            return GenericMovieCard<MediaItem>(
-                              item: show,
-                              titleBuilder: (s) => s.title ,
-                              posterBuilder: (s) =>
-                                  "https://image.tmdb.org/t/p/w500${s.posterPath}",
-                              typeBuilder: (s) => limited.join(", "),
-                              onTap: () {
-                                provider.selectItem(provider.upcoming, index);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const GenericDetailsScreen(),
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+          ? Center(child: Text('Error: $error'))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(5),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Carousel Banner
+                  if (provider.movies.isNotEmpty)
+                    BannerCarousel(movies: provider.movies, movieApi: movieApi),
+                  const SizedBox(height: 5),
+                  const Text(
+                    "Suggested Communities",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
-                ),
+                  const Padding(
+                    padding: EdgeInsetsGeometry.all(8),
+                    child: CommunityAvatarList(),
+                  ),
+
+                  MovieSection(
+                    title: "Discover",
+                    items: provider.discover,
+                    movieApi: movieApi,
+                  ),
+
+                  MovieSection(
+                    title: "Trending Movies",
+                    items: provider.movies,
+                    movieApi: movieApi,
+                  ),
+
+                  MovieSection(
+                    title: "Trending Shows",
+                    items: provider.shows,
+                    movieApi: movieApi,
+                  ),
+
+                  MovieSection(
+                    title: "Popular",
+                    items: provider.popular,
+                    movieApi: movieApi,
+                  ),
+
+                  MovieSection(
+                    title: "Upcoming",
+                    items: provider.upcoming,
+                    movieApi: movieApi,
+                  ),
+                  MovieSection(
+                    title: "Airing Today",
+                    items: provider.airingToday,
+                    movieApi: movieApi,
+                  ),
+                ],
+              ),
+            ),
     );
   }
 }

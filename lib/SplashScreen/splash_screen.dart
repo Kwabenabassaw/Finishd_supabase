@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-
+import 'package:provider/provider.dart';
+import 'package:finishd/services/auth_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -24,16 +25,20 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(seconds: 2),
     );
 
-    _animation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeIn,
-    );
+    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
 
     _controller.forward();
 
-    // Navigate to home after a delay
+    // Navigate based on auth state after a delay
     Timer(const Duration(seconds: 4), () {
-      Navigator.pushReplacementNamed(context, '/home');
+      if (mounted) {
+        final authService = Provider.of<AuthService>(context, listen: false);
+        if (authService.currentUser != null) {
+          Navigator.pushReplacementNamed(context, 'homepage');
+        } else {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
+      }
     });
   }
 
@@ -49,9 +54,7 @@ class _SplashScreenState extends State<SplashScreen>
       backgroundColor: const Color(0xFF1A8927),
       body: FadeTransition(
         opacity: _animation,
-        child: Center(
-          child: Image.asset('assets/icon.png')
-        ),
+        child: Center(child: Image.asset('assets/icon.png')),
       ),
     );
   }

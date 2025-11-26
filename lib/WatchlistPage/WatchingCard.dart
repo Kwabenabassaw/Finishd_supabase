@@ -1,12 +1,9 @@
-
 import 'package:flutter/material.dart';
+
 class MovieCard extends StatelessWidget {
   final Map<String, dynamic> movieData;
 
-  const MovieCard({
-    super.key,
-    required this.movieData,
-  });
+  const MovieCard({super.key, required this.movieData});
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +11,7 @@ class MovieCard extends StatelessWidget {
       children: [
         // 1. Card Image Container
         Container(
-          height: 450,
+          height: MediaQuery.of(context).size.height * 0.55,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
             color: Colors.black,
@@ -67,7 +64,11 @@ class MovieCard extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: const [
-                          Icon(Icons.local_movies_outlined, color: Colors.white, size: 16),
+                          Icon(
+                            Icons.local_movies_outlined,
+                            color: Colors.white,
+                            size: 16,
+                          ),
                           SizedBox(width: 5),
                           Text(
                             'ORIGINAL SERIES',

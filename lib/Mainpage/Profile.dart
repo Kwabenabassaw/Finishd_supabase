@@ -1,6 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:finishd/profile/profileScreen.dart';
 import 'package:flutter/material.dart';
-
 
 class Profile extends StatefulWidget {
   const Profile({super.key});
@@ -12,13 +12,14 @@ class Profile extends StatefulWidget {
 class _ProfileState extends State<Profile> {
   @override
   Widget build(BuildContext context) {
-    return ProfileScreen(
-      userProfile:UserProfile(
-    name: 'Jill Doe',
-    email: 'jill.doe@gmail.com',
-  )
-    );
+    final User? user = FirebaseAuth.instance.currentUser;
 
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: Text('Please log in to view your profile.')),
+      );
+    }
+
+    return ProfileScreen(uid: user.uid);
   }
-
 }

@@ -26,18 +26,12 @@ class _ExploreShimmerState extends State<ExploreShimmer>
     _opacity = Tween<double>(
       begin: 0,
       end: 1,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOut,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     _slide = Tween<Offset>(
       begin: const Offset(0, 0.15), // slight slide up
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOut,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     _controller.forward();
   }
@@ -99,8 +93,12 @@ class _ExploreShimmerState extends State<ExploreShimmer>
   }
 
   Widget _horizontalList() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth = screenWidth * 0.35 > 160 ? 160.0 : screenWidth * 0.35;
+    final cardHeight = cardWidth * 1.5; // 2:3 aspect ratio
+
     return SizedBox(
-      height: 200,
+      height: cardHeight + 40, // +40 for text below
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: 6,
@@ -108,11 +106,11 @@ class _ExploreShimmerState extends State<ExploreShimmer>
         itemBuilder: (_, __) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _skeleton(height: 150, width: 110, radius: 12),
+            _skeleton(height: cardHeight, width: cardWidth, radius: 12),
             const SizedBox(height: 8),
-            _skeleton(height: 16, width: 90),
+            _skeleton(height: 10, width: cardWidth * 0.8),
             const SizedBox(height: 5),
-            _skeleton(height: 14, width: 70),
+            _skeleton(height: 10, width: cardWidth * 0.6),
           ],
         ),
       ),

@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+
+
+import 'shareSceen.dart';
+
+
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -7,41 +13,108 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  bool isLiked = false;
+  double sliderValue = 0;
   final List<Map<String, String>> _feedItems = [
     {
-      'image': 'https://images.unsplash.com/photo-1535295972055-1c762f4483e5?q=80&w=2574&auto=format&fit=crop', // Superman-ish figure
+      'image':
+          'https://images.unsplash.com/photo-1535295972055-1c762f4483e5?q=80&w=2574&auto=format&fit=crop',
       'title': 'Superman',
-      'description': 'Clark learns about the source of his abilities and his real home when he enters a Kryptonian ship in the Artic.',
+      'description':
+          'Clark learns about the source of his abilities and his real home when he enters a Kryptonian ship in the Arctic.',
       'likes': '1.2M',
       'comments': '4,021',
     },
     {
-      'image': 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=2525&auto=format&fit=crop', // Rainmaker
+      'image':
+          'https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=2525&auto=format&fit=crop',
       'title': 'Rainmaker',
-      'description': 'Season 1 Finale: The courtroom drama intensifies as the team faces their biggest challenge yet.',
+      'description':
+          'Season 1 Finale: The courtroom drama intensifies as the team faces their biggest challenge yet.',
       'likes': '850K',
       'comments': '2,100',
     },
     {
-      'image': 'https://images.unsplash.com/photo-1541963463532-d68292c34b19?q=80&w=2576&auto=format&fit=crop', // Dune
+      'image':
+          'https://images.unsplash.com/photo-1541963463532-d68292c34b19?q=80&w=2576&auto=format&fit=crop',
       'title': 'Dune: Prophecy',
-      'description': '10,000 years before the ascension of Paul Atreides, the Bene Gesserit is founded.',
+      'description':
+          '10,000 years before the ascension of Paul Atreides, the Bene Gesserit is founded.',
       'likes': '2.4M',
       'comments': '15K',
     },
   ];
 
+  // Emoji slider data
+  final List<String> _emojis = ["😍", "😎", "😢", "😊", "🤩", "🤯", "😂"];
+
+  // Function to show the emoji slider
+  void _showEmojiSlider() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Material(
+              color: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                height: MediaQuery.of(context).size.height * 0.5,
+                decoration: const BoxDecoration(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+                  children: [
+                    // Emoji display on the left
+                    Text(
+                      _emojis[sliderValue.toInt()],
+                      style: const TextStyle(fontSize: 40),
+                    ),
+
+                    // Vertical Slider on the right
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.4,
+                      child: RotatedBox(
+                        quarterTurns: 1,
+                        child: Slider(
+                          value: sliderValue,
+                          min: 0,
+                          max: (_emojis.length - 1).toDouble(),
+                          divisions: _emojis.length - 1,
+                          label: _emojis[sliderValue.toInt()],
+                          onChanged: (value) {
+                            setState(() {
+                              sliderValue = value;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return PageView.builder(
-      scrollDirection: Axis.vertical, // Makes it scroll like TikTok
+      scrollDirection: Axis.vertical,
       itemCount: _feedItems.length,
       itemBuilder: (context, index) {
         final item = _feedItems[index];
         return Stack(
           fit: StackFit.expand,
           children: [
-            // 1. Background Image
+            // Background image
             Image.network(
               item['image']!,
               fit: BoxFit.cover,
@@ -51,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
 
-            // 2. Gradient Overlay (Top and Bottom for text readability)
+            // Gradient overlay
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -68,22 +141,22 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            // 3. Top Bar (Notification, Tabs, Search)
+            // Top bar
             Positioned(
-              top: 60, 
+              top: MediaQuery.of(context).padding.top + 10,
               left: 20,
               right: 20,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   GestureDetector(
-
-                    onTap: () => {
-                      Navigator.pushNamed(context, 'notification')
-                    },
-                    child:const Icon(Icons.notifications_none, color: Colors.white, size: 28), 
-                  )
-                  ,
+                    onTap: () => Navigator.pushNamed(context, 'notification'),
+                    child: const Icon(
+                      Icons.notifications_none,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
                   Row(
                     children: [
                       Text(
@@ -103,50 +176,87 @@ class _HomeScreenState extends State<HomeScreen> {
                               color: Colors.white,
                               fontSize: 17,
                               fontWeight: FontWeight.bold,
-                              shadows: [Shadow(color: Colors.black45, blurRadius: 5)],
+                              shadows: [
+                                Shadow(color: Colors.black45, blurRadius: 5),
+                              ],
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Container(
-                            width: 30,
-                            height: 2,
-                            color: Colors.white,
-                          )
+                          Container(width: 30, height: 2, color: Colors.white),
                         ],
                       ),
                     ],
                   ),
                   GestureDetector(
                     onTap: () => Navigator.pushNamed(context, 'homesearch'),
-                     child:  const Icon(Icons.search, color: Colors.white, size: 28),
-                  )
-                  
+
+                    child: const Icon(
+                      Icons.search,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
                 ],
               ),
             ),
 
-            // 4. Right Sidebar Actions
+            // Right sidebar
             Positioned(
               right: 10,
-              bottom: 100, // Above the bottom nav area
+              bottom: 80 + MediaQuery.of(context).padding.bottom,
               child: Column(
                 children: [
-                  _buildActionBtn(Icons.chat_bubble_outline_outlined, "Comments"),
+                  GestureDetector(
+                    onTap: () => {
+                      Navigator.pushNamed(context, 'comment'),
+                    },
+                    child: _buildActionBtn(
+                      Icons.chat_bubble_outline_outlined,
+                      "Comments",
+                    ),
+                  ),
                   const SizedBox(height: 20),
-                  _buildActionBtn(Icons.people_outline_outlined, "Friends"),
+                  GestureDetector(
+                    onTap: () => {
+                      Navigator.pushNamed(context, 'friends'),
+                    },
+                    child: _buildActionBtn(Icons.people_outline_outlined, "Friends"),
+                  ),
                   const SizedBox(height: 20),
-                  _buildActionBtn(Icons.favorite_border, "Like"),
+
+                  GestureDetector(
+                    onLongPress: () {
+                      _showEmojiSlider();
+                      setState(() {
+                        isLiked = true;
+                      });
+                    }, // LONG PRESS shows slider
+                    onDoubleTap: () {
+                      setState(() {
+                        isLiked = false;
+                      });
+                    },
+                    child: _buildActionBtn(
+                      isLiked ? Icons.favorite : Icons.favorite_border_outlined,
+                      "Like",
+                    ),
+                  ),
                   const SizedBox(height: 20),
-                  _buildActionBtn(Icons.share_outlined, "Share"),
+                  GestureDetector(
+                    onTap: () => {
+                      showShareBottomSheet(context),
+                    },
+                    child: _buildActionBtn(Icons.share_outlined, "Share"),
+                  )
                 ],
               ),
             ),
 
-            // 5. Bottom Info (Title & Description)
+            // Bottom info
             Positioned(
               left: 20,
-              right: 80, // Leave room for sidebar
-              bottom: 30,
+              right: 80,
+              bottom: 40 + MediaQuery.of(context).padding.bottom,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -185,11 +295,9 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         Icon(icon, color: Colors.white, size: 32),
         const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white, fontSize: 10),
-        ),
+        Text(label, style: const TextStyle(color: Colors.white, fontSize: 10)),
       ],
     );
   }
 }
+
