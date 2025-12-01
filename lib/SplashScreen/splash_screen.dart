@@ -54,7 +54,7 @@ class _SplashScreenState extends State<SplashScreen>
       backgroundColor: const Color(0xFF1A8927),
       body: FadeTransition(
         opacity: _animation,
-        child: Center(child: Image.asset('assets/icon.png')),
+        child: Center(child: Image.asset('assets/icon2.png')),
       ),
     );
   }

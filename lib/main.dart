@@ -28,10 +28,15 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:finishd/firebase_options.dart';
 import 'package:finishd/services/auth_service.dart';
+import 'package:finishd/services/push_notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+  await PushNotificationService().initialize(navigatorKey);
+
   runApp(
     MultiProvider(
       providers: [
@@ -40,18 +45,21 @@ void main() async {
         ChangeNotifierProvider(create: (_) => UserProvider()),
         Provider<AuthService>(create: (_) => AuthService()),
       ],
-      child: const MyApp(),
+      child: MyApp(navigatorKey: navigatorKey),
     ),
   );
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final GlobalKey<NavigatorState> navigatorKey;
+
+  const MyApp({super.key, required this.navigatorKey});
 
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Finishd',
       theme: ThemeData(

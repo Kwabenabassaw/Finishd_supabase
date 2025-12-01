@@ -1,7 +1,9 @@
 import 'package:finishd/Model/Searchdiscover.dart';
+import 'package:finishd/Model/movie_list_item.dart';
 import 'package:finishd/Model/trending.dart';
 
 import 'package:finishd/MovieDetails/movie_details_screen.dart';
+import 'package:finishd/Widget/movie_action_drawer.dart';
 import 'package:finishd/provider/MovieProvider.dart';
 import 'package:finishd/tmbd/Search.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
@@ -11,7 +13,6 @@ import 'dart:async';
 import 'package:provider/provider.dart';
 
 Trending api = Trending();
-
 
 // Utility for TMDB image URLs
 String getTmdbImageUrl(String? path, {String size = 'w500'}) {
@@ -42,37 +43,40 @@ class _SearchScreenState extends State<SearchScreen> {
 
   String _lastQuery = '';
 
-void fetchTrendingMovies() async {
-  try {
-    final movies = List<MediaItem>.from(await api.fetchTrendingMovie());
-    final shows = List<MediaItem>.from(await api.fetchTrendingShow());
-    final popular = List<MediaItem>.from(await api.fetchpopularMovies());
-    final upcoming = List<MediaItem>.from(await api.fetchUpcoming());
+  void fetchTrendingMovies() async {
+    try {
+      final movies = List<MediaItem>.from(await api.fetchTrendingMovie());
+      final shows = List<MediaItem>.from(await api.fetchTrendingShow());
+      final popular = List<MediaItem>.from(await api.fetchpopularMovies());
+      final upcoming = List<MediaItem>.from(await api.fetchUpcoming());
 
-    final provider = Provider.of<MovieProvider>(context, listen: false);
-    
-    provider.setMovies(movies);
-    provider.setShows(shows);
-    provider.setPopular(popular);
-    provider.setUpcoming(upcoming);
-    _allResults = movies.map((e) => provider.convertMediaItemToResult(e)).toList(); // This line is causing the error
+      final provider = Provider.of<MovieProvider>(context, listen: false);
 
-    setState(() {
-      _isLoading = false;
-    });
-  } catch (e) {
-    setState(() {
-      var error = e.toString();
-      _isLoading = false;
-      print(error);
-    });
+      provider.setMovies(movies);
+      provider.setShows(shows);
+      provider.setPopular(popular);
+      provider.setUpcoming(upcoming);
+      _allResults = movies
+          .map((e) => provider.convertMediaItemToResult(e))
+          .toList(); // This line is causing the error
+
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        var error = e.toString();
+        _isLoading = false;
+        print(error);
+      });
+    }
   }
-}
+
   @override
   void initState() {
     super.initState();
-  
-   fetchTrendingMovies();
+
+    fetchTrendingMovies();
     provider.clearSearchSelection();
   }
 
@@ -112,10 +116,14 @@ void fetchTrendingMovies() async {
       final results = await search.getSearchitem(trimmedQuery);
 
       setState(() {
-        _allResults = results.where((r) =>
-            r.mediaType != null &&
-            r.mediaType != '' &&
-            r.mediaType != 'unknown').toList();
+        _allResults = results
+            .where(
+              (r) =>
+                  r.mediaType != null &&
+                  r.mediaType != '' &&
+                  r.mediaType != 'unknown',
+            )
+            .toList();
 
         _isLoading = false;
       });
@@ -147,7 +155,6 @@ void fetchTrendingMovies() async {
                   _buildResultsGrid('all'),
                   _buildResultsGrid('movie'),
                   _buildResultsGrid('tv'),
-                  
                 ],
               ),
             ),
@@ -195,7 +202,6 @@ void fetchTrendingMovies() async {
         Tab(text: "All"),
         Tab(text: "Movies"),
         Tab(text: "TV Shows"),
-        
       ],
     );
   }
@@ -206,8 +212,8 @@ void fetchTrendingMovies() async {
     }
 
     final filtered = mediaType == 'all'
-      ? _allResults
-      : _allResults.where((r) => r.mediaType == mediaType).toList();
+        ? _allResults
+        : _allResults.where((r) => r.mediaType == mediaType).toList();
 
     if (filtered.isEmpty) {
       return Center(
@@ -235,23 +241,34 @@ void fetchTrendingMovies() async {
         final displayName = item.mediaType == 'movie'
             ? item.title ?? "Unknown Movie"
             : item.mediaType == 'tv'
-                ? item.name ?? "Unknown Show"
-                : item.name ?? "Unknown Person";
-             
+            ? item.name ?? "Unknown Show"
+            : item.name ?? "Unknown Person";
 
         final imagePath = item.mediaType == 'person'
             ? item.profilePath ?? item.posterPath
             : item.posterPath;
 
         return GestureDetector(
+          onLongPress: () {
+            if (item.mediaType == 'person') return; // Skip for people
+
+            // Convert Result to MovieListItem
+            final movieItem = MovieListItem(
+              id: item.id.toString(),
+              title: displayName,
+              posterPath: item.posterPath,
+              mediaType: item.mediaType ?? 'movie',
+              addedAt: DateTime.now(),
+            );
+
+            showMovieActionDrawer(context, movieItem);
+          },
           onTap: () {
             provider.selectSearchItem(filtered, index);
 
-            Navigator.push(
+            Navigator.pushReplacement(
               context,
-              MaterialPageRoute(
-                builder: (_) => const GenericDetailsScreen(),
-              ),
+              MaterialPageRoute(builder: (_) =>  GenericDetailsScreen()),
             );
           },
           child: Column(

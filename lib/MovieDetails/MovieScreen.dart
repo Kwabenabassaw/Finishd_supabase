@@ -1,12 +1,19 @@
 import 'package:finishd/LoadingWidget/playerloading.dart';
 import 'package:finishd/Model/MovieDetails.dart';
+import 'package:finishd/Model/movie_list_item.dart';
 import 'package:finishd/Model/tvdetail.dart';
 import 'package:finishd/Widget/Cast_avatar.dart';
 import 'package:finishd/Widget/MovieStreamingprovider.dart';
 import 'package:finishd/Widget/ScoreDisplay.dart';
 import 'package:finishd/Widget/TrailerPlayer.dart';
 import 'package:finishd/Widget/TvStreamingprovider.dart';
+import 'package:finishd/Widget/movie_action_drawer.dart';
 import 'package:finishd/tmbd/fetch_trialler.dart';
+import 'package:finishd/Model/recommendation_model.dart';
+import 'package:finishd/Model/user_model.dart';
+import 'package:finishd/services/recommendation_service.dart';
+import 'package:finishd/services/user_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -26,14 +33,38 @@ class MovieDetailsScreen extends StatelessWidget {
     return Scaffold(
       body: CustomScrollView(
         slivers: <Widget>[
-           SliverAppBar(
-          pinned: true,
-          expandedHeight: 100,
-          flexibleSpace: FlexibleSpaceBar(
-          title: Text(  movie.title,style: TextStyle(color: Colors.black  ,fontSize: 20,fontWeight: FontWeight.bold)),
-          centerTitle: true,
+          SliverAppBar(
+            pinned: true,
+            expandedHeight: 100,
+            flexibleSpace: FlexibleSpaceBar(
+              title: Text(
+                movie.title,
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              centerTitle: true,
+            ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.more_vert, color: Colors.black),
+                onPressed: () {
+                  // Convert TvShowDetails to MovieListItem
+                  final movieItem = MovieListItem(
+                    id: movie.id.toString(),
+                    title: movie.title,
+                    posterPath: movie.posterPath,
+                    mediaType: 'movie',
+                    addedAt: DateTime.now(),
+                  );
+
+                  showMovieActionDrawer(context, movieItem);
+                },
+              ),
+            ],
           ),
-        ),
           // 2. The Main Content Body
           SliverList(
             delegate: SliverChildListDelegate([
@@ -350,19 +381,17 @@ class MovieDetailsScreen extends StatelessWidget {
   }
 
   Widget _buildGenres(List<String> genres) {
-    return Row(
+    return Wrap(
+      spacing: 8.0,
+      runSpacing: 4.0,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        ...genres
-            .map(
-              (genre) => Padding(
-                padding: const EdgeInsets.only(right: 8.0),
-                child: Text(
-                  genre,
-                  style: const TextStyle(color: Colors.black54, fontSize: 16),
-                ),
-              ),
-            )
-            .toList(),
+        ...genres.map(
+          (genre) => Text(
+            genre,
+            style: const TextStyle(color: Colors.black54, fontSize: 16),
+          ),
+        ),
         // Runtime
         const Text('•', style: TextStyle(color: Colors.black54, fontSize: 16)),
         Text(
@@ -449,51 +478,68 @@ class MovieDetailsScreen extends StatelessWidget {
   // }
 
   Widget _buildRecommendedSection() {
-    // This is often a placeholder since recommendations are complex to mock
-    // It maintains the structure from the image.
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return const SizedBox.shrink();
+
+    final RecommendationService recommendationService = RecommendationService();
+    final UserService userService = UserService();
+
+    return StreamBuilder<List<Recommendation>>(
+      stream: recommendationService.getMyRecommendationsForMovie(
+        user.uid,
+        movie.id.toString(),
+      ),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final recommendations = snapshot.data!;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Recommended by',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Recommended by',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.arrow_forward, color: Colors.black),
+                  onPressed: () {
+                    // TODO: Show full list in a bottom sheet or new screen
+                  },
+                ),
+              ],
             ),
-            IconButton(
-              icon: const Icon(Icons.arrow_forward, color: Colors.black),
-              onPressed: () {},
+            const SizedBox(height: 15),
+            SizedBox(
+              height: 100,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: recommendations.length,
+                itemBuilder: (context, index) {
+                  final rec = recommendations[index];
+                  return FutureBuilder<UserModel?>(
+                    future: userService.getUser(rec.fromUserId),
+                    builder: (context, userSnapshot) {
+                      final sender = userSnapshot.data;
+                      if (sender == null) return const SizedBox.shrink();
+
+                      return _buildPersonTile(
+                        sender.username,
+                        sender.profileImage,
+                      );
+                    },
+                  );
+                },
+              ),
             ),
           ],
-        ),
-        const SizedBox(height: 15),
-        // Mock people profiles
-        SizedBox(
-          height: 100,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              _buildPersonTile(
-                'Esther Howard',
-                'https://i.imgur.com/qE4J3gI.jpg',
-              ),
-              _buildPersonTile(
-                'Brooklyn Simmons',
-                'https://i.imgur.com/7w3k9Xm.jpg',
-              ),
-              _buildPersonTile(
-                'Cameron Williamson',
-                'https://i.imgur.com/hXG2Z0S.jpg',
-              ),
-              _buildPersonTile(
-                'Kwabena Mensah',
-                'https://i.imgur.com/R5v8q2y.jpg',
-              ),
-            ],
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -504,8 +550,10 @@ class MovieDetailsScreen extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 30,
-            backgroundImage: CachedNetworkImageProvider(imageUrl),
-            backgroundColor: Colors.yellow, // Mock color
+            backgroundImage: imageUrl.isNotEmpty
+                ? CachedNetworkImageProvider(imageUrl)
+                : const AssetImage('assets/noimage.jpg') as ImageProvider,
+            backgroundColor: Colors.grey.shade200,
           ),
           const SizedBox(height: 8),
           SizedBox(

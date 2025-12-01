@@ -110,12 +110,18 @@ class AnimatedScoreDisplay extends StatelessWidget {
                     ),
                   ),
                   // The score text inside the circle
-                  Text(
-                    "$currentPercent%",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      color: currentColor,
+                  FittedBox(
+                    fit: BoxFit.contain,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Text(
+                        "$currentPercent%",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: currentColor,
+                        ),
+                      ),
                     ),
                   ),
                 ],

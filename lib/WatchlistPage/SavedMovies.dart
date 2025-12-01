@@ -16,23 +16,10 @@ class _WatchedState extends State<Watched> {
   @override
   void initState() {
     super.initState();
-    fetchShows();
+
   }
 
-  Future<void> fetchShows() async {
-    final url = Uri.parse('https://api.tvmaze.com/shows');
-    final response = await http.get(url);
-
-    if (response.statusCode == 200) {
-      setState(() {
-        shows = jsonDecode(response.body);
-        isLoading = false;
-      });
-    } else {
-      throw Exception('Failed to load shows');
-    }
-  }
-
+ 
   @override
   Widget build(BuildContext context) {
     return Scaffold(

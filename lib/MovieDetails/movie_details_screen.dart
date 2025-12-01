@@ -1,6 +1,5 @@
 import 'package:finishd/LoadingWidget/Tvshowscreenloader.dart';
 import 'package:finishd/Model/MovieDetails.dart';
-import 'package:finishd/Model/trending.dart';
 import 'package:finishd/Model/tvdetail.dart';
 import 'package:finishd/MovieDetails/MovieScreen.dart';
 import 'package:finishd/MovieDetails/Tvshowscreen.dart';
@@ -74,26 +73,6 @@ class _GenericDetailsScreenState extends State<GenericDetailsScreen> {
         return true;
       },
       child: Scaffold(
-        appBar: AppBar(
-          automaticallyImplyLeading: true,
-          title: Text(item.title ?? "Details"),
-          centerTitle: true,
-          actions: const [
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8),
-              child: Icon(Icons.favorite_border),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8),
-              child: Icon(Icons.share),
-            ),
-            Padding(
-              padding: EdgeInsets.only(right: 16),
-              child: Icon(Icons.ios_share),
-            ),
-          ],
-        ),
-
         /// 🔥 Show Movie or TV details correctly
         body: isTV
             ? (provider.showDetail != null

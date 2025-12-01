@@ -42,17 +42,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await Provider.of<AuthService>(
-        context,
-        listen: false,
-      ).signUpWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-        firstName: _firstNameController.text.trim(),
-        lastName: _lastNameController.text.trim(),
-      );
+      final result = await Provider.of<AuthService>(context, listen: false)
+          .signUpWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+            firstName: _firstNameController.text.trim(),
+            lastName: _lastNameController.text.trim(),
+          );
+
       if (mounted) {
-        Navigator.pushReplacementNamed(context, 'genre');
+        // If new user, go to onboarding
+        if (result['isNewUser'] == true) {
+          Navigator.pushReplacementNamed(context, 'genre');
+        } else {
+          // Existing user (signed in), skip onboarding
+          Navigator.pushReplacementNamed(context, 'homepage');
+        }
       }
     } catch (e) {
       if (mounted) {

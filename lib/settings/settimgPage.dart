@@ -1,4 +1,6 @@
- import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -11,7 +13,7 @@ class SettingsScreen extends StatelessWidget {
         'items': [
           {'icon': Icons.closed_caption_outlined, 'title': 'Subtitles'},
           {'icon': Icons.play_circle_outline, 'title': 'Autoplay Next Episode'},
-        ]
+        ],
       },
       {
         'title': 'App Preferences',
@@ -20,7 +22,7 @@ class SettingsScreen extends StatelessWidget {
           {'icon': Icons.language, 'title': 'Language'},
           {'icon': Icons.notifications_none_outlined, 'title': 'Notifications'},
           {'icon': Icons.public, 'title': 'Streaming Services'},
-        ]
+        ],
       },
       {
         'title': 'About',
@@ -28,16 +30,12 @@ class SettingsScreen extends StatelessWidget {
           {'icon': Icons.help_outline, 'title': 'Help & Support'},
           {'icon': Icons.description_outlined, 'title': 'Terms & Privacy'},
           {'icon': Icons.web_asset_outlined, 'title': 'App Version'},
-        ]
+        ],
       },
     ];
 
     return Scaffold(
-      appBar: AppBar(
-     
-        centerTitle: true,
-        title: const Text('Settings'),
-      ),
+      appBar: AppBar(centerTitle: true, title: const Text('Settings')),
       body: SafeArea(
         child: Column(
           children: [
@@ -78,7 +76,24 @@ class SettingsScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 50,
                 child: OutlinedButton(
-                  onPressed: () {},
+                  onPressed: () async {
+                    try {
+                      await FirebaseAuth.instance.signOut();
+                      if (context.mounted) {
+                        Navigator.pushNamedAndRemoveUntil(
+                          context,
+                          '/login',
+                          (route) => false,
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error logging out: $e')),
+                        );
+                      }
+                    }
+                  },
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.red),
                     shape: RoundedRectangleBorder(
@@ -88,10 +103,7 @@ class SettingsScreen extends StatelessWidget {
                   ),
                   child: const Text(
                     'Logout',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -131,11 +143,7 @@ class _SettingsTile extends StatelessWidget {
   final String title;
   final VoidCallback? onTap;
 
-  const _SettingsTile({
-    required this.icon,
-    required this.title,
-    this.onTap,
-  });
+  const _SettingsTile({required this.icon, required this.title, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -143,7 +151,8 @@ class _SettingsTile extends StatelessWidget {
       contentPadding: const EdgeInsets.symmetric(horizontal: 20),
       leading: Icon(
         icon,
-        color: Colors.black87, // Slightly softer black for icons usually looks better
+        color: Colors
+            .black87, // Slightly softer black for icons usually looks better
         size: 24,
       ),
       title: Text(

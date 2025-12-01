@@ -26,19 +26,19 @@ class MovieSection extends StatelessWidget {
     if (items.isEmpty) return const SizedBox.shrink();
 
     final screenWidth = MediaQuery.of(context).size.width;
-    final cardWidth = screenWidth * 0.35 > 160 ? 160.0 : screenWidth * 0.35;
-    final imgHeight = cardWidth * 1.5;
+    final cardWidth = screenWidth * 0.90 > 190 ? 160.0 : screenWidth * 0.35;
+    final imgHeight = cardWidth * 1.3;
     final listHeight =
-        imgHeight + 60; // Image + spacing + 2 lines of text + padding
+        imgHeight + 80; // Image + spacing + 2 lines of text + padding
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
         ),
-        const SizedBox(height: 5),
+       
         SizedBox(
           height: listHeight,
           child: ListView.builder(
@@ -151,7 +151,7 @@ class MovieSection extends StatelessWidget {
             },
           ),
         ),
-        const SizedBox(height: 40),
+       
       ],
     );
   }

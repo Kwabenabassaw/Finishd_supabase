@@ -54,30 +54,22 @@ class UserService {
     try {
       WriteBatch batch = _firestore.batch();
 
+      // Add to current user's following subcollection
       DocumentReference followingRef = _firestore
-          .collection(_followingCollection)
+          .collection(_usersCollection)
           .doc(currentUid)
-          .collection('list')
+          .collection(_followingCollection)
           .doc(targetUid);
 
+      // Add to target user's followers subcollection
       DocumentReference followerRef = _firestore
-          .collection(_followersCollection)
+          .collection(_usersCollection)
           .doc(targetUid)
-          .collection('list')
+          .collection(_followersCollection)
           .doc(currentUid);
-
-      DocumentReference currentUserRef = _firestore
-          .collection(_usersCollection)
-          .doc(currentUid);
-      DocumentReference targetUserRef = _firestore
-          .collection(_usersCollection)
-          .doc(targetUid);
 
       batch.set(followingRef, {'followedAt': FieldValue.serverTimestamp()});
       batch.set(followerRef, {'followedAt': FieldValue.serverTimestamp()});
-
-      batch.update(currentUserRef, {'followingCount': FieldValue.increment(1)});
-      batch.update(targetUserRef, {'followersCount': FieldValue.increment(1)});
 
       await batch.commit();
     } catch (e) {
@@ -91,32 +83,22 @@ class UserService {
     try {
       WriteBatch batch = _firestore.batch();
 
+      // Remove from current user's following subcollection
       DocumentReference followingRef = _firestore
-          .collection(_followingCollection)
+          .collection(_usersCollection)
           .doc(currentUid)
-          .collection('list')
+          .collection(_followingCollection)
           .doc(targetUid);
 
+      // Remove from target user's followers subcollection
       DocumentReference followerRef = _firestore
-          .collection(_followersCollection)
+          .collection(_usersCollection)
           .doc(targetUid)
-          .collection('list')
+          .collection(_followersCollection)
           .doc(currentUid);
-
-      DocumentReference currentUserRef = _firestore
-          .collection(_usersCollection)
-          .doc(currentUid);
-      DocumentReference targetUserRef = _firestore
-          .collection(_usersCollection)
-          .doc(targetUid);
 
       batch.delete(followingRef);
       batch.delete(followerRef);
-
-      batch.update(currentUserRef, {
-        'followingCount': FieldValue.increment(-1),
-      });
-      batch.update(targetUserRef, {'followersCount': FieldValue.increment(-1)});
 
       await batch.commit();
     } catch (e) {
@@ -129,15 +111,111 @@ class UserService {
   Future<bool> isFollowing(String currentUid, String targetUid) async {
     try {
       DocumentSnapshot doc = await _firestore
-          .collection(_followingCollection)
+          .collection(_usersCollection)
           .doc(currentUid)
-          .collection('list')
+          .collection(_followingCollection)
           .doc(targetUid)
           .get();
       return doc.exists;
     } catch (e) {
       print('Error checking follow status: $e');
       return false;
+    }
+  }
+
+  // Get followers list
+  Future<List<String>> getFollowers(String uid) async {
+    try {
+      QuerySnapshot snapshot = await _firestore
+          .collection(_usersCollection)
+          .doc(uid)
+          .collection(_followersCollection)
+          .get();
+      return snapshot.docs.map((doc) => doc.id).toList();
+    } catch (e) {
+      print('Error fetching followers: $e');
+      return [];
+    }
+  }
+
+  // Get following list
+  Future<List<String>> getFollowing(String uid) async {
+    try {
+      QuerySnapshot snapshot = await _firestore
+          .collection(_usersCollection)
+          .doc(uid)
+          .collection(_followingCollection)
+          .get();
+      return snapshot.docs.map((doc) => doc.id).toList();
+    } catch (e) {
+      print('Error fetching following: $e');
+      return [];
+    }
+  }
+
+  // Get all users (for Find Friends)
+  Future<List<UserModel>> getAllUsers() async {
+    try {
+      QuerySnapshot snapshot = await _firestore
+          .collection(_usersCollection)
+          .get();
+      return snapshot.docs.map((doc) => UserModel.fromDocument(doc)).toList();
+    } catch (e) {
+      print('Error fetching all users: $e');
+      return [];
+    }
+  }
+
+  // Get users by list of IDs
+  Future<List<UserModel>> getUsers(List<String> uids) async {
+    if (uids.isEmpty) return [];
+    try {
+      List<UserModel> users = [];
+      for (String uid in uids) {
+        DocumentSnapshot doc = await _firestore
+            .collection(_usersCollection)
+            .doc(uid)
+            .get();
+        if (doc.exists) {
+          users.add(UserModel.fromDocument(doc));
+        }
+      }
+      return users;
+    } catch (e) {
+      print('Error fetching users by IDs: $e');
+      return [];
+    }
+  }
+
+  // Get followers count
+  Future<int> getFollowersCount(String uid) async {
+    try {
+      AggregateQuerySnapshot snapshot = await _firestore
+          .collection(_usersCollection)
+          .doc(uid)
+          .collection(_followersCollection)
+          .count()
+          .get();
+      return snapshot.count ?? 0;
+    } catch (e) {
+      print('Error fetching followers count: $e');
+      return 0;
+    }
+  }
+
+  // Get following count
+  Future<int> getFollowingCount(String uid) async {
+    try {
+      AggregateQuerySnapshot snapshot = await _firestore
+          .collection(_usersCollection)
+          .doc(uid)
+          .collection(_followingCollection)
+          .count()
+          .get();
+      return snapshot.count ?? 0;
+    } catch (e) {
+      print('Error fetching following count: $e');
+      return 0;
     }
   }
 }

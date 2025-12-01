@@ -1,5 +1,7 @@
 import 'package:finishd/Model/movie_item.dart';
+import 'package:finishd/Model/movie_list_item.dart';
 import 'package:finishd/MovieDetails/MovieScreen.dart';
+import 'package:finishd/Widget/movie_action_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
@@ -15,7 +17,7 @@ class MoviePosterGrid extends StatelessWidget {
     if (movies.isEmpty) {
       return const Center(
         child: Padding(
-          padding: EdgeInsets.all(20.0),
+          padding: EdgeInsets.all(30.0),
           child: Text(
             'No movies found in this list.',
             style: TextStyle(color: Colors.grey),
@@ -25,7 +27,8 @@ class MoviePosterGrid extends StatelessWidget {
     }
 
     return GridView.builder(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(20.0),
+       
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3, // 3 columns as per the design
         childAspectRatio: 0.65, // Adjust this ratio to fit poster aspect
@@ -35,11 +38,24 @@ class MoviePosterGrid extends StatelessWidget {
       itemCount: movies.length,
       // Important: Disable scrolling for the GridView itself,
       // as the SingleChildScrollView of the parent handles it.
-      physics: const NeverScrollableScrollPhysics(),
+      physics: const  AlwaysScrollableScrollPhysics(),
+      
       shrinkWrap: true, // Make the grid take only as much space as its children
       itemBuilder: (context, index) {
         final movie = movies[index];
         return GestureDetector(
+          onLongPress: () {
+            // Convert MovieItem to MovieListItem
+            final movieItem = MovieListItem(
+              id: movie.id.toString(),
+              title: movie.title ?? 'Unknown',
+              posterPath: movie.posterPath,
+              mediaType: movie.mediaType ?? 'movie',
+              addedAt: DateTime.now(),
+            );
+
+            showMovieActionDrawer(context, movieItem);
+          },
           onTap: () async {
             // Show loading indicator
             showDialog(
@@ -105,6 +121,7 @@ class MoviePosterGrid extends StatelessWidget {
           },
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            
             children: [
               Expanded(
                 child: ClipRRect(
@@ -140,10 +157,15 @@ class MoviePosterGrid extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 11, color: Colors.grey),
               ),
+              
             ],
           ),
         );
+       
       },
+      
     );
+    
   }
+  
 }

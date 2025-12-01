@@ -20,9 +20,41 @@ class ServiceSelectionScreen extends StatefulWidget {
 }
 
 class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
+  List<WatchProvider>? _cachedServices;
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadServices();
+  }
+
+  Future<void> _loadServices() async {
+    try {
+      final services = await getprovider.getMovieprovide();
+      if (mounted) {
+        setState(() {
+          _cachedServices = services;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final onboardingProvider = Provider.of<OnboardingProvider>(context, listen: true);
+    final onboardingProvider = Provider.of<OnboardingProvider>(
+      context,
+      listen: true,
+    );
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -54,52 +86,44 @@ class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
                   const SizedBox(height: 10),
                   const Text(
                     'We\'ll only recommend shows you can actually watch.',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(fontSize: 15, color: Colors.grey),
                   ),
                   const SizedBox(height: 30),
                   _buildSearchBar(),
                   const SizedBox(height: 25),
-                  FutureBuilder(
-                    future: getprovider.getMovieprovide(),
-                    builder: (context, asyncSnapshot) {
-                      if (asyncSnapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      } else if (asyncSnapshot.hasError) {
-                        return Text('Error: ${asyncSnapshot.error}');
-                      }
-                      final services = asyncSnapshot.data!;
-                      return GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 15.0,
-                          mainAxisSpacing: 15.0,
-                          childAspectRatio: 1.5,
+                  _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _error != null
+                      ? Text('Error: $_error')
+                      : GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                crossAxisSpacing: 15.0,
+                                mainAxisSpacing: 15.0,
+                                childAspectRatio: 0.85,
+                              ),
+                          itemCount: _cachedServices!.length,
+                          itemBuilder: (context, index) {
+                            final service = _cachedServices![index];
+                            final isSelected = onboardingProvider
+                                .isProviderSelected(service.providerId);
+                            return ServiceLogoTile(
+                              service: service,
+                              isSelected: isSelected,
+                              onTap: () {
+                                final provider = SelectedProvider(
+                                  providerId: service.providerId,
+                                  providerName: service.providerName,
+                                  logoPath: service.logoPath ?? '',
+                                );
+                                onboardingProvider.toggleProvider(provider);
+                              },
+                            );
+                          },
                         ),
-                        itemCount: services.length,
-                        itemBuilder: (context, index) {
-                          final service = services[index];
-                          final isSelected = onboardingProvider.isProviderSelected(service.providerId);
-                          return ServiceLogoTile(
-                            service: service,
-                            isSelected: isSelected,
-                            onTap: () {
-                              final provider = SelectedProvider(
-                                providerId: service.providerId,
-                                providerName: service.providerName,
-                                logoPath: service.logoPath ?? '',
-                              );
-                              onboardingProvider.toggleProvider(provider);
-                            },
-                          );
-                        },
-                      );
-                    },
-                  ),
                 ],
               ),
             ),
@@ -177,7 +201,10 @@ class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
   }
 
   Widget _buildBottomButtonBar(BuildContext context) {
-    final onboardingProvider = Provider.of<OnboardingProvider>(context, listen: false);
+    final onboardingProvider = Provider.of<OnboardingProvider>(
+      context,
+      listen: false,
+    );
 
     return Container(
       color: Colors.white,
@@ -199,7 +226,8 @@ class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
                   showDialog(
                     context: context,
                     barrierDismissible: false,
-                    builder: (context) => const Center(child: CircularProgressIndicator()),
+                    builder: (context) =>
+                        const Center(child: CircularProgressIndicator()),
                   );
 
                   final success = await onboardingProvider.saveToFirestore();
@@ -208,15 +236,22 @@ class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
 
                   if (success) {
                     print('Successfully saved preferences!');
-                    print('Selected Genres: ${onboardingProvider.selectedGenres}');
                     print(
-                        'Selected Movies/Shows: ${onboardingProvider.selectedMovies.length + onboardingProvider.selectedShows.length}');
-                    print('Selected Providers: ${onboardingProvider.selectedProviders}');
+                      'Selected Genres: ${onboardingProvider.selectedGenres}',
+                    );
+                    print(
+                      'Selected Movies/Shows: ${onboardingProvider.selectedMovies.length + onboardingProvider.selectedShows.length}',
+                    );
+                    print(
+                      'Selected Providers: ${onboardingProvider.selectedProviders}',
+                    );
                     Navigator.pushReplacementNamed(context, 'welcome');
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Failed to save preferences: ${onboardingProvider.errorMessage}'),
+                        content: Text(
+                          'Failed to save preferences: ${onboardingProvider.errorMessage}',
+                        ),
                         backgroundColor: Colors.red,
                       ),
                     );
@@ -285,24 +320,58 @@ class ServiceLogoTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(10.0),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: isSelected ? primaryGreen.withOpacity(0.1) : Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isSelected ? primaryGreen : Colors.grey.shade300,
-            width: isSelected ? 2.0 : 1.0,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isSelected ? primaryGreen : Colors.grey.shade300,
+                width: isSelected ? 3.0 : 2.0,
+              ),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: primaryGreen.withOpacity(0.3),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                      ),
+                    ]
+                  : [],
+            ),
+            child: ClipOval(
+              child: Container(
+                color: Colors.white,
+                padding: const EdgeInsets.all(12),
+                child: CachedNetworkImage(
+                  imageUrl:
+                      "https://image.tmdb.org/t/p/w500${service.logoPath}",
+                  fit: BoxFit.contain,
+                  placeholder: (context, url) => const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  errorWidget: (context, url, error) =>
+                      Image.asset("assets/noimage.jpg", fit: BoxFit.contain),
+                ),
+              ),
+            ),
           ),
-        ),
-        child: CachedNetworkImage(
-          imageUrl: "https://image.tmdb.org/t/p/w500${service.logoPath}",
-          fit: BoxFit.fill,
-          width: double.infinity,
-          height: double.infinity,
-          errorWidget: (context, url, error) => Image.asset("assets/noimage.jpg"),
-        ),
+          const SizedBox(height: 8),
+          Text(
+            service.providerName,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: isSelected ? primaryGreen : Colors.black87,
+            ),
+          ),
+        ],
       ),
     );
   }

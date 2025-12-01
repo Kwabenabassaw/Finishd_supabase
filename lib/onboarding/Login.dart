@@ -35,15 +35,20 @@ class _LoginState extends State<Login> {
     setState(() => _isLoading = true);
 
     try {
-      await Provider.of<AuthService>(
-        context,
-        listen: false,
-      ).signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+      final result = await Provider.of<AuthService>(context, listen: false)
+          .signInWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+          );
+
       if (mounted) {
-        Navigator.pushReplacementNamed(context, 'homepage');
+        // If new user (auto-created), go to onboarding
+        if (result['isNewUser'] == true) {
+          Navigator.pushReplacementNamed(context, 'genre');
+        } else {
+          // Existing user, go to homepage
+          Navigator.pushReplacementNamed(context, 'homepage');
+        }
       }
     } catch (e) {
       if (mounted) {

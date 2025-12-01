@@ -6,6 +6,7 @@ class MovieListItem {
   final String title;
   final String? posterPath;
   final String mediaType; // 'movie' or 'tv'
+  final String genre; // Genre information
   final DateTime addedAt;
 
   MovieListItem({
@@ -13,6 +14,7 @@ class MovieListItem {
     required this.title,
     this.posterPath,
     required this.mediaType,
+    this.genre = '',
     required this.addedAt,
   });
 
@@ -23,6 +25,7 @@ class MovieListItem {
       'title': title,
       'posterPath': posterPath,
       'mediaType': mediaType,
+      'genre': genre,
       'addedAt': Timestamp.fromDate(addedAt),
     };
   }
@@ -35,6 +38,7 @@ class MovieListItem {
       title: data['title'] as String,
       posterPath: data['posterPath'] as String?,
       mediaType: data['mediaType'] as String,
+      genre: data['genre'] as String? ?? '',
       addedAt: (data['addedAt'] as Timestamp).toDate(),
     );
   }
@@ -46,9 +50,12 @@ class MovieListItem {
       title: data['title'] as String,
       posterPath: data['posterPath'] as String?,
       mediaType: data['mediaType'] as String,
+      genre: data['genre'] as String? ?? '',
       addedAt: (data['addedAt'] as Timestamp).toDate(),
     );
   }
+
+  get addedTime => null;
 
   // Copy with method for updates
   MovieListItem copyWith({
@@ -56,6 +63,7 @@ class MovieListItem {
     String? title,
     String? posterPath,
     String? mediaType,
+    String? genre,
     DateTime? addedAt,
   }) {
     return MovieListItem(
@@ -63,6 +71,7 @@ class MovieListItem {
       title: title ?? this.title,
       posterPath: posterPath ?? this.posterPath,
       mediaType: mediaType ?? this.mediaType,
+      genre: genre ?? this.genre,
       addedAt: addedAt ?? this.addedAt,
     );
   }

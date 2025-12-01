@@ -15,7 +15,8 @@ class AuthService {
   User? get currentUser => _auth.currentUser;
 
   // Sign Up with Email & Password
-  Future<UserCredential?> signUpWithEmailAndPassword({
+  // Returns a map with 'credential' and 'isNewUser' flag
+  Future<Map<String, dynamic>> signUpWithEmailAndPassword({
     required String email,
     required String password,
     required String firstName,
@@ -34,8 +35,20 @@ class AuthService {
         lastName: lastName,
       );
 
-      return result;
+      return {'credential': result, 'isNewUser': true};
     } on FirebaseAuthException catch (e) {
+      // If email already exists, sign them in instead
+      if (e.code == 'email-already-in-use') {
+        try {
+          final result = await _auth.signInWithEmailAndPassword(
+            email: email,
+            password: password,
+          );
+          return {'credential': result, 'isNewUser': false};
+        } catch (signInError) {
+          throw 'Account exists but password is incorrect.';
+        }
+      }
       throw e.message ?? 'An error occurred during sign up.';
     } catch (e) {
       throw 'An unexpected error occurred.';
@@ -43,16 +56,32 @@ class AuthService {
   }
 
   // Sign In with Email & Password
-  Future<UserCredential?> signInWithEmailAndPassword({
+  // Returns a map with 'credential' and 'isNewUser' flag
+  Future<Map<String, dynamic>> signInWithEmailAndPassword({
     required String email,
     required String password,
   }) async {
     try {
-      return await _auth.signInWithEmailAndPassword(
+      final result = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
+      return {'credential': result, 'isNewUser': false};
     } on FirebaseAuthException catch (e) {
+      // If user doesn't exist, auto-create account
+      if (e.code == 'user-not-found') {
+        try {
+          final result = await _auth.createUserWithEmailAndPassword(
+            email: email,
+            password: password,
+          );
+          // Create user document with basic info
+          await _createUserDocument(result.user);
+          return {'credential': result, 'isNewUser': true};
+        } catch (createError) {
+          throw 'Failed to create account: $createError';
+        }
+      }
       throw e.message ?? 'An error occurred during sign in.';
     } catch (e) {
       throw 'An unexpected error occurred.';

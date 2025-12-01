@@ -4,6 +4,7 @@ import 'package:finishd/services/movie_list_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:finishd/Home/Friends/friend_selection_screen.dart';
 
 /// Interactive bottom sheet drawer for movie list actions
 /// Allows users to add movies to watching, watchlist, finished, or favorites
@@ -277,6 +278,21 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
                   isActive: _movieStatus['favorites']!,
                   onTap: () => _handleAction('favorites'),
                   iconColor: _movieStatus['favorites']! ? Colors.red : null,
+                ),
+                _buildActionTile(
+                  icon: Icons.share_outlined,
+                  title: 'Recommend to...',
+                  isActive: false,
+                  onTap: () {
+                    Navigator.pop(context); // Close drawer first
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            FriendSelectionScreen(movie: widget.movie),
+                      ),
+                    );
+                  },
                 ),
 
                 // Show remove option if movie is in any list

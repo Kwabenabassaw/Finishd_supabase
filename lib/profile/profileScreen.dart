@@ -5,10 +5,13 @@ import 'package:finishd/Model/movie_list_item.dart';
 import 'package:finishd/Model/user_model.dart';
 import 'package:finishd/profile/MoviePosterGrid.dart';
 import 'package:finishd/profile/edit_profile_screen.dart';
+import 'package:finishd/profile/user_list_screen.dart';
 import 'package:finishd/provider/user_provider.dart';
 import 'package:finishd/services/movie_list_service.dart';
 import 'package:finishd/services/user_service.dart';
 import 'package:flutter/material.dart';
+import 'package:finishd/Chat/chatScreen.dart';
+import 'package:finishd/services/chat_service.dart';
 import 'package:provider/provider.dart';
 
 // --- Main Profile Screen Widget ---
@@ -202,183 +205,292 @@ class _ProfileScreenState extends State<ProfileScreen>
                               )
                               .toList();
 
-                      return SingleChildScrollView(
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 10),
-                            // User Avatar
-                            CircleAvatar(
-                              radius: 50,
-                              backgroundImage: user.profileImage.isNotEmpty
-                                  ? CachedNetworkImageProvider(
-                                      user.profileImage,
-                                    )
-                                  : const AssetImage('assets/noimage.jpg')
-                                        as ImageProvider, // Fallback
-                              backgroundColor: Colors.grey.shade200,
-                            ),
-                            const SizedBox(height: 10),
-                            // User Name
-                            Text(
-                              user.username.isNotEmpty
-                                  ? user.username
-                                  : 'No Name',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            // User Email
-                            Text(
-                              user.email,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-
-                            // Stats Row
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                _buildStatColumn(
-                                  "Finishd",
-                                  finishedMovies.length,
-                                ), // Real count from Firebase
-                                _buildStatColumn(
-                                  "Followers",
-                                  user.followersCount,
-                                ),
-                                _buildStatColumn(
-                                  "Following",
-                                  user.followingCount,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-
-                            // Edit Profile or Follow Button
-                            if (isCurrentUser)
-                              ElevatedButton.icon(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          EditProfileScreen(user: user),
-                                    ),
-                                  );
-                                },
-                                icon: const Icon(
-                                  Icons.person_add_alt_1,
-                                  color: Colors.white,
-                                ),
-                                label: const Text(
-                                  'Edit Profile',
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color.fromARGB(
-                                    255,
-                                    3,
-                                    130,
-                                    7,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 30,
-                                    vertical: 10,
-                                  ),
-                                ),
-                              )
-                            else
-                              ElevatedButton(
-                                onPressed: _isCheckingFollow
-                                    ? null
-                                    : _toggleFollow,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _isFollowing
-                                      ? Colors.grey.shade300
-                                      : const Color.fromARGB(255, 3, 130, 7),
-                                  foregroundColor: _isFollowing
-                                      ? Colors.black
-                                      : Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 40,
-                                    vertical: 10,
-                                  ),
-                                ),
-                                child: _isCheckingFollow
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
+                      return RefreshIndicator(
+                        onRefresh: () async {
+                          // Refresh user data and movie lists
+                          await Future.wait([
+                            _userService.getUserStream(widget.uid).first,
+                            MovieListService()
+                                .streamMoviesFromList(widget.uid, 'finished')
+                                .first,
+                            MovieListService()
+                                .streamMoviesFromList(widget.uid, 'watching')
+                                .first,
+                            MovieListService()
+                                .streamMoviesFromList(widget.uid, 'watchlist')
+                                .first,
+                          ]);
+                        },
+                        color: const Color(0xFF1A8927),
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.symmetric(vertical:20 ),
+                          physics: const NeverScrollableScrollPhysics(),
+                         
+                          child: Column(
+                            children: [
+                              const SizedBox(height: 10),
+                              // User Avatar
+                              CircleAvatar(
+                                radius: 50,
+                                backgroundImage: user.profileImage.isNotEmpty
+                                    ? CachedNetworkImageProvider(
+                                        user.profileImage,
                                       )
-                                    : Text(
-                                        _isFollowing ? 'Following' : 'Follow',
-                                      ),
+                                    : const AssetImage('assets/noimage.jpg')
+                                          as ImageProvider, // Fallback
+                                backgroundColor: Colors.grey.shade200,
                               ),
-                            const SizedBox(height: 15),
-
-                            // Bio Text
-                            if (user.bio.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                ),
-                                child: Text(
-                                  user.bio,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.black87,
-                                  ),
-                                  textAlign: TextAlign.center,
+                              const SizedBox(height: 10),
+                              // User Name
+                              Text(
+                                user.username.isNotEmpty
+                                    ? user.username
+                                    : 'No Name',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            const SizedBox(height: 25),
+                              // User Email
+                              Text(
+                                user.email,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
 
-                            // Tabs for content
-                            _buildTabBar(),
-                            SizedBox(
-                              // Adjust height based on content to avoid overflow or empty space
-                              height:
-                                  MediaQuery.of(context).size.height -
-                                  350, // Example adjustment
-                              child: TabBarView(
-                                controller: _tabController,
+                              // Stats Row
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
                                 children: [
-                                  finishedSnapshot.connectionState ==
-                                          ConnectionState.waiting
-                                      ? const Center(
-                                          child: CircularProgressIndicator(),
-                                        )
-                                      : MoviePosterGrid(movies: finishedMovies),
-                                  watchingSnapshot.connectionState ==
-                                          ConnectionState.waiting
-                                      ? const Center(
-                                          child: CircularProgressIndicator(),
-                                        )
-                                      : MoviePosterGrid(movies: watchingMovies),
-                                  watchlistSnapshot.connectionState ==
-                                          ConnectionState.waiting
-                                      ? const Center(
-                                          child: CircularProgressIndicator(),
-                                        )
-                                      : MoviePosterGrid(
-                                          movies: watchLaterMovies,
-                                        ),
+                                  _buildStatColumn(
+                                    "Finishd",
+                                    finishedMovies.length,
+                                  ), // Real count from Firebase
+                                  FutureBuilder<int>(
+                                    future: _userService.getFollowersCount(
+                                      widget.uid,
+                                    ),
+                                    builder: (context, snapshot) {
+                                      return _buildStatColumn(
+                                        "Followers",
+                                        snapshot.data ?? 0,
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  UserListScreen(
+                                                    title: 'Followers',
+                                                    uid: widget.uid,
+                                                    isFollowers: true,
+                                                  ),
+                                            ),
+                                          );
+                                        },
+                                      );
+                                    },
+                                  ),
+                                  FutureBuilder<int>(
+                                    future: _userService.getFollowingCount(
+                                      widget.uid,
+                                    ),
+                                    builder: (context, snapshot) {
+                                      return _buildStatColumn(
+                                        "Following",
+                                        snapshot.data ?? 0,
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  UserListScreen(
+                                                    title: 'Following',
+                                                    uid: widget.uid,
+                                                    isFollowers: false,
+                                                  ),
+                                            ),
+                                          );
+                                        },
+                                      );
+                                    },
+                                  ),
                                 ],
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 20),
+
+                              // Edit Profile or Follow Button
+                              if (isCurrentUser)
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            EditProfileScreen(user: user),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(
+                                    Icons.person_add_alt_1,
+                                    color: Colors.white,
+                                  ),
+                                  label: const Text(
+                                    'Edit Profile',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color.fromARGB(
+                                      255,
+                                      3,
+                                      130,
+                                      7,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 30,
+                                      vertical: 10,
+                                    ),
+                                  ),
+                                )
+                              else
+                                ElevatedButton(
+                                  onPressed: _isCheckingFollow
+                                      ? null
+                                      : _toggleFollow,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _isFollowing
+                                        ? Colors.grey.shade300
+                                        : const Color.fromARGB(255, 3, 130, 7),
+                                    foregroundColor: _isFollowing
+                                        ? Colors.black
+                                        : Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 40,
+                                      vertical: 10,
+                                    ),
+                                  ),
+                                  child: _isCheckingFollow
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              _isFollowing
+                                                  ? 'Friends'
+                                                  : 'Add Friend',
+                                            ),
+                                            if (_isFollowing) ...[
+                                              const SizedBox(width: 8),
+                                              GestureDetector(
+                                                onTap: () async {
+                                                  // Navigate to chat
+                                                  final chatService =
+                                                      ChatService(); // Instantiate locally or use provider
+                                                  // We need the full user object to pass to ChatScreen
+                                                  // Since we only have uid here, we might need to fetch it or pass it if available
+                                                  // Ideally ProfileScreen should have the full user object from the stream
+                                                  final chatId =
+                                                      await chatService
+                                                          .createChat(
+                                                            _currentUserId,
+                                                            widget.uid,
+                                                          );
+                                                  if (context.mounted) {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (context) =>
+                                                            ChatScreen(
+                                                              chatId: chatId,
+                                                              otherUser: user,
+                                                            ),
+                                                      ),
+                                                    );
+                                                  }
+                                                },
+                                                child: const Icon(
+                                                  Icons.chat_bubble_outline,
+                                                  size: 20,
+                                                  color: Colors.black,
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                ),
+                              const SizedBox(height: 15),
+
+                              // Bio Text
+                              if (user.bio.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                  ),
+                                  child: Text(
+                                    user.bio,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.black87,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              const SizedBox(height: 25),
+
+                              // Tabs for content
+                              _buildTabBar(),
+                              SizedBox(
+                                // Adjust height based on content to avoid overflow or empty space
+                                height:
+                                    MediaQuery.of(context).size.height -
+                                    350, // Example adjustment
+                                child: TabBarView(
+                                  controller: _tabController,
+                                  children: [
+                                    finishedSnapshot.connectionState ==
+                                            ConnectionState.waiting
+                                        ? const Center(
+                                            child: CircularProgressIndicator(),
+                                          )
+                                        : MoviePosterGrid(
+                                            movies: finishedMovies,
+                                          ),
+                                    watchingSnapshot.connectionState ==
+                                            ConnectionState.waiting
+                                        ? const Center(
+                                            child: CircularProgressIndicator(),
+                                          )
+                                        : MoviePosterGrid(
+                                            movies: watchingMovies,
+                                          ),
+                                    watchlistSnapshot.connectionState ==
+                                            ConnectionState.waiting
+                                        ? const Center(
+                                            child: CircularProgressIndicator(),
+                                          )
+                                        : MoviePosterGrid(
+                                            movies: watchLaterMovies,
+                                          ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },
@@ -394,15 +506,18 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   // --- Helper Widgets for ProfileScreen ---
 
-  Widget _buildStatColumn(String label, int count) {
-    return Column(
-      children: [
-        Text(
-          count.toString(),
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-        ),
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-      ],
+  Widget _buildStatColumn(String label, int count, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Text(
+            count.toString(),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          Text(label, style: const TextStyle(fontSize: 16, color: Colors.grey)),
+        ],
+      ),
     );
   }
 
@@ -414,7 +529,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       ),
       child: TabBar(
         controller: _tabController,
-        indicatorColor: Colors.black, // Active tab indicator color
+        indicatorColor: Colors.green.shade900, // Active tab indicator color
         labelColor: Colors.black, // Active tab text color
         unselectedLabelColor: Colors.grey, // Inactive tab text color
         labelStyle: const TextStyle(fontWeight: FontWeight.bold),
