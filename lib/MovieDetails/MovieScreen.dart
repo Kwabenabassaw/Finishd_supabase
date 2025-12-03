@@ -4,9 +4,7 @@ import 'package:finishd/Model/movie_list_item.dart';
 import 'package:finishd/Model/tvdetail.dart';
 import 'package:finishd/Widget/Cast_avatar.dart';
 import 'package:finishd/Widget/MovieStreamingprovider.dart';
-import 'package:finishd/Widget/ScoreDisplay.dart';
 import 'package:finishd/Widget/TrailerPlayer.dart';
-import 'package:finishd/Widget/TvStreamingprovider.dart';
 import 'package:finishd/Widget/movie_action_drawer.dart';
 import 'package:finishd/tmbd/fetch_trialler.dart';
 import 'package:finishd/Model/recommendation_model.dart';
@@ -16,6 +14,9 @@ import 'package:finishd/services/user_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:finishd/MovieDetails/movie_recommenders_screen.dart';
+import 'package:finishd/Widget/related_content_section.dart';
+import 'package:finishd/Widget/ratings_display_widget.dart';
 
 // --- Placeholder/Mock Data Models ---
 // Replace these with your actual TMDB models (Movie, CastMember, Season)
@@ -115,10 +116,12 @@ class MovieDetailsScreen extends StatelessWidget {
                       showId: movie.id,
                       title: movie.title,
                     ),
-                    const SizedBox(height: 5),
-                    fancyAnimatedScoreWithLabel(
-                      movie.voteAverage!,
-                      label: "Rating",
+                    const SizedBox(height: 15),
+
+                    // Ratings from multiple sources
+                    RatingsDisplayWidget(
+                      tmdbId: movie.id,
+                      tmdbRating: movie.voteAverage,
                     ),
                     //Overview
                     Text(
@@ -144,6 +147,13 @@ class MovieDetailsScreen extends StatelessWidget {
                     // Recommended Section (Placeholder for complex logic)
                     _buildRecommendedSection(),
                     const SizedBox(height: 25),
+
+                    // Related Movies Section
+                    RelatedContentSection(
+                      contentId: movie.id,
+                      mediaType: 'movie',
+                      title: movie.title,
+                    ),
 
                     // // Seasons/Episodes Section
                     // _buildSeasonsSection(movie.seasons),
@@ -509,7 +519,15 @@ class MovieDetailsScreen extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.arrow_forward, color: Colors.black),
                   onPressed: () {
-                    // TODO: Show full list in a bottom sheet or new screen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MovieRecommendersScreen(
+                          movieId: movie.id.toString(),
+                          movieTitle: movie.title,
+                        ),
+                      ),
+                    );
                   },
                 ),
               ],

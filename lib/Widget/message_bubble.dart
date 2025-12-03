@@ -23,51 +23,58 @@ class MessageBubble extends StatelessWidget {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+        margin: const EdgeInsets.symmetric(vertical: 3, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
         decoration: BoxDecoration(
-          color: isMe ? const Color(0xFF1A8927) : Colors.grey[200],
+          color: isMe ? const Color(0xFFDCF8C6) : Colors.white,
           borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(12),
-            topRight: const Radius.circular(12),
+            topLeft: const Radius.circular(8),
+            topRight: const Radius.circular(8),
             bottomLeft: isMe
-                ? const Radius.circular(12)
+                ? const Radius.circular(8)
                 : const Radius.circular(0),
             bottomRight: isMe
                 ? const Radius.circular(0)
-                : const Radius.circular(12),
+                : const Radius.circular(8),
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 1,
+              offset: const Offset(0, 1),
+            ),
+          ],
         ),
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               text,
-              style: TextStyle(
-                color: isMe ? Colors.white : Colors.black,
-                fontSize: 16,
+              style: const TextStyle(
+                color: Colors.black87,
+                fontSize: 15,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Row(
               mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 Text(
                   time,
                   style: TextStyle(
-                    color: isMe ? Colors.white70 : Colors.black54,
-                    fontSize: 14,
+                    color: Colors.grey[600],
+                    fontSize: 11,
                   ),
                 ),
-                if (isMe) ...[
-                  const SizedBox(width: 4),
+                if (isMe) ...[ const SizedBox(width: 4),
                   Icon(
                     isRead ? Icons.done_all : Icons.done,
-                    size: 14,
-                    color: isRead ? Colors.blueAccent : Colors.white70,
+                    size: 16,
+                    color: isRead ? const Color(0xFF34B7F1) : Colors.grey,
                   ),
                 ],
               ],

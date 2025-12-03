@@ -7,9 +7,11 @@ import 'package:finishd/Model/user_model.dart';
 import 'package:finishd/services/recommendation_service.dart';
 import 'package:finishd/services/user_service.dart';
 import 'package:finishd/Widget/movie_action_drawer.dart';
+import 'package:finishd/Widget/overlapping_avatars_widget.dart';
+import 'package:finishd/MovieDetails/movie_recommenders_screen.dart';
 import 'package:finishd/MovieDetails/MovieScreen.dart';
 import 'package:finishd/MovieDetails/Tvshowscreen.dart';
-import 'package:finishd/tmbd/fetchtrending.dart'; // For fetching details if needed
+import 'package:finishd/tmbd/fetchtrending.dart';
 
 class RecsTab extends StatefulWidget {
   const RecsTab({super.key});
@@ -56,7 +58,7 @@ class _RecsTabState extends State<RecsTab> {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  'When friends recommend movies,\nthey will appear here.',
+                  'When friends recommend movies,\\nthey will appear here.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.grey),
                 ),
@@ -65,24 +67,48 @@ class _RecsTabState extends State<RecsTab> {
           );
         }
 
+        // Group recommendations by movieId
+        final groupedRecs = <String, List<Recommendation>>{};
+        for (final rec in recommendations) {
+          if (!groupedRecs.containsKey(rec.movieId)) {
+            groupedRecs[rec.movieId] = [];
+          }
+          groupedRecs[rec.movieId]!.add(rec);
+        }
+
+        final movieIds = groupedRecs.keys.toList();
+
         return ListView.builder(
           padding: const EdgeInsets.all(16),
-          itemCount: recommendations.length,
+          itemCount: movieIds.length,
           itemBuilder: (context, index) {
-            return _buildRecommendationCard(recommendations[index]);
+            final movieId = movieIds[index];
+            final recsForMovie = groupedRecs[movieId]!;
+            return _buildRecommendationCard(recsForMovie);
           },
         );
       },
     );
   }
 
-  Widget _buildRecommendationCard(Recommendation rec) {
-    return FutureBuilder<UserModel?>(
-      future: _userService.getUser(rec.fromUserId),
+  Widget _buildRecommendationCard(List<Recommendation> recs) {
+    // Use the first recommendation for movie details
+    final rec = recs.first;
+    final recommenderCount = recs.length;
+
+    return FutureBuilder<List<UserModel?>>(
+      future: Future.wait(
+        recs.map((r) => _userService.getUser(r.fromUserId)).toList(),
+      ),
       builder: (context, snapshot) {
-        final user = snapshot.data;
-        final senderName = user?.username ?? 'Someone';
-        final senderImage = user?.profileImage;
+        final users = snapshot.data ?? [];
+        final profileImages = users.map((u) => u?.profileImage).toList();
+
+        // Handle case where users list might be empty or have nulls
+        final hasUsers = users.isNotEmpty && users.any((u) => u != null);
+        final firstUsername = users.where((u) => u != null).isNotEmpty
+            ? users.firstWhere((u) => u != null)!.username
+            : 'a friend';
 
         return Card(
           margin: const EdgeInsets.only(bottom: 30),
@@ -98,9 +124,11 @@ class _RecsTabState extends State<RecsTab> {
               // 1. Large Poster (Clickable)
               InkWell(
                 onTap: () async {
-                  // Mark as seen
-                  if (rec.status == 'unread') {
-                    _recommendationService.markAsSeen(rec.id);
+                  // Mark all as seen
+                  for (final r in recs) {
+                    if (r.status == 'unread') {
+                      _recommendationService.markAsSeen(r.id);
+                    }
                   }
                   _navigateToDetails(rec);
                 },
@@ -109,10 +137,10 @@ class _RecsTabState extends State<RecsTab> {
                   borderRadius: BorderRadius.circular(16),
                   child: CachedNetworkImage(
                     imageUrl: rec.moviePosterPath != null
-                        ? 'https://image.tmdb.org/t/p/w780${rec.moviePosterPath}' // Higher res
+                        ? 'https://image.tmdb.org/t/p/w780${rec.moviePosterPath}'
                         : 'https://via.placeholder.com/400x600',
                     width: double.infinity,
-                    height: 450, // Large height
+                    height: 450,
                     fit: BoxFit.cover,
                     placeholder: (context, url) => Container(
                       height: 450,
@@ -144,9 +172,7 @@ class _RecsTabState extends State<RecsTab> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          rec.mediaType == 'movie'
-                              ? 'Movie'
-                              : 'TV Show', // Placeholder for Season/Ep
+                          rec.mediaType == 'movie' ? 'Movie' : 'TV Show',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey.shade600,
@@ -156,16 +182,28 @@ class _RecsTabState extends State<RecsTab> {
                     ),
                   ),
                   const Icon(
-                    Icons.remove_red_eye_outlined, // Binoculars look-alike
-                    color: Color(0xFF1A8927), // Green brand color
+                    Icons.remove_red_eye_outlined,
+                    color: Color(0xFF1A8927),
                     size: 28,
                   ),
                 ],
               ),
               const SizedBox(height: 12),
 
-              // 3. Recommender Row (Clickable/Long Press)
+              // 3. Recommender Row with Overlapping Avatars
               InkWell(
+                onTap: () {
+                  // Navigate to recommenders screen
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => MovieRecommendersScreen(
+                        movieId: rec.movieId,
+                        movieTitle: rec.movieTitle,
+                      ),
+                    ),
+                  );
+                },
                 onLongPress: () {
                   // Add to list action
                   final movieItem = MovieListItem(
@@ -180,41 +218,31 @@ class _RecsTabState extends State<RecsTab> {
                 borderRadius: BorderRadius.circular(8),
                 child: Row(
                   children: [
-                    // Avatar Stack (Placeholder for multiple, currently showing one)
-                    SizedBox(
-                      width: 40, // Width for overlapping avatars if needed
-                      height: 30,
-                      child: Stack(
-                        children: [
-                          CircleAvatar(
-                            radius: 15,
-                            backgroundImage:
-                                senderImage != null && senderImage.isNotEmpty
-                                ? CachedNetworkImageProvider(senderImage)
-                                : const AssetImage('assets/noimage.jpg')
-                                      as ImageProvider,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: RichText(
-                        text: TextSpan(
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 13,
-                          ),
-                          children: [
-                            const TextSpan(text: 'Recommended by '),
-                            TextSpan(
-                              text: senderName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w100,
-                                color: Colors.black87,
+                    // Overlapping Avatars
+                    if (hasUsers)
+                      OverlappingAvatarsWidget(
+                        imageUrls: profileImages,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => MovieRecommendersScreen(
+                                movieId: rec.movieId,
+                                movieTitle: rec.movieTitle,
                               ),
                             ),
-                          ],
+                          );
+                        },
+                      ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        recommenderCount == 1
+                            ? 'Recommended by $firstUsername'
+                            : 'Recommended by $recommenderCount friends',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 13,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),

@@ -4,6 +4,7 @@ import 'package:finishd/models/message_model.dart';
 import 'package:finishd/services/chat_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 
 class ChatScreen extends StatefulWidget {
   final String chatId;
@@ -20,11 +21,28 @@ class _ChatScreenState extends State<ChatScreen> {
   final ChatService _chatService = ChatService();
   final ScrollController _scrollController = ScrollController();
   final String _currentUserId = FirebaseAuth.instance.currentUser!.uid;
+  bool _showEmojiPicker = false;
+  final FocusNode _focusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
     _markAsRead();
+    _focusNode.addListener(() {
+      if (_focusNode.hasFocus && _showEmojiPicker) {
+        setState(() {
+          _showEmojiPicker = false;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    _scrollController.dispose();
+    _focusNode.dispose();
+    super.dispose();
   }
 
   void _markAsRead() {
@@ -55,17 +73,29 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  void _toggleEmojiPicker() {
+    setState(() {
+      _showEmojiPicker = !_showEmojiPicker;
+    });
+    if (_showEmojiPicker) {
+      _focusNode.unfocus();
+    } else {
+      _focusNode.requestFocus();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      // WhatsApp background color
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color.fromARGB(255, 2, 83, 22), // WhatsApp dark green
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        titleSpacing: 0,
         title: Row(
           children: [
             CircleAvatar(
@@ -73,27 +103,39 @@ class _ChatScreenState extends State<ChatScreen> {
               backgroundImage: widget.otherUser.profileImage.isNotEmpty
                   ? NetworkImage(widget.otherUser.profileImage)
                   : null,
+              backgroundColor: Colors.grey[300],
               child: widget.otherUser.profileImage.isEmpty
-                  ? Text(widget.otherUser.username[0].toUpperCase())
+                  ? Text(
+                      widget.otherUser.username[0].toUpperCase(),
+                      style: const TextStyle(color: Colors.white),
+                    )
                   : null,
             ),
             const SizedBox(width: 10),
-            Text(
-              widget.otherUser.username,
-              style: const TextStyle(
-                color: Colors.black,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
+            Expanded(
+              child: Text(
+                widget.otherUser.username,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
         ),
+        actions: [
+         
+          IconButton(
+            icon: const Icon(Icons.more_vert, color: Colors.white),
+            onPressed: () {},
+          ),
+        ],
       ),
       body: Column(
-
         children: [
           Expanded(
-            
             child: StreamBuilder<List<Message>>(
               stream: _chatService.getMessagesStream(widget.chatId),
               builder: (context, snapshot) {
@@ -103,7 +145,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return const Center(
-                    child: Text('No messages yet. Say hi! 👋'),
+                    child: Text(
+                      'No messages yet. Say hi! 👋',
+                      style: TextStyle(color: Colors.black54),
+                    ),
                   );
                 }
 
@@ -112,6 +157,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 return ListView.builder(
                   controller: _scrollController,
                   reverse: true,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final message = messages[index];
@@ -129,6 +175,22 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
           _buildMessageInput(),
+          if (_showEmojiPicker)
+            SizedBox(
+              height: 250,
+              child: EmojiPicker(
+                onEmojiSelected: (category, emoji) {
+                  _messageController.text += emoji.emoji;
+                },
+                config: const Config(
+                  checkPlatformCompatibility: true,
+                  emojiViewConfig: EmojiViewConfig(
+                    columns: 7,
+                    emojiSizeMax: 28,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -136,45 +198,66 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildMessageInput() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, -1),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+      decoration: const BoxDecoration(color: Color(0xFFF0F0F0)),
       child: SafeArea(
         top: false,
         child: Row(
           children: [
             Expanded(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                padding: const EdgeInsets.symmetric(horizontal: 12.0),
                 decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(30.0),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(25.0),
                 ),
-                child: TextField(
-                  controller: _messageController,
-                  decoration: InputDecoration(
-                    hintText: 'Message...',
-                    hintStyle: TextStyle(color: Colors.grey[600]),
-                    border: InputBorder.none,
-                    isDense: true,
-                  ),
-                  onSubmitted: (_) => _sendMessage(),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        _showEmojiPicker
+                            ? Icons.keyboard
+                            : Icons.emoji_emotions_outlined,
+                        color: Colors.grey[600],
+                        size: 24,
+                      ),
+                      onPressed: _toggleEmojiPicker,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _messageController,
+                        focusNode: _focusNode,
+                        decoration: const InputDecoration(
+                          hintText: 'Message',
+                          hintStyle: TextStyle(color: Colors.grey),
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(vertical: 10),
+                        ),
+                        maxLines: null,
+                        textCapitalization: TextCapitalization.sentences,
+                        onSubmitted: (_) => _sendMessage(),
+                      ),
+                    ),
+                   
+                    const SizedBox(width: 4),
+                    
+                  ],
                 ),
               ),
             ),
             const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.send, color: Color(0xFF1A8927)),
-              onPressed: _sendMessage,
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: const Color.fromARGB(255, 2, 83, 22),
+              child: IconButton(
+                icon: const Icon(Icons.send, color: Colors.white, size: 22),
+                onPressed: _sendMessage,
+                padding: EdgeInsets.zero,
+              ),
             ),
           ],
         ),

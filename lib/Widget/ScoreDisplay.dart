@@ -117,7 +117,7 @@ class AnimatedScoreDisplay extends StatelessWidget {
                       child: Text(
                         "$currentPercent%",
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: 12,
                           fontWeight: FontWeight.w900,
                           color: currentColor,
                         ),
@@ -148,9 +148,9 @@ class AnimatedScoreDisplay extends StatelessWidget {
               Text(
                 _getScoreGrade(targetPercent),
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 10,
                   color: baseColor,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w400,
                 ),
               ),
             ],

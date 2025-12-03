@@ -27,8 +27,8 @@ class MoviePosterGrid extends StatelessWidget {
     }
 
     return GridView.builder(
-      padding: const EdgeInsets.all(20.0),
-       
+      padding: const EdgeInsets.fromLTRB(20.0, 20.0, 20.0, 180.0),
+
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3, // 3 columns as per the design
         childAspectRatio: 0.65, // Adjust this ratio to fit poster aspect
@@ -38,8 +38,8 @@ class MoviePosterGrid extends StatelessWidget {
       itemCount: movies.length,
       // Important: Disable scrolling for the GridView itself,
       // as the SingleChildScrollView of the parent handles it.
-      physics: const  AlwaysScrollableScrollPhysics(),
-      
+      physics: const AlwaysScrollableScrollPhysics(),
+
       shrinkWrap: true, // Make the grid take only as much space as its children
       itemBuilder: (context, index) {
         final movie = movies[index];
@@ -121,7 +121,7 @@ class MoviePosterGrid extends StatelessWidget {
           },
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            
+
             children: [
               Expanded(
                 child: ClipRRect(
@@ -157,15 +157,10 @@ class MoviePosterGrid extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 11, color: Colors.grey),
               ),
-              
             ],
           ),
         );
-       
       },
-      
     );
-    
   }
-  
 }

@@ -79,23 +79,29 @@ class YouTubeService {
 
   String? _nextPageToken;
 
-  Future<List<FeedVideo>> fetchVideos() async {
+  /// Fetch videos from YouTube
+  /// If [query] is provided, it uses that specific query.
+  /// Otherwise, it picks a random query from the predefined list.
+  Future<List<FeedVideo>> fetchVideos({String? query}) async {
     if (_apiKey.isEmpty) {
       print('⚠️ Missing YouTube API Key.');
       return [];
     }
 
-    // 🎯 Select a completely random query
-    final String query = _queries[_random.nextInt(_queries.length)];
+    // Use provided query or select a random one
+    final String searchQuery =
+        query ?? _queries[_random.nextInt(_queries.length)];
 
     // 🎯 50% chance to ignore nextPageToken → makes content fresher
-    final bool usePageToken = _nextPageToken != null && _random.nextBool();
+    // Only use page token if we are NOT using a specific query (random discovery mode)
+    final bool usePageToken =
+        query == null && _nextPageToken != null && _random.nextBool();
     final String pageTokenParam = usePageToken
         ? '&pageToken=$_nextPageToken'
         : '';
 
     final url = Uri.parse(
-      '$_baseUrl?part=snippet&q=$query&type=video&maxResults=10&key=$_apiKey&videoDuration=short&videoEmbeddable=true$pageTokenParam',
+      '$_baseUrl?part=snippet&q=$searchQuery&type=video&maxResults=10&key=$_apiKey&videoDuration=short&videoEmbeddable=true$pageTokenParam',
     );
 
     try {

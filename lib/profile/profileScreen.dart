@@ -343,6 +343,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     style: TextStyle(color: Colors.white),
                                   ),
                                   style: ElevatedButton.styleFrom(
+                                  fixedSize: Size(200, 50),
+                                  
                                     backgroundColor: const Color.fromARGB(
                                       255,
                                       3,
@@ -351,6 +353,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(10),
+
                                     ),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 30,
@@ -360,10 +363,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 )
                               else
                                 ElevatedButton(
+                                  
+
                                   onPressed: _isCheckingFollow
                                       ? null
                                       : _toggleFollow,
                                   style: ElevatedButton.styleFrom(
+                                    
                                     backgroundColor: _isFollowing
                                         ? Colors.grey.shade300
                                         : const Color.fromARGB(255, 3, 130, 7),
@@ -372,11 +378,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                                         : Colors.white,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(10),
+
                                     ),
+                                   
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 40,
                                       vertical: 10,
                                     ),
+                                      
                                   ),
                                   child: _isCheckingFollow
                                       ? const SizedBox(

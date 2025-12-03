@@ -58,6 +58,18 @@ service cloud.firestore {
         allow write: if isOwner(userId);
       }
     }
+
+    // Movies collection (for caching ratings)
+    match /movies/{movieId}/ratings/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // Feed cache collection (for personalized feed caching)
+    match /feed_cache/{userId} {
+      allow read: if isAuthenticated() && isOwner(userId);
+      allow write: if isAuthenticated() && isOwner(userId);
+    }
     // Chats collection
     match /chats/{chatId} {
       // Allow read if document doesn't exist (to check existence) OR if user is a participant

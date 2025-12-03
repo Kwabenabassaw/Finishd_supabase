@@ -61,7 +61,9 @@ class _WatchlistState extends State<Watchlist>
         ),
       ),
       body: TabBarView(
+      
         controller: _tabController,
+
         children: [_buildWatchlistTab(), _buildSavedTab()],
       ),
     );
@@ -86,7 +88,9 @@ class _WatchlistState extends State<Watchlist>
 
         if (movies.isEmpty) {
           return Center(
+           
             child: Column(
+
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
@@ -132,7 +136,8 @@ class _WatchlistState extends State<Watchlist>
         final movies = snapshot.data ?? [];
 
         if (movies.isEmpty) {
-          return Center(
+          return Container(
+            padding: const EdgeInsets.fromLTRB(20.0, 20.0, 20.0, 180.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -164,7 +169,7 @@ class _WatchlistState extends State<Watchlist>
   // Full-width list for Watchlist tab
   Widget _buildFullWidthList(List<MovieListItem> movies) {
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    padding: const EdgeInsets.fromLTRB(20.0, 20.0, 20.0, 80.0),
       itemCount: movies.length,
       itemBuilder: (context, index) {
         final movie = movies[index];

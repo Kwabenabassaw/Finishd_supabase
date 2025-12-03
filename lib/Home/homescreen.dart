@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:finishd/models/feed_video.dart';
-import 'package:finishd/services/youtube_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:finishd/services/personalized_feed_service.dart';
 import 'package:finishd/services/fast_video_pool_manager.dart';
 import 'package:finishd/Feed/chewie_video_player.dart';
 
@@ -13,7 +14,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final PageController _pageController = PageController();
-  final YouTubeService _youtubeService = YouTubeService();
+  final PersonalizedFeedService _feedService = PersonalizedFeedService();
   final FastVideoPoolManager _videoManager = FastVideoPoolManager();
 
   final List<FeedVideo> _videos = [];
@@ -52,7 +53,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
 
     try {
-      final newVideos = await _youtubeService.fetchVideos();
+      final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+      final newVideos = await _feedService.loadPersonalizedFeed(uid);
       if (mounted) {
         setState(() {
           _videos.addAll(newVideos);

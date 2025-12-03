@@ -2,7 +2,6 @@ import 'package:finishd/LoadingWidget/playerloading.dart';
 import 'package:finishd/Model/movie_list_item.dart';
 import 'package:finishd/Model/tvdetail.dart';
 import 'package:finishd/Widget/Cast_avatar.dart';
-import 'package:finishd/Widget/ScoreDisplay.dart';
 import 'package:finishd/Widget/TvStreamingprovider.dart';
 import 'package:finishd/Widget/TrailerPlayer.dart';
 import 'package:finishd/Widget/movie_action_drawer.dart';
@@ -15,6 +14,9 @@ import 'package:finishd/services/user_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:finishd/MovieDetails/movie_recommenders_screen.dart';
+import 'package:finishd/Widget/related_content_section.dart';
+import 'package:finishd/Widget/ratings_display_widget.dart';
 
 // --- Placeholder/Mock Data Models ---
 // Replace these with your actual TMDB models (Movie, CastMember, Season)
@@ -151,23 +153,27 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                         ),
                       ],
                     ),
+      Text(
+                      widget.movie.genres.map((genre) => genre.name).join(", "),
+                    ),
 
                     Streamingprovider(
                       showId: widget.movie.id.toString(),
                       title: widget.movie.name,
                     ),
 
-                    SizedBox(height: 5),
-                    // Genres
-                    Text(
-                      widget.movie.genres.map((genre) => genre.name).join(", "),
-                    ),
-                    SizedBox(height: 5),
-                    fancyAnimatedScoreWithLabel(
-                      widget.movie.voteAverage,
-                      label: "User",
+                    SizedBox(height: 15),
+                    
+
+                    // Ratings from multiple sources
+                    RatingsDisplayWidget(
+                      tmdbId: widget.movie.id,
+                      tmdbRating: widget.movie.voteAverage,
                     ),
 
+                    SizedBox(height: 5),
+                    // Genres
+              
                     const SizedBox(height: 16),
 
                     // Streaming Services (Logos)
@@ -201,7 +207,13 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
 
                     // Seasons/Episodes Section
                     _buildSeasonsSection(context, widget.movie.seasons),
-                    // const SizedBox(height: 40),
+
+                    // Related TV Shows Section
+                    RelatedContentSection(
+                      contentId: widget.movie.id,
+                      mediaType: 'tv',
+                      title: widget.movie.name,
+                    ),
                   ],
                 ),
               ),
@@ -421,7 +433,15 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                 IconButton(
                   icon: const Icon(Icons.arrow_forward, color: Colors.black),
                   onPressed: () {
-                    // TODO: Show full list
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MovieRecommendersScreen(
+                          movieId: widget.movie.id.toString(),
+                          movieTitle: widget.movie.name,
+                        ),
+                      ),
+                    );
                   },
                 ),
               ],

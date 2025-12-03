@@ -80,35 +80,37 @@ class Trending {
       }
 
       print("Loaded genres: $genreMap");
-
     } catch (e) {
       print("Genre load error: $e");
     }
   }
-Future<List<MediaItem>> fetchpopularMovies() async {
+
+  Future<List<MediaItem>> fetchpopularMovies() async {
     try {
       Map result = await tmdb.v3.movies.getPopular();
       List list = result['results'] ?? [];
-      return list.map((json) => MediaItem.fromJson(json).copyWith(mediaType: "movie")).toList();
-
+      return list
+          .map((json) => MediaItem.fromJson(json).copyWith(mediaType: "movie"))
+          .toList();
     } catch (e) {
       print("Genre load error: $e");
       return [];
     }
   }
 
-
-  Future <List<MediaItem>> fetchUpcoming() async {
+  Future<List<MediaItem>> fetchUpcoming() async {
     try {
       Map result = await tmdb.v3.movies.getUpcoming();
       List list = result['results'] ?? [];
-      return list.map((json) => MediaItem.fromJson(json).copyWith(mediaType: "movie")).toList();
-
+      return list
+          .map((json) => MediaItem.fromJson(json).copyWith(mediaType: "movie"))
+          .toList();
     } catch (e) {
       print("Genre load error: $e");
       return [];
     }
   }
+
   // ---------------------------------------------------------------------------
   // ✅ GET GENRE NAME BY ID
   // ---------------------------------------------------------------------------
@@ -123,71 +125,98 @@ Future<List<MediaItem>> fetchpopularMovies() async {
     return ids.map((id) => getGenreName(id)).toList();
   }
 
- // ---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   // ✅ FETCH Movie Details
   // ---------------------------------------------------------------------------
 
-Future<MovieDetails> fetchMovieDetails(int movieId) async {
-  try {
-    final result = await tmdb.v3.movies.getDetails(movieId);
+  Future<MovieDetails> fetchMovieDetails(int movieId) async {
+    try {
+      final result = await tmdb.v3.movies.getDetails(movieId);
 
-    // Cast Map<dynamic, dynamic> to Map<String, dynamic>
-    final data = Map<String, dynamic>.from(result);
+      // Cast Map<dynamic, dynamic> to Map<String, dynamic>
+      final data = Map<String, dynamic>.from(result);
 
-    return MovieDetails.fromJson(data);
-  } catch (e) {
-    print("Error fetching movie details: $e");
-    rethrow;
+      return MovieDetails.fromJson(data);
+    } catch (e) {
+      print("Error fetching movie details: $e");
+      rethrow;
+    }
   }
-}
- // ---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   // ✅ FETCH Shows Details
   // ---------------------------------------------------------------------------
 
- Future<TvShowDetails?> fetchDetailsTvShow(int showId) async {
-  try {
-    final result = await tmdb.v3.tv.getDetails(showId); 
-    final data = Map<String, dynamic>.from(result);
-    return TvShowDetails.fromJson(data);
-  } catch (e) {
-    print("Error fetching TV show details: $e");
-    return null; 
+  Future<TvShowDetails?> fetchDetailsTvShow(int showId) async {
+    try {
+      final result = await tmdb.v3.tv.getDetails(showId);
+      final data = Map<String, dynamic>.from(result);
+      return TvShowDetails.fromJson(data);
+    } catch (e) {
+      print("Error fetching TV show details: $e");
+      return null;
+    }
   }
-}
 
- // ---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   // ✅ FETCH Streaming Details
   // ---------------------------------------------------------------------------
- 
- Future <WatchProvidersResponse> fetchStreamingDetails(String showId) async {
-  try {
-    final result = await tmdb.v3.tv.getWatchProviders(showId);
-    final data = Map<String, dynamic>.from(result);
-    return WatchProvidersResponse.fromJson(data);
-  } catch (e) {
-    print("Error fetching streaming details: $e");
-    rethrow;
-  }
-}
 
-Future<WatchProvidersResponse> fetchStreamingDetailsMovie(int movieId) async {
-  try {
-    final result = await tmdb.v3.movies.getWatchProviders(movieId);
-    
-    // Ensure result is a Map
-    if (result is Map<String, dynamic>) {
-      return WatchProvidersResponse.fromJson(result);
-    } else {
-      throw Exception("Invalid data format received from TMDB API");
+  Future<WatchProvidersResponse> fetchStreamingDetails(String showId) async {
+    try {
+      final result = await tmdb.v3.tv.getWatchProviders(showId);
+      final data = Map<String, dynamic>.from(result);
+      return WatchProvidersResponse.fromJson(data);
+    } catch (e) {
+      print("Error fetching streaming details: $e");
+      rethrow;
     }
-  } catch (e) {
-    print("Error fetching streaming details: $e");
-    rethrow;
+  }
+
+  Future<WatchProvidersResponse> fetchStreamingDetailsMovie(int movieId) async {
+    try {
+      final result = await tmdb.v3.movies.getWatchProviders(movieId);
+
+      // Ensure result is a Map
+      if (result is Map<String, dynamic>) {
+        return WatchProvidersResponse.fromJson(result);
+      } else {
+        throw Exception("Invalid data format received from TMDB API");
+      }
+    } catch (e) {
+      print("Error fetching streaming details: $e");
+      rethrow;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // ✅ FETCH RELATED MOVIES
+  // ---------------------------------------------------------------------------
+  Future<List<MediaItem>> fetchRelatedMovies(int movieId) async {
+    try {
+      final result = await tmdb.v3.movies.getSimilar(movieId);
+      List list = result['results'] ?? [];
+      return list
+          .map((json) => MediaItem.fromJson(json).copyWith(mediaType: "movie"))
+          .toList();
+    } catch (e) {
+      print("Error fetching related movies: $e");
+      return [];
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // ✅ FETCH RELATED TV SHOWS
+  // ---------------------------------------------------------------------------
+  Future<List<MediaItem>> fetchRelatedTVShows(int showId) async {
+    try {
+      final result = await tmdb.v3.tv.getSimilar(showId);
+      List list = result['results'] ?? [];
+      return list
+          .map((json) => MediaItem.fromJson(json).copyWith(mediaType: "tv"))
+          .toList();
+    } catch (e) {
+      print("Error fetching related TV shows: $e");
+      return [];
+    }
   }
 }
-
-}
- 
-
-
-
