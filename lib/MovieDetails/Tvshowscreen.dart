@@ -15,6 +15,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:finishd/MovieDetails/movie_recommenders_screen.dart';
+import 'package:finishd/MovieDetails/SeasonDetailsScreen.dart';
 import 'package:finishd/Widget/related_content_section.dart';
 import 'package:finishd/Widget/ratings_display_widget.dart';
 
@@ -527,43 +528,59 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
               final season = seasons[index];
               return Padding(
                 padding: const EdgeInsets.only(right: 15.0),
-                child: SizedBox(
-                  width: cardWidth,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: CachedNetworkImage(
-                          imageUrl:
-                              "https://image.tmdb.org/t/p/w500${season.posterPath}",
-                          height: cardHeight,
-                          width: cardWidth,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => Container(
-                            color: Colors.grey.shade300,
-                            height: cardHeight,
-                            width: cardWidth,
-                          ),
-                          errorWidget: (context, url, error) => Container(
-                            color: Colors.grey,
-                            height: cardHeight,
-                            width: cardWidth,
-                            child: const Icon(Icons.error, color: Colors.white),
-                          ),
+                child: InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SeasonDetailsScreen(
+                          tvId: widget.movie.id,
+                          seasonNumber: season.seasonNumber,
+                          showName: widget.movie.name,
+                          posterPath: widget.movie.posterPath,
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        season.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: SizedBox(
+                    width: cardWidth,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: CachedNetworkImage(
+                            imageUrl:
+                                "https://image.tmdb.org/t/p/w500${season.posterPath}",
+                            height: cardHeight,
+                            width: cardWidth,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Container(
+                              color: Colors.grey.shade300,
+                              height: cardHeight,
+                              width: cardWidth,
+                            ),
+                            errorWidget: (context, url, error) => Container(
+                              color: Colors.grey,
+                              height: cardHeight,
+                              width: cardWidth,
+                              child: const Icon(Icons.error, color: Colors.white),
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 6),
+                        Text(
+                          season.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );

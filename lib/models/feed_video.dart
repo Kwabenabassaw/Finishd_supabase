@@ -4,6 +4,9 @@ class FeedVideo {
   final String thumbnailUrl;
   final String channelName;
   final String description;
+  final String? recommendationReason; // e.g., "Kobby is watching"
+  final String? relatedItemId; // e.g., Movie ID or Friend UID
+  final String? relatedItemType; // e.g., "friend", "trending", "movie"
 
   FeedVideo({
     required this.videoId,
@@ -11,6 +14,9 @@ class FeedVideo {
     required this.thumbnailUrl,
     required this.channelName,
     this.description = '',
+    this.recommendationReason,
+    this.relatedItemId,
+    this.relatedItemType,
   });
 
   /// Factory to create from YouTube API JSON
@@ -30,6 +36,10 @@ class FeedVideo {
         thumbnailUrl: snippet['thumbnails']?['high']?['url'] ?? '',
         channelName: snippet['channelTitle'] ?? '',
         description: snippet['description'] ?? '',
+        // These will be populated manually after fetching from YouTube
+        recommendationReason: null,
+        relatedItemId: null,
+        relatedItemType: null,
       );
     } else {
       // Firestore/Local structure
@@ -39,6 +49,9 @@ class FeedVideo {
         thumbnailUrl: json['thumbnailUrl'] ?? '',
         channelName: json['channelName'] ?? '',
         description: json['description'] ?? '',
+        recommendationReason: json['recommendationReason'],
+        relatedItemId: json['relatedItemId'],
+        relatedItemType: json['relatedItemType'],
       );
     }
   }
@@ -51,6 +64,31 @@ class FeedVideo {
       'thumbnailUrl': thumbnailUrl,
       'channelName': channelName,
       'description': description,
+      'recommendationReason': recommendationReason,
+      'relatedItemId': relatedItemId,
+      'relatedItemType': relatedItemType,
     };
+  }
+
+  FeedVideo copyWith({
+    String? videoId,
+    String? title,
+    String? thumbnailUrl,
+    String? channelName,
+    String? description,
+    String? recommendationReason,
+    String? relatedItemId,
+    String? relatedItemType,
+  }) {
+    return FeedVideo(
+      videoId: videoId ?? this.videoId,
+      title: title ?? this.title,
+      thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+      channelName: channelName ?? this.channelName,
+      description: description ?? this.description,
+      recommendationReason: recommendationReason ?? this.recommendationReason,
+      relatedItemId: relatedItemId ?? this.relatedItemId,
+      relatedItemType: relatedItemType ?? this.relatedItemType,
+    );
   }
 }

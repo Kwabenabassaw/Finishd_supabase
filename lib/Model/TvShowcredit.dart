@@ -30,8 +30,8 @@ class TvShowCredit {
     }
 
     Map<String, dynamic> toJson() => {
-        "cast": cast.map((x) => x?.toJson()).toList(),
-        "crew": crew.map((x) => x?.toJson()).toList(),
+        "cast": cast.map((x) => x.toJson()).toList(),
+        "crew": crew.map((x) => x.toJson()).toList(),
         "id": id,
     };
 

@@ -29,7 +29,7 @@ class TrendingMovies {
         return <String, dynamic>{
             'page': page,
             // Convert each Result object back to a Map using its toJson() method
-            'results': results?.map((e) => e?.toJson()).toList(),
+            'results': results?.map((e) => e.toJson()).toList(),
             'total_pages': totalPages,
             'total_results': totalResults,
         };

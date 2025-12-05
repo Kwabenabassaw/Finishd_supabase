@@ -6,6 +6,7 @@ import 'package:finishd/Model/user_model.dart';
 import 'package:finishd/services/recommendation_service.dart';
 import 'package:finishd/services/user_service.dart';
 import 'package:intl/intl.dart';
+import 'package:finishd/profile/profileScreen.dart';
 
 class MovieRecommendersScreen extends StatefulWidget {
   final String movieId;
@@ -164,13 +165,12 @@ class _MovieRecommendersScreenState extends State<MovieRecommendersScreen> {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () {
-            // TODO: Navigate to user profile
-            // Navigator.push(
-            //   context,
-            //   MaterialPageRoute(
-            //     builder: (context) => UserProfileScreen(userId: user.uid),
-            //   ),
-            // );
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProfileScreen(uid: user.uid),
+              ),
+            );
           },
           child: Padding(
             padding: const EdgeInsets.all(16),

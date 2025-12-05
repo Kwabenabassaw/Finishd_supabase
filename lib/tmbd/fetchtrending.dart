@@ -4,6 +4,7 @@ import 'package:finishd/Model/MovieDetails.dart';
 import 'package:finishd/Model/Watchprovider.dart';
 import 'package:finishd/Model/trending.dart';
 import 'package:finishd/Model/tvdetail.dart';
+import 'package:finishd/Model/season_detail_model.dart';
 import 'package:finishd/onboarding/streamingService.dart';
 import 'package:tmdb_api/tmdb_api.dart';
 
@@ -217,6 +218,20 @@ class Trending {
     } catch (e) {
       print("Error fetching related TV shows: $e");
       return [];
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // ✅ FETCH SEASON DETAILS
+  // ---------------------------------------------------------------------------
+  Future<SeasonDetail?> fetchSeasonDetails(int tvId, int seasonNumber) async {
+    try {
+      final result = await tmdb.v3.tvSeasons.getDetails(tvId, seasonNumber);
+      final data = Map<String, dynamic>.from(result);
+      return SeasonDetail.fromJson(data);
+    } catch (e) {
+      print("Error fetching season details: $e");
+      return null;
     }
   }
 }

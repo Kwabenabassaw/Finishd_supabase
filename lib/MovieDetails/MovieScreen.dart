@@ -1,7 +1,7 @@
 import 'package:finishd/LoadingWidget/playerloading.dart';
 import 'package:finishd/Model/MovieDetails.dart';
 import 'package:finishd/Model/movie_list_item.dart';
-import 'package:finishd/Model/tvdetail.dart';
+
 import 'package:finishd/Widget/Cast_avatar.dart';
 import 'package:finishd/Widget/MovieStreamingprovider.dart';
 import 'package:finishd/Widget/TrailerPlayer.dart';
@@ -172,98 +172,7 @@ class MovieDetailsScreen extends StatelessWidget {
   // Helper Widget Builders (Defined outside the build method for clarity)
   // -------------------------------------------------------------------
 
-  Widget _buildSliverAppBar(BuildContext context) {
-    return SliverAppBar(
-      expandedHeight: 250.0, // Height of the video player area
-      pinned: true,
-      backgroundColor: Colors.white,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.black),
-        onPressed: () => Navigator.pop(context),
-      ),
-      actions: const [
-        // Heart Icon (Favorite)
-        Padding(
-          padding: EdgeInsets.only(right: 8.0),
-          child: Icon(Icons.favorite_border, color: Colors.black),
-        ),
-        // Share Icon
-        Padding(
-          padding: EdgeInsets.only(right: 8.0),
-          child: Icon(Icons.share, color: Colors.black),
-        ),
-        // Options Icon
-        Padding(
-          padding: EdgeInsets.only(right: 16.0),
-          child: Icon(
-            Icons.ios_share,
-            color: Colors.black,
-          ), // Using ios_share for similar look
-        ),
-      ],
-      flexibleSpace: FlexibleSpaceBar(
-        centerTitle: false,
-        background: AspectRatio(
-          aspectRatio: 16 / 9,
-          // Video Player Placeholder Area
-          child: Container(
-            color: Colors.black, // Background of the player
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Replace with your actual video player widget (e.g., video_player, youtube_player_flutter)
-                CachedNetworkImage(
-                  imageUrl:
-                      'https://i.imgur.com/5J3k80s.jpg', // Placeholder image matching the visual
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  height: double.infinity,
-                  errorWidget: (context, url, error) => const Center(
-                    child: Icon(Icons.error, color: Colors.white),
-                  ),
-                ),
-                // Play Button
-                const Icon(
-                  Icons.play_circle_fill,
-                  color: Colors.white,
-                  size: 50,
-                ),
-                // Custom progress bar/timeline (Mocked with a simple row)
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Row(
-                      children: [
-                        const Text(
-                          'Killing Eve',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const Spacer(),
-                        const Icon(Icons.graphic_eq, color: Colors.green),
-                        const SizedBox(width: 4),
-                        const Text('2M', style: TextStyle(color: Colors.white)),
-                        const Spacer(),
-                        // Mock timeline
-                        Container(height: 2, width: 80, color: Colors.red),
-                        Container(height: 2, width: 40, color: Colors.grey),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+
 
   Widget fancyScoreWithLabel(double score, {required String label}) {
     // Convert score (assumed 0-10) to percentage (0-100)
@@ -416,76 +325,7 @@ class MovieDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStreamingServices(List<String> services) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: services
-          .map(
-            (service) => Container(
-              padding: const EdgeInsets.all(8.0),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              // Placeholder for service logos
-              child: Text(
-                service.toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black54,
-                ),
-              ),
-            ),
-          )
-          .toList(),
-    );
-  }
-
-  // Widget _buildCastSection(List<Cast> cast) {
-  //   if (cast.isEmpty) return const SizedBox.shrink();
-
-  //   return Column(
-  //     crossAxisAlignment: CrossAxisAlignment.start,
-  //     children: [
-  //       const Text('Cast', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-  //       const SizedBox(height: 15),
-  //       SizedBox(
-  //         height: 100, // Height for the horizontal list
-  //         child: ListView.builder(
-  //           scrollDirection: Axis.horizontal,
-  //           itemCount: cast.length,
-  //           itemBuilder: (context, index) {
-  //             final member = cast[index];
-  //             return Padding(
-  //               padding: const EdgeInsets.only(right: 20.0),
-  //               child: Column(
-  //                 children: [
-  //                   CircleAvatar(
-  //                     radius: 30,
-  //                     backgroundImage: CachedNetworkImageProvider(member.imageUrl),
-  //                     backgroundColor: Colors.grey.shade200,
-  //                   ),
-  //                   const SizedBox(height: 8),
-  //                   SizedBox(
-  //                     width: 60,
-  //                     child: Text(
-  //                       member.name,
-  //                       textAlign: TextAlign.center,
-  //                       maxLines: 2,
-  //                       overflow: TextOverflow.ellipsis,
-  //                       style: const TextStyle(fontSize: 12),
-  //                     ),
-  //                   ),
-  //                 ],
-  //               ),
-  //             );
-  //           },
-  //         ),
-  //       ),
-  //     ],
-  //   );
-  // }
+ 
 
   Widget _buildRecommendedSection() {
     final user = FirebaseAuth.instance.currentUser;
@@ -589,79 +429,4 @@ class MovieDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSeasonsSection(BuildContext context, List<Season> seasons) {
-    if (seasons.isEmpty) return const SizedBox.shrink();
-
-    final screenWidth = MediaQuery.of(context).size.width;
-    final cardWidth = screenWidth * 0.35 > 140 ? 140.0 : screenWidth * 0.35;
-    final cardHeight = cardWidth * 1.3; // Approx aspect ratio
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '${seasons.length} Seasons',
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 15),
-        SizedBox(
-          height: cardHeight + 40, // Height for the season posters + text
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: seasons.length,
-            itemBuilder: (context, index) {
-              final season = seasons[index];
-              return Padding(
-                padding: const EdgeInsets.only(right: 15.0),
-                child: SizedBox(
-                  width: cardWidth,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: CachedNetworkImage(
-                          imageUrl: season.posterPath.toString(),
-                          height: cardHeight,
-                          width: cardWidth,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => Container(
-                            color: Colors.grey.shade300,
-                            height: cardHeight,
-                            width: cardWidth,
-                          ),
-                          errorWidget: (context, url, error) => Container(
-                            color: Colors.grey,
-                            height: cardHeight,
-                            width: cardWidth,
-                            child: const Icon(Icons.error, color: Colors.white),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        season.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
 }
-
-
-// -------------------------------------------------------------------
-// Example Usage (for testing the screen)
-// -------------------------------------------------------------------
-

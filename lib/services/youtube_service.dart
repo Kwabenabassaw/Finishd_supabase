@@ -82,7 +82,10 @@ class YouTubeService {
   /// Fetch videos from YouTube
   /// If [query] is provided, it uses that specific query.
   /// Otherwise, it picks a random query from the predefined list.
-  Future<List<FeedVideo>> fetchVideos({String? query}) async {
+  Future<List<FeedVideo>> fetchVideos({
+    String? query,
+    String language = 'en',
+  }) async {
     if (_apiKey.isEmpty) {
       print('⚠️ Missing YouTube API Key.');
       return [];
@@ -101,7 +104,7 @@ class YouTubeService {
         : '';
 
     final url = Uri.parse(
-      '$_baseUrl?part=snippet&q=$searchQuery&type=video&maxResults=10&key=$_apiKey&videoDuration=short&videoEmbeddable=true$pageTokenParam',
+      '$_baseUrl?part=snippet&q=$searchQuery&type=video&maxResults=10&key=$_apiKey&videoDuration=short&videoEmbeddable=true&relevanceLanguage=$language$pageTokenParam',
     );
 
     try {

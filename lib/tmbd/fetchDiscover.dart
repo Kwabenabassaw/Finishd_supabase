@@ -1,48 +1,86 @@
-
-
 import 'package:finishd/Model/trending.dart';
 import 'package:tmdb_api/tmdb_api.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class Fetchdiscover {
-
   TMDB tmdb = TMDB(
-   ApiKeys(
+    ApiKeys(
       '829afd9e186fc15a71a6dfe50f3d00ad',
       'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI4MjlhZmQ5ZTE4NmZjMTVhNzFhNmRmZTUwZjNkMDBhZCIsIm5iZiI6IjY1Y2E5NjM5ZjQ0ZjI3MDE0OTJkNzU3ZCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.yqT5XJko1-qlM6PNwYjutel_TQrDQ9L4AKP8KegIUG0',
     ),
   );
 
- Future<List<MediaItem>> fetchDiscover() async {
-  try {
-    // Fetch movies and TV shows from TMDB
-    Map movieData = await tmdb.v3.discover.getMovies( page: 5);
-    Map tvData = await tmdb.v3.discover.getTvShows(
-      page: 5
+  Future<List<MediaItem>> fetchDiscover() async {
+    try {
+      // Fetch movies and TV shows from TMDB
+      Map movieData = await tmdb.v3.discover.getMovies(page: 5);
+      Map tvData = await tmdb.v3.discover.getTvShows(page: 5);
+
+      // Map movie results to MediaItem
+      List<MediaItem> movies =
+          (movieData['results'] as List<dynamic>?)
+              ?.map((item) => MediaItem.fromJson(item, type: 'movie'))
+              .toList() ??
+          [];
+
+      // Map TV results to MediaItem
+      List<MediaItem> tvShows =
+          (tvData['results'] as List<dynamic>?)
+              ?.map((item) => MediaItem.fromJson(item, type: 'tv'))
+              .toList() ??
+          [];
+
+      // Combine movies and TV shows into a single list
+      List<MediaItem> combined = [];
+      combined.addAll(tvShows);
+      combined.addAll(movies);
+      combined.shuffle();
+
+      return combined;
+    } catch (e) {
+      print(e);
+      return [];
+    }
+  }
+
+  Future<List<MediaItem>> fetchContentByProvider(
+    int providerId, {
+    int page = 1,
+  }) async {
+    const apiKey = '829afd9e186fc15a71a6dfe50f3d00ad';
+
+    // Fetch Movies
+    final movieResponse = await http.get(
+      Uri.parse(
+        'https://api.themoviedb.org/3/discover/movie?api_key=$apiKey&with_watch_providers=$providerId&watch_region=US&sort_by=popularity.desc&page=$page',
+      ),
     );
 
-    // Map movie results to MediaItem
-    List<MediaItem> movies = (movieData['results'] as List<dynamic>?)
-            ?.map((item) => MediaItem.fromJson(item, type: 'movie'))
-            .toList() ??
-        [];
+    // Fetch TV Shows
+    final tvResponse = await http.get(
+      Uri.parse(
+        'https://api.themoviedb.org/3/discover/tv?api_key=$apiKey&with_watch_providers=$providerId&watch_region=US&sort_by=popularity.desc&page=$page',
+      ),
+    );
 
-    // Map TV results to MediaItem
-    List<MediaItem> tvShows = (tvData['results'] as List<dynamic>?)
-            ?.map((item) => MediaItem.fromJson(item, type: 'tv'))
-            .toList() ??
-        [];
+    List<MediaItem> content = [];
 
-    // Combine movies and TV shows into a single list
-    List<MediaItem> combined = [];
-     combined.addAll(tvShows);
-    combined.addAll(movies);
-   combined.shuffle();
+    if (movieResponse.statusCode == 200) {
+      final decodedData = json.decode(movieResponse.body)['results'] as List;
+      content.addAll(
+        decodedData.map((m) => MediaItem.fromJson(m, type: 'movie')),
+      );
+    }
 
-    return combined;
-  } catch (e) {
-    print(e);
-    return [];
+    if (tvResponse.statusCode == 200) {
+      final decodedData = json.decode(tvResponse.body)['results'] as List;
+      content.addAll(decodedData.map((m) => MediaItem.fromJson(m, type: 'tv')));
+    }
+
+    // Shuffle to mix movies and TV shows
+    content.shuffle();
+
+    return content;
   }
-}
-
 }

@@ -1,3 +1,4 @@
+import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:finishd/MovieDetails/MovieScreen.dart';
 import 'package:finishd/MovieDetails/Tvshowscreen.dart';
 import 'package:finishd/provider/MovieProvider.dart';
@@ -157,7 +158,7 @@ class _BannerCarouselState extends State<BannerCarousel> {
                 context: context,
                 barrierDismissible: false,
                 builder: (context) =>
-                    const Center(child: CircularProgressIndicator()),
+                    const Center(child: LogoLoadingScreen()),
               );
 
               try {

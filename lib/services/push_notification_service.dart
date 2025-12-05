@@ -1,13 +1,38 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class PushNotificationService {
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
 
   Future<void> initialize(GlobalKey<NavigatorState> navigatorKey) async {
-    // Request permissions
+    // 1. Initialize Local Notifications
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
+    const iosSettings = DarwinInitializationSettings();
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
+
+    await _localNotifications.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: (response) {
+        // Handle local notification tap
+        if (response.payload != null) {
+          // Parse payload if needed, or just navigate based on stored data
+          // For simplicity, we might need to store the message data in a map to retrieve here
+          // Or just rely on FCM's onMessageOpenedApp for background taps
+        }
+      },
+    );
+
+    // 2. Request permissions
     NotificationSettings settings = await _fcm.requestPermission(
       alert: true,
       badge: true,
@@ -17,34 +42,26 @@ class PushNotificationService {
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
       print('User granted permission');
 
-      // Get token
-      String? token = await _fcm.getToken();
-      if (token != null) {
-        print('FCM Token: $token');
-        // Save token to current user's document if logged in
-        // This part usually requires the current user ID to be passed or retrieved from auth service
-      }
+      // 3. Subscribe to Trending Topic
+      await _fcm.subscribeToTopic('trending');
+      print('Subscribed to trending topic');
 
-      // Handle background messages
+      // 4. Handle Background/Terminated Taps
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
         print('Message clicked!');
         _handleMessage(message, navigatorKey);
       });
 
-      // Handle foreground messages
+      // 5. Handle Foreground Messages
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         print('Got a message whilst in the foreground!');
-        print('Message data: ${message.data}');
 
         if (message.notification != null) {
-          print(
-            'Message also contained a notification: ${message.notification}',
-          );
-          // Show local notification or snackbar
+          _showLocalNotification(message);
         }
       });
 
-      // Check if app was opened from a terminated state
+      // 6. Check Initial Message
       RemoteMessage? initialMessage = await _fcm.getInitialMessage();
       if (initialMessage != null) {
         _handleMessage(initialMessage, navigatorKey);
@@ -56,26 +73,81 @@ class PushNotificationService {
     RemoteMessage message,
     GlobalKey<NavigatorState> navigatorKey,
   ) {
-    if (message.data['type'] == 'chat') {
-      final chatId = message.data['chatId'];
-      // Navigate to chat screen
-      // navigatorKey.currentState?.pushNamed('/chat', arguments: chatId);
-      // Note: You'll need to ensure your route handling supports this
+    final data = message.data;
+    final type = data['type'];
+
+    if (type == 'trending') {
+      // Navigate to Trending List
+      navigatorKey.currentState?.pushNamed(
+        '/trending_list',
+        arguments: data['date'],
+      );
+    } else if (type == 'new_episode') {
+      // Navigate to TV Details
+      final tmdbId = int.tryParse(data['tmdbId'] ?? '');
+      if (tmdbId != null) {
+        // Assuming you have a route that takes an ID or object
+        // You might need to fetch the full object or pass just the ID
+        // For now, passing ID map
+        navigatorKey.currentState?.pushNamed(
+          '/tv_details',
+          arguments: {'id': tmdbId},
+        );
+      }
+    } else if (type == 'chat') {
+      final chatId = data['chatId'];
+      navigatorKey.currentState?.pushNamed('/chat', arguments: chatId);
+    }
+  }
+
+  Future<void> _showLocalNotification(RemoteMessage message) async {
+    final notification = message.notification;
+    final androidDetails = AndroidNotificationDetails(
+      'high_importance_channel',
+      'High Importance Notifications',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+    final details = NotificationDetails(android: androidDetails);
+
+    if (notification != null) {
+      await _localNotifications.show(
+        notification.hashCode,
+        notification.title,
+        notification.body,
+        details,
+        payload: message.data.toString(),
+      );
     }
   }
 
   Future<void> saveTokenToDatabase(String userId) async {
     String? token = await _fcm.getToken();
     if (token != null) {
-      await _firestore.collection('users').doc(userId).update({
-        'fcmToken': token,
-      });
+      // Save to subcollection for multi-device support
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('deviceTokens')
+          .doc(token)
+          .set({
+            'token': token,
+            'platform': 'android', // or detect platform
+            'lastUpdated': FieldValue.serverTimestamp(),
+          });
 
-      // Listen for token refresh
+      // Listen for refresh
       _fcm.onTokenRefresh.listen((newToken) async {
-        await _firestore.collection('users').doc(userId).update({
-          'fcmToken': newToken,
-        });
+        await _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('deviceTokens')
+            .doc(newToken)
+            .set({
+              'token': newToken,
+              'platform': 'android',
+              'lastUpdated': FieldValue.serverTimestamp(),
+            });
       });
     }
   }

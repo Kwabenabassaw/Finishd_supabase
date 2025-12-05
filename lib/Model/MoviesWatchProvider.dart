@@ -628,7 +628,7 @@ class Ad {
 
     Map<String, dynamic> toJson() => {
         "link": link,
-        "flatrate": flatrate.map((x) => x?.toJson()).toList(),
+        "flatrate": flatrate.map((x) => x.toJson()).toList(),
     };
 
     @override
@@ -724,9 +724,9 @@ class Ao {
 
     Map<String, dynamic> toJson() => {
         "link": link,
-        "buy": buy.map((x) => x?.toJson()).toList(),
-        "rent": rent.map((x) => x?.toJson()).toList(),
-        "flatrate": flatrate.map((x) => x?.toJson()).toList(),
+        "buy": buy.map((x) => x.toJson()).toList(),
+        "rent": rent.map((x) => x.toJson()).toList(),
+        "flatrate": flatrate.map((x) => x.toJson()).toList(),
     };
 
     @override

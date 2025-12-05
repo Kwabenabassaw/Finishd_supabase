@@ -1,4 +1,4 @@
-import 'package:finishd/Chat/NewChat.dart';
+
 import 'package:finishd/Chat/chatScreen.dart';
 import 'package:finishd/models/chat_model.dart';
 import 'package:finishd/services/chat_service.dart';

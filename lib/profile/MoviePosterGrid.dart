@@ -9,8 +9,9 @@ import 'package:finishd/MovieDetails/Tvshowscreen.dart';
 
 class MoviePosterGrid extends StatelessWidget {
   final List<MovieItem> movies; // Expects a list of MovieItem
+  final ScrollPhysics? physics;
 
-  const MoviePosterGrid({super.key, required this.movies});
+  const MoviePosterGrid({super.key, required this.movies, this.physics});
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +39,7 @@ class MoviePosterGrid extends StatelessWidget {
       itemCount: movies.length,
       // Important: Disable scrolling for the GridView itself,
       // as the SingleChildScrollView of the parent handles it.
-      physics: const AlwaysScrollableScrollPhysics(),
+      physics: physics ?? const AlwaysScrollableScrollPhysics(),
 
       shrinkWrap: true, // Make the grid take only as much space as its children
       itemBuilder: (context, index) {

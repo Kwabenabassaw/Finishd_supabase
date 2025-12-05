@@ -1,3 +1,4 @@
+import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:finishd/Model/trending.dart';
 import 'package:finishd/Model/movie_list_item.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
@@ -86,7 +87,7 @@ class MovieSection extends StatelessWidget {
                     context: context,
                     barrierDismissible: false,
                     builder: (context) =>
-                        const Center(child: CircularProgressIndicator()),
+                        const Center(child: LogoLoadingScreen()),
                   );
 
                   try {

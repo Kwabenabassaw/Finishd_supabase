@@ -20,7 +20,7 @@ class MovieProvider {
     }
 
     Map<String, dynamic> toJson() => {
-        "results": results.map((x) => x?.toJson()).toList(),
+        "results": results.map((x) => x.toJson()).toList(),
     };
 
     @override
