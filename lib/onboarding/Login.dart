@@ -119,12 +119,14 @@ class _LoginState extends State<Login> {
             const SizedBox(height: 30),
 
             // 2. Title
-            const Text(
+            Text(
               'Join the Watch Party',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : Colors.black,
               ),
             ),
             const SizedBox(height: 8),
@@ -195,7 +197,10 @@ class _LoginState extends State<Login> {
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _loginWithGoogle,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
+                      backgroundColor:
+                          Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF1E1E1E)
+                          : Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                         side: const BorderSide(color: Colors.grey, width: 0.5),
@@ -206,7 +211,7 @@ class _LoginState extends State<Login> {
                       spacing: 10,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Image.asset('assets/glogo.png'),
+                        Image.asset('assets/glogo.png', width: 24, height: 24),
                         const Text(
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.right,
@@ -228,7 +233,10 @@ class _LoginState extends State<Login> {
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _loginWithApple,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
+                      backgroundColor:
+                          Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF1E1E1E)
+                          : Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                         side: const BorderSide(color: Colors.grey, width: 0.5),
@@ -239,7 +247,7 @@ class _LoginState extends State<Login> {
                       spacing: 10,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Image.asset('assets/apple.png'),
+                        Image.asset('assets/apple.png', width: 24, height: 24),
                         const Text(
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.right,
@@ -298,21 +306,23 @@ class _LabeledTextFieldState extends State<LabeledTextField> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           widget.label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Colors.black54,
+            color: isDark ? Colors.white70 : Colors.black54,
           ),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: widget.controller,
-          obscureText: _obscureText, // Use the local state
+          obscureText: _obscureText,
           keyboardType: widget.keyboardType,
           style: const TextStyle(fontWeight: FontWeight.w500),
           decoration: InputDecoration(
@@ -327,12 +337,12 @@ class _LabeledTextFieldState extends State<LabeledTextField> {
               borderSide: const BorderSide(color: Colors.grey),
             ),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
             suffixIcon: widget.isPassword
                 ? GestureDetector(
                     onTap: () {
                       setState(() {
-                        _obscureText = !_obscureText; // Toggle local state
+                        _obscureText = !_obscureText;
                       });
                     },
                     child: Icon(
@@ -354,15 +364,17 @@ class ToggleButtonRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       height: 45,
       decoration: BoxDecoration(
-        color: Colors.grey.shade100, // Light grey background
+        color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         children: <Widget>[
-          // Log In Button (Inactive)
+          // Log In Button (Active)
           Expanded(
             child: GestureDetector(
               onTap: () {
@@ -371,7 +383,7 @@ class ToggleButtonRow extends StatelessWidget {
               child: Container(
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: Colors.white, // Active button background
+                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                   borderRadius: BorderRadius.circular(10),
                   boxShadow: [
                     BoxShadow(
@@ -381,14 +393,18 @@ class ToggleButtonRow extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: const Text(
+                child: Text(
                   'Log In',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
                 ),
               ),
             ),
           ),
-          // Sign Up Button (Active)
+          // Sign Up Button (Inactive)
           Expanded(
             child: GestureDetector(
               onTap: () {
@@ -397,15 +413,8 @@ class ToggleButtonRow extends StatelessWidget {
               child: Container(
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: const Color.fromARGB(0, 245, 246, 249),
+                  color: Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 0,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
                 ),
                 child: Text(
                   'Sign Up',

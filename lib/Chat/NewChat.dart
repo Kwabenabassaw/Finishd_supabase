@@ -88,48 +88,48 @@ class _NewChatListScreenState extends State<NewChatListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+          icon: Icon(
+            Icons.arrow_back_ios,
+            color: isDark ? Colors.white : Colors.black,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
+        title: Text(
           'New Chat',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
       ),
       body: Column(
         children: [
           // Search Bar
-          
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: TextField(
-                  controller: _searchController,
-                  onChanged: _filterFriends,
-                  decoration: const InputDecoration(
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: TextField(
+              controller: _searchController,
+              onChanged: _filterFriends,
+              decoration: const InputDecoration(
+                hintText: 'Search for your friends',
+                hintStyle: TextStyle(color: Colors.grey),
 
-                    hintText: 'Search for your friends',
-                    hintStyle: TextStyle(color: Colors.grey),
-                    
-                   border: OutlineInputBorder(
-                     borderRadius: BorderRadius.all(Radius.circular(15.0)),
-                     borderSide: BorderSide(
-                       color: Colors.grey,
-                       
-                     ),
-                     
-                   ),
-                   
-                    isDense: true,
-                  ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(15.0)),
+                  borderSide: BorderSide(color: Colors.grey),
                 ),
+
+                isDense: true,
+              ),
             ),
+          ),
 
           // List of Friends/Contacts
           Expanded(
@@ -159,8 +159,8 @@ class _NewChatListScreenState extends State<NewChatListScreen> {
                         ),
                         title: Text(
                           friend.username,
-                          style: const TextStyle(
-                            color: Colors.black,
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black,
                             fontWeight: FontWeight.w600,
                             fontSize: 16,
                           ),

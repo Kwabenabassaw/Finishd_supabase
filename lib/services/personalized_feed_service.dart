@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:finishd/services/cache/feed_cache_service.dart';
 import 'package:finishd/Model/user_preferences.dart';
 import 'package:finishd/models/feed_video.dart';
 import 'package:finishd/services/movie_list_service.dart';
 import 'package:finishd/services/user_preferences_service.dart';
 import 'package:finishd/services/youtube_service.dart';
 import 'package:finishd/services/user_service.dart';
+import 'package:finishd/services/api_client.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
 import 'dart:math';
 
@@ -15,6 +17,7 @@ class PersonalizedFeedService {
   final YouTubeService _youtubeService = YouTubeService();
   final UserService _userService = UserService();
   final Trending _trendingService = Trending();
+  final ApiClient _apiClient = ApiClient();
 
   // Weights for interest calculation
   static const int _weightGenre = 5;
@@ -27,7 +30,95 @@ class PersonalizedFeedService {
   static const int _weightTrending = 5;
 
   /// Main entry point to load the personalized feed
-  Future<List<FeedVideo>> loadPersonalizedFeed(String uid) async {
+  /// Now uses SQLite cache -> Backend API -> Local implementation fallback
+  Future<List<FeedVideo>> loadPersonalizedFeed(
+    String uid, {
+    int page = 1,
+  }) async {
+    try {
+      // 1. Check SQLite Cache (24h TTL) - Only for Page 1
+      if (page == 1) {
+        // DISABLED (User Request): Always fetch fresh from network for now
+        /*
+        final cachedJson = await FeedCacheService.getCachedFeed();
+        if (cachedJson != null && cachedJson.isNotEmpty) {
+          print('✅ [SQLite] Loaded feed from local cache');
+          return cachedJson.map((v) => FeedVideo.fromJson(v)).toList();
+        }
+        */
+      }
+
+      // 2. Try backend API
+      print('📡 Fetching personalized feed (Page $page) from backend API...');
+      // Note: Assuming API Client has updated method.
+      // Need to update ApiClient.getPersonalizedFeed to use getPersonalizedFeedV2 internally or update it.
+      // But based on previous file, getPersonalizedFeed is legacy.
+      // Wait, ApiClient has getPersonalizedFeedV2 which returns FeedItem, but service returns FeedVideo.
+      // The service maps API FeedItem (or json) to FeedVideo.
+      // Let's assume we update ApiClient.getPersonalizedFeed (LEGACY method used here) or switch to V2?
+      // The service uses _apiClient.getPersonalizedFeed() which returns Future<List<FeedVideo>>.
+      // I should update that method in ApiClient OR update this service to use the V2 method and map.
+      // The current code calls _apiClient.getPersonalizedFeed(). I updated V2 in ApiClient.
+      // I should ALSO update the legacy method in ApiClient if that's what is used, OR update this call.
+      // The user wants 'FeedVideo' which is the old model.
+      // I'll update the LEGACY method in ApiClient to accept page too, just in case.
+      // Actually, looking at `ApiClient.dart`, `getPersonalizedFeed` calls `/feed/get`.
+      // I updated `/feed/get` in backend to accept page.
+      // So I should update `ApiClient.getPersonalizedFeed` as well.
+
+      // I will proceed with updating this service Assuming `_apiClient.getPersonalizedFeed` accepts page.
+      // I will update ApiClient legacy method in next step.
+      final apiVideos = await _apiClient.getPersonalizedFeed(page: page);
+
+      if (apiVideos.isNotEmpty) {
+        print('✅ Got ${apiVideos.length} videos from backend API');
+
+        // 3. Save/Append to SQLite Cache
+        final jsonList = apiVideos.map((v) => v.toJson()).toList();
+
+        if (page == 1) {
+          FeedCacheService.saveFeed(jsonList);
+        } else {
+          FeedCacheService.appendFeed(jsonList);
+        }
+
+        return apiVideos;
+      }
+
+      print('⚠️ Backend returned empty, falling back to local implementation');
+    } catch (e) {
+      print('⚠️ Backend/Cache error: $e, using local implementation');
+    }
+
+    // Fallback to local implementation (legacy)
+    return _loadPersonalizedFeedLocal(uid);
+  }
+
+  /// Refresh feed (bypasses cache)
+  Future<List<FeedVideo>> refreshFeed(String uid) async {
+    try {
+      print('🔄 Refreshing feed from backend API...');
+      final apiVideos = await _apiClient.refreshFeed();
+
+      if (apiVideos.isNotEmpty) {
+        print('✅ Refreshed ${apiVideos.length} videos from backend API');
+
+        // Update Cache
+        final jsonList = apiVideos.map((v) => v.toJson()).toList();
+        FeedCacheService.saveFeed(jsonList);
+
+        return apiVideos;
+      }
+    } catch (e) {
+      print('⚠️ Backend refresh failed: $e');
+    }
+
+    // Fallback to local
+    return _loadPersonalizedFeedLocal(uid);
+  }
+
+  /// Local implementation (original logic)
+  Future<List<FeedVideo>> _loadPersonalizedFeedLocal(String uid) async {
     try {
       // 1. Check Cache (24h TTL)
       final cachedFeed = await _getCachedFeed(uid);

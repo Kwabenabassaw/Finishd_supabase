@@ -66,18 +66,19 @@ class _UserListScreenState extends State<UserListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
           widget.title,
-          style: const TextStyle(
-            color: Colors.black,
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black,
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: Colors.white,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -107,7 +108,7 @@ class _UserListScreenState extends State<UserListScreen> {
                   subtitle: Text(
                     user.firstName.isNotEmpty || user.lastName.isNotEmpty
                         ? '${user.firstName} ${user.lastName}'
-                        : user.email,
+                        : '@${user.username}',
                   ),
                   onTap: () {
                     Navigator.push(

@@ -78,7 +78,7 @@ class _SeasonDetailsScreenState extends State<SeasonDetailsScreen> {
                           style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                          
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -133,7 +133,7 @@ class _SeasonDetailsScreenState extends State<SeasonDetailsScreen> {
       
       expandedHeight: 250.0,
       pinned: true,
-      backgroundColor: Colors.white,
+    
     centerTitle: true,
     title: Text(widget.showName),
       flexibleSpace: FlexibleSpaceBar(

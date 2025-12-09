@@ -48,24 +48,24 @@ class FastVideoPoolManager extends ChangeNotifier {
   }
 
   /// Manages the pool of controllers:
-  /// - Creates needed controllers (Current, +1, +2, -1)
-  /// - Disposes distant controllers (> 3 away)
+  /// - Creates needed controllers (Current, +1, +2, +3, -1)
+  /// - Disposes distant controllers (> 4 away)
   Future<void> _updatePool(int index, List<FeedVideo> videos) async {
     if (_isDisposed) return;
 
-    // 1. Define the window of indices to keep
+    // 1. Define the window of indices to keep (increased for faster loading)
     final window = {
       index, // Current
       index + 1, // Next
       index + 2, // Next + 1 (Preload)
+      index + 3, // Next + 2 (Preload more)
       index - 1, // Previous (Keep for back scroll)
     };
 
-    // 2. Identify controllers to dispose (outside window AND > 3 away)
-    // We keep a slightly larger buffer for disposal to prevent thrashing
-    // if the user scrolls back and forth quickly.
+    // 2. Identify controllers to dispose (outside window AND > 4 away)
+    // Increased buffer for smoother experience
     final toDispose = _controllers.keys.where((key) {
-      return (key - index).abs() > 3;
+      return (key - index).abs() > 4;
     }).toList();
 
     for (final key in toDispose) {
@@ -103,12 +103,12 @@ class FastVideoPoolManager extends ChangeNotifier {
         lowQualityUrl: urls.lowQualityUrl,
         highQualityUrl: urls.highQualityUrl,
         onSwap: () {
-          // Notify UI when swap happens (LQ -> HQ)
+          // Notify UI when swap happens (144p -> 360p)
           notifyListeners();
         },
       );
 
-      // Initialize LQ first (fastest)
+      // Initialize 144p first (fastest - instant start!)
       await dualController.initializeLowQuality();
 
       if (_isDisposed) {
@@ -120,16 +120,16 @@ class FastVideoPoolManager extends ChangeNotifier {
 
       // If this is the current index, play immediately!
       if (index == _currentIndex) {
-        debugPrint('[FastVideoPool] ▶️ Auto-playing index $index (LQ)');
+        debugPrint('[FastVideoPool] ▶️ Auto-playing index $index (144p)');
         dualController.play();
       }
 
       notifyListeners();
 
-      // Start loading HQ in background
+      // Start loading 360p in background
       dualController.initializeHighQuality().then((_) {
         if (index == _currentIndex && !_isDisposed) {
-          debugPrint('[FastVideoPool] ⚡ Swapped to HQ for index $index');
+          debugPrint('[FastVideoPool] ⚡ Upgraded to 360p for index $index');
         }
       });
     } catch (e) {

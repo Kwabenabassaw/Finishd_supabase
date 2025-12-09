@@ -113,8 +113,7 @@ class _ProviderContentScreenState extends State<ProviderContentScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.providerName),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+    
         elevation: 0,
       ),
       body: _isLoading

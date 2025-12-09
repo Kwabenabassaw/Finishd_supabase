@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 class SearchScreenHome extends StatefulWidget {
@@ -10,28 +9,17 @@ class SearchScreenHome extends StatefulWidget {
 
 class _SearchScreenHomeState extends State<SearchScreenHome> {
   final List<Map<String, String>> _suggestions = [
-    {
-      'title': 'The Batman',
-      'subtitle': 'related to your recent search',
-    },
-    {
-      'title': 'Oppenheimer',
-      'subtitle': 'related to your recent search',
-    },
-    {
-      'title': 'Elemental',
-      'subtitle': 'trending',
-    },
-    {
-      'title': 'Barbie',
-      'subtitle': '',
-    },
+    {'title': 'The Batman', 'subtitle': 'related to your recent search'},
+    {'title': 'Oppenheimer', 'subtitle': 'related to your recent search'},
+    {'title': 'Elemental', 'subtitle': 'trending'},
+    {'title': 'Barbie', 'subtitle': ''},
   ];
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.white, // White background as per image
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,7 +30,11 @@ class _SearchScreenHomeState extends State<SearchScreenHome> {
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 20),
+                    icon: Icon(
+                      Icons.arrow_back_ios_new,
+                      color: isDark ? Colors.white : Colors.black,
+                      size: 20,
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
                   const SizedBox(width: 5),
@@ -50,17 +42,23 @@ class _SearchScreenHomeState extends State<SearchScreenHome> {
                     child: Container(
                       height: 45,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey.shade300),
+                        border: Border.all(
+                          color: isDark ? Colors.white24 : Colors.grey.shade300,
+                        ),
                       ),
                       child: TextField(
-                        autofocus: true, // Pops up keyboard
+                        autofocus: true,
                         textAlignVertical: TextAlignVertical.center,
                         decoration: const InputDecoration(
                           prefixIcon: Icon(Icons.search, color: Colors.grey),
-                          hintText: "Search for people, favourite or trending movies.",
-                          hintStyle: TextStyle(color: Colors.grey, fontSize: 13),
+                          hintText:
+                              "Search for people, favourite or trending movies.",
+                          hintStyle: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 13,
+                          ),
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.symmetric(horizontal: 10),
                         ),
@@ -77,10 +75,10 @@ class _SearchScreenHomeState extends State<SearchScreenHome> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     "You may like",
                     style: TextStyle(
-                      color: Colors.black,
+                      color: isDark ? Colors.white : Colors.black,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -88,12 +86,19 @@ class _SearchScreenHomeState extends State<SearchScreenHome> {
                   GestureDetector(
                     onTap: () {},
                     child: Row(
-                      children: const [
-                        Icon(Icons.refresh, size: 14, color: Colors.black54),
-                        SizedBox(width: 4),
+                      children: [
+                        Icon(
+                          Icons.refresh,
+                          size: 14,
+                          color: isDark ? Colors.white54 : Colors.black54,
+                        ),
+                        const SizedBox(width: 4),
                         Text(
                           "Refresh",
-                          style: TextStyle(color: Colors.black54, fontSize: 12),
+                          style: TextStyle(
+                            color: isDark ? Colors.white54 : Colors.black54,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
@@ -120,7 +125,7 @@ class _SearchScreenHomeState extends State<SearchScreenHome> {
                           width: 6,
                           height: 6,
                           decoration: const BoxDecoration(
-                            color: Colors.green, // Distinctive green dot
+                            color: Colors.green,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -130,8 +135,8 @@ class _SearchScreenHomeState extends State<SearchScreenHome> {
                           children: [
                             Text(
                               item['title']!,
-                              style: const TextStyle(
-                                color: Colors.black, // Changed to dark green/black based on image
+                              style: TextStyle(
+                                color: isDark ? Colors.white : Colors.black,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -145,7 +150,7 @@ class _SearchScreenHomeState extends State<SearchScreenHome> {
                                   fontSize: 12,
                                 ),
                               ),
-                            ]
+                            ],
                           ],
                         ),
                       ],

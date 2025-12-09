@@ -164,7 +164,7 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: Colors.white,
+        
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
@@ -177,7 +177,7 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
             height: 4,
             margin: const EdgeInsets.only(bottom: 20),
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+            
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -194,12 +194,11 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
                   height: 90,
                   fit: BoxFit.cover,
                   placeholder: (context, url) => Container(
-                    color: Colors.grey.shade300,
+               
                     width: 60,
                     height: 90,
                   ),
                   errorWidget: (context, url, error) => Container(
-                    color: Colors.grey,
                     width: 60,
                     height: 90,
                     child: const Icon(Icons.error, color: Colors.white),
@@ -227,7 +226,7 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
                       widget.movie.mediaType == 'movie' ? 'Movie' : 'TV Show',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.grey.shade600,
+                       
                       ),
                     ),
                   ],
@@ -325,7 +324,7 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
     return ListTile(
       leading: Icon(
         icon,
-        color: iconColor ?? (isActive ? Colors.green : Colors.grey.shade700),
+        color: iconColor ?? (isActive ? Colors.green : null),
         size: 28,
       ),
       title: Text(
@@ -333,7 +332,7 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
         style: TextStyle(
           fontSize: 16,
           fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-          color: isActive ? Colors.green.shade700 : Colors.black87,
+          color: isActive ? Colors.green.shade700 : null,
         ),
       ),
       trailing: isActive
@@ -367,7 +366,7 @@ void showMovieActionDrawer(
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    backgroundColor: Colors.transparent,
+   
     builder: (context) =>
         MovieActionDrawer(movie: movie, onActionComplete: onActionComplete),
   );

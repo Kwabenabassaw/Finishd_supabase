@@ -43,13 +43,14 @@ class _MessagesState extends State<Messages>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Messages'),
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: const Color(0xFF1A8927),
-          labelColor: Colors.black,
+          labelColor: isDark ? Colors.white : Colors.black,
           unselectedLabelColor: Colors.grey,
           labelStyle: const TextStyle(fontWeight: FontWeight.bold),
           tabs: const [

@@ -3,8 +3,8 @@ import 'package:flutter/foundation.dart';
 
 /// Holds URLs for different quality streams
 class StreamManifestUrls {
-  final String lowQualityUrl;
-  final String highQualityUrl;
+  final String lowQualityUrl;   // 144p for instant start
+  final String highQualityUrl;  // 360p max for smooth playback
 
   StreamManifestUrls({
     required this.lowQualityUrl,
@@ -13,11 +13,15 @@ class StreamManifestUrls {
 }
 
 /// Service to extract direct MP4 URLs from YouTube videos
+/// 
+/// Strategy:
+/// - LQ (144p): For instant start when scrolling fast
+/// - HQ (360p max): For smooth playback, saves bandwidth
 class YouTubeMp4Extractor {
   final YoutubeExplode _yt = YoutubeExplode();
   final Map<String, _CachedUrl> _cache = {};
 
-  /// Extract both Low and High quality MP4 URLs
+  /// Extract both 144p and 360p MP4 URLs
   Future<StreamManifestUrls?> getStreamUrls(String videoId) async {
     try {
       // Check cache first
@@ -41,33 +45,45 @@ class YouTubeMp4Extractor {
         return null;
       }
 
-      // Sort by size (proxy for quality)
+      // Sort by size (proxy for quality, smallest first)
       muxedStreams.sort(
         (a, b) => a.size.totalBytes.compareTo(b.size.totalBytes),
       );
 
-      // 1. Low Quality (Fastest start)
-      // Pick the smallest available stream (usually 144p or 240p)
-      final lowQualityStream = muxedStreams.first;
-
-      // 2. High Quality (Best viewing)
-      // Pick 480p or 360p (optimal for mobile vertical feed)
-      // Avoid 720p/1080p if possible to save bandwidth/memory unless requested,
-      // but user asked for "HQ". Let's try to find 480p, else highest available.
-      var highQualityStream = muxedStreams.last; // Default to highest
-
-      // Try to find specific optimal qualities
-      final preferred480 = muxedStreams
-          .where((s) => s.qualityLabel.contains('480'))
+      // === LOW QUALITY (144p for INSTANT START) ===
+      // Try to find 144p specifically, else use smallest available
+      var lowQualityStream = muxedStreams.first;
+      
+      final preferred144 = muxedStreams
+          .where((s) => s.qualityLabel.contains('144'))
           .toList();
+      if (preferred144.isNotEmpty) {
+        lowQualityStream = preferred144.first;
+      }
+
+      // === HIGH QUALITY (360p MAX for smooth playback) ===
+      // User specified: DO NOT go higher than 360p
+      var highQualityStream = lowQualityStream; // Default to same as low
+      
+      // Try to find 360p specifically
       final preferred360 = muxedStreams
           .where((s) => s.qualityLabel.contains('360'))
           .toList();
-
-      if (preferred480.isNotEmpty) {
-        highQualityStream = preferred480.last;
-      } else if (preferred360.isNotEmpty) {
-        highQualityStream = preferred360.last;
+      final preferred240 = muxedStreams
+          .where((s) => s.qualityLabel.contains('240'))
+          .toList();
+      
+      if (preferred360.isNotEmpty) {
+        // Found 360p - use it as high quality
+        highQualityStream = preferred360.first;
+      } else if (preferred240.isNotEmpty) {
+        // No 360p, use 240p
+        highQualityStream = preferred240.first;
+      } else {
+        // Use second smallest if available (step up from 144p)
+        if (muxedStreams.length > 1) {
+          highQualityStream = muxedStreams[1];
+        }
       }
 
       final urls = StreamManifestUrls(
@@ -79,7 +95,7 @@ class YouTubeMp4Extractor {
       _cache[videoId] = _CachedUrl(urls: urls, timestamp: DateTime.now());
 
       debugPrint(
-        '[MP4Extractor] ✅ Extracted LQ(${lowQualityStream.qualityLabel}) & HQ(${highQualityStream.qualityLabel}) for $videoId',
+        '[MP4Extractor] ✅ Extracted 144p(${lowQualityStream.qualityLabel}) → 360p(${highQualityStream.qualityLabel}) for $videoId',
       );
 
       return urls;

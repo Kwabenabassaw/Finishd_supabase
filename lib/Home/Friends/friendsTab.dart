@@ -113,21 +113,15 @@ class _FriendsScreenState extends State<FriendsScreen>
       _filteredMyFriends = _myFriends.where((user) {
         final username = user.username.toLowerCase();
         final fullName = '${user.firstName} ${user.lastName}'.toLowerCase();
-        final email = user.email.toLowerCase();
 
-        return username.contains(searchLower) ||
-            fullName.contains(searchLower) ||
-            email.contains(searchLower);
+        return username.contains(searchLower) || fullName.contains(searchLower);
       }).toList();
 
       _filteredAllUsers = _allUsers.where((user) {
         final username = user.username.toLowerCase();
         final fullName = '${user.firstName} ${user.lastName}'.toLowerCase();
-        final email = user.email.toLowerCase();
 
-        return username.contains(searchLower) ||
-            fullName.contains(searchLower) ||
-            email.contains(searchLower);
+        return username.contains(searchLower) || fullName.contains(searchLower);
       }).toList();
     });
   }
@@ -183,7 +177,7 @@ class _FriendsScreenState extends State<FriendsScreen>
       subtitle: Text(
         user.firstName.isNotEmpty || user.lastName.isNotEmpty
             ? '${user.firstName} ${user.lastName}'
-            : user.email,
+            : '@${user.username}',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
@@ -210,33 +204,39 @@ class _FriendsScreenState extends State<FriendsScreen>
     );
   }
 
-  // --- Main Build Method ---
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
         leading: _isSearching
             ? null
             : IconButton(
-                icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+                icon: Icon(
+                  Icons.arrow_back_ios,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
                 onPressed: () => Navigator.pop(context),
               ),
         title: _isSearching
             ? TextField(
                 controller: _searchController,
                 autofocus: true,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: 'Search friends...',
                   border: InputBorder.none,
-                  hintStyle: TextStyle(color: Colors.grey),
+                  hintStyle: TextStyle(
+                    color: isDark ? Colors.white54 : Colors.grey,
+                  ),
                 ),
-                style: const TextStyle(color: Colors.black),
+                style: TextStyle(color: isDark ? Colors.white : Colors.black),
               )
-            : const Text(
+            : Text(
                 'Friends',
                 style: TextStyle(
-                  color: Colors.black,
+                  color: isDark ? Colors.white : Colors.black,
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
                 ),
@@ -246,7 +246,7 @@ class _FriendsScreenState extends State<FriendsScreen>
           IconButton(
             icon: Icon(
               _isSearching ? Icons.close : Icons.search,
-              color: Colors.black,
+              color: isDark ? Colors.white : Colors.black,
             ),
             onPressed: _toggleSearch,
           ),

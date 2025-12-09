@@ -51,7 +51,9 @@ class _WatchlistState extends State<Watchlist>
           controller: _tabController,
           tabAlignment: TabAlignment.fill,
           indicatorColor: const Color(0xFF1A8927),
-          labelColor: Colors.black,
+          labelColor: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white
+              : Colors.black,
           unselectedLabelColor: Colors.grey,
           labelStyle: const TextStyle(fontWeight: FontWeight.bold),
           tabs: const [
@@ -61,7 +63,6 @@ class _WatchlistState extends State<Watchlist>
         ),
       ),
       body: TabBarView(
-      
         controller: _tabController,
 
         children: [_buildWatchlistTab(), _buildSavedTab()],
@@ -88,9 +89,7 @@ class _WatchlistState extends State<Watchlist>
 
         if (movies.isEmpty) {
           return Center(
-           
             child: Column(
-
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
@@ -169,7 +168,7 @@ class _WatchlistState extends State<Watchlist>
   // Full-width list for Watchlist tab
   Widget _buildFullWidthList(List<MovieListItem> movies) {
     return ListView.builder(
-    padding: const EdgeInsets.fromLTRB(20.0, 20.0, 20.0, 80.0),
+      padding: const EdgeInsets.fromLTRB(20.0, 20.0, 20.0, 80.0),
       itemCount: movies.length,
       itemBuilder: (context, index) {
         final movie = movies[index];
@@ -299,7 +298,7 @@ class _WatchlistState extends State<Watchlist>
                             ],
                           ),
                         ),
-                           Text(
+                        Text(
                           movie.addedAt.toLocal().year.toString(),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -377,7 +376,9 @@ class _WatchlistState extends State<Watchlist>
           child: Container(
             margin: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF1E1E1E)
+                  : Colors.white,
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
@@ -425,7 +426,7 @@ class _WatchlistState extends State<Watchlist>
                       child: Text(
                         movie.title,
                         maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                        overflow: TextOverflow.clip,
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,

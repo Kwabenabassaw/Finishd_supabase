@@ -5,6 +5,7 @@ import 'package:finishd/Widget/ImageSlideshow.dart';
 import 'package:finishd/Widget/community_avatar.dart';
 import 'package:finishd/Widget/loading.dart';
 import 'package:finishd/Widget/movie_section.dart';
+import 'package:finishd/tmbd/Nowplaying.dart';
 import 'package:finishd/tmbd/airingToday.dart';
 import 'package:finishd/tmbd/fetchDiscover.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +21,7 @@ import 'package:finishd/Discover/provider_content_screen.dart';
 final Trending movieApi = Trending();
 final Fetchdiscover getDiscover = Fetchdiscover();
 final Airingtoday airingToday = Airingtoday();
+
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -52,6 +54,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
       final airingTodayshow = List<MediaItem>.from(
         await airingToday.fetchAiringToday(),
       );
+      final nowPlaying = List<MediaItem>.from(await movieApi.getNowPlaying() );
+      final topRatedTv = List<MediaItem>.from(await movieApi.TopRatedTv() );
 
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid != null) {
@@ -65,6 +69,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
       provider.setPopular(popular);
       provider.setUpcoming(upcoming);
       provider.setAiringToday(airingTodayshow);
+      provider.setNowPlaying(nowPlaying);
+      provider.setTopRatedTv(topRatedTv);
 
       setState(() {
         isLoading = false;
@@ -153,10 +159,20 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       items: provider.shows,
                       movieApi: movieApi,
                     ),
+                    // MovieSection(
+                    //   title: "Top Rated TV",
+                    //   items: provider.topRatedTv,
+                    //   movieApi: movieApi,
+                    // ),
 
                     MovieSection(
                       title: "Popular",
                       items: provider.popular,
+                      movieApi: movieApi,
+                    ),
+                    MovieSection(
+                      title: "Now Playing",
+                      items: provider.nowPlaying,
                       movieApi: movieApi,
                     ),
 

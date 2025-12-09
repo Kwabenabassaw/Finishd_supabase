@@ -12,7 +12,8 @@ class MovieProvider extends ChangeNotifier {
   List<MediaItem> _upcoming = [];
   List<MediaItem> _discover = [];
   List<MediaItem> _airingToday = [];
-
+  List <MediaItem> _nowPlaying = [];
+  List <MediaItem> _topRatedTv = [];
 
   // Selected list for navigation (Movies/Shows)
   List<MediaItem> _selectedList = [];
@@ -27,6 +28,17 @@ class MovieProvider extends ChangeNotifier {
   int _selectedSearchIndex = 0;
 
   // -------------------- Movies Getters & Setters --------------------
+  List<MediaItem> get topRatedTv => _topRatedTv;
+  void setTopRatedTv(List<MediaItem> topRatedTv) {
+    _topRatedTv = topRatedTv;
+    notifyListeners();
+  }
+  
+  List<MediaItem> get nowPlaying => _nowPlaying;
+  void setNowPlaying(List<MediaItem> nowPlaying) {
+    _nowPlaying = nowPlaying;
+    notifyListeners();
+  }
 
   List<MediaItem> get airingToday => _airingToday;
   void setAiringToday(List<MediaItem> airingToday) {

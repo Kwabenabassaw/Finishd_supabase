@@ -53,7 +53,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
             expandedHeight: 100,
             actions: [
               IconButton(
-                icon: const Icon(Icons.more_vert, color: Colors.black),
+                icon: const Icon(Icons.more_vert,),
                 onPressed: () {
                   // Convert TvShowDetails to MovieListItem
                   final movieItem = MovieListItem(
@@ -72,7 +72,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
               title: Text(
                 widget.movie.name,
                 style: TextStyle(
-                  color: Colors.black,
+                  
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),

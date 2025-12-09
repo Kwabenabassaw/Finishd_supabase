@@ -85,7 +85,7 @@ class AnimatedScoreDisplay extends StatelessWidget {
                         shape: BoxShape.circle,
                         // Create a gradient border that is thicker than the indicator itself
                         border: Border.all(
-                          color: Colors.grey.shade200, // Background color
+                           // Background color
                           width: 8,
                         ),
                       ),

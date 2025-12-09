@@ -1,3 +1,5 @@
+import 'package:finishd/models/feed_item.dart';
+
 class FeedVideo {
   final String videoId;
   final String title;
@@ -18,6 +20,20 @@ class FeedVideo {
     this.relatedItemId,
     this.relatedItemType,
   });
+
+  /// Factory to create from FeedItem
+  factory FeedVideo.fromFeedItem(FeedItem item) {
+    return FeedVideo(
+      videoId: item.youtubeKey ?? '',
+      title: item.videoName ?? item.title,
+      thumbnailUrl: item.bestThumbnailUrl,
+      channelName: item.channelTitle ?? '',
+      description: item.description ?? item.overview ?? '',
+      recommendationReason: item.reason,
+      relatedItemId: item.tmdbId?.toString() ?? item.relatedTmdbId?.toString(),
+      relatedItemType: item.relatedType ?? item.mediaType,
+    );
+  }
 
   /// Factory to create from YouTube API JSON
   factory FeedVideo.fromJson(Map<String, dynamic> json) {

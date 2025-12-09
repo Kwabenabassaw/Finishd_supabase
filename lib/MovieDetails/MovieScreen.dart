@@ -41,7 +41,7 @@ class MovieDetailsScreen extends StatelessWidget {
               title: Text(
                 movie.title,
                 style: TextStyle(
-                  color: Colors.black,
+                  
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -50,7 +50,7 @@ class MovieDetailsScreen extends StatelessWidget {
             ),
             actions: [
               IconButton(
-                icon: const Icon(Icons.more_vert, color: Colors.black),
+                icon: const Icon(Icons.more_vert, ),
                 onPressed: () {
                   // Convert TvShowDetails to MovieListItem
                   final movieItem = MovieListItem(

@@ -290,6 +290,7 @@ class _ShowSelectionScreenState extends State<ShowSelectionScreen> {
           TextButton(
             onPressed: () {
               print('Skipped this step');
+              Navigator.pushReplacementNamed(context, 'streaming');
             },
             child: const Text(
               'Skip this step',

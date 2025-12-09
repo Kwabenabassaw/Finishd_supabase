@@ -112,9 +112,9 @@ class RatingsDisplayWidget extends StatelessWidget {
       margin: const EdgeInsets.only(right: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: Colors.grey.shade700),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -137,7 +137,7 @@ class RatingsDisplayWidget extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade700,
+                  
                 ),
               ),
             ],
@@ -162,7 +162,7 @@ class RatingsDisplayWidget extends StatelessWidget {
                       child: CircularProgressIndicator(
                         value: progressValue,
                         strokeWidth: 5,
-                        backgroundColor: Colors.grey.shade200,
+                 
                         valueColor: AlwaysStoppedAnimation<Color>(currentColor),
                         strokeCap: StrokeCap.round,
                       ),
@@ -205,9 +205,9 @@ class RatingsDisplayWidget extends StatelessWidget {
       margin: const EdgeInsets.only(right: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+       
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: Colors.grey.shade700),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -230,7 +230,7 @@ class RatingsDisplayWidget extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade700,
+                 
                 ),
               ),
             ],
@@ -241,13 +241,13 @@ class RatingsDisplayWidget extends StatelessWidget {
             style: const TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+             
             ),
           ),
           // Subtitle
           Text(
             subtitle,
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 12, ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -261,7 +261,7 @@ class RatingsDisplayWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20.0),
+          padding: EdgeInsets.symmetric(horizontal: 10.0),
           child: Text(
             'Ratings',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -272,7 +272,7 @@ class RatingsDisplayWidget extends StatelessWidget {
           height: 130,
           child: ListView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
             children: List.generate(
               3,
               (index) => Container(
@@ -280,7 +280,7 @@ class RatingsDisplayWidget extends StatelessWidget {
                 height: 130,
                 margin: const EdgeInsets.only(right: 12),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
+                  
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),

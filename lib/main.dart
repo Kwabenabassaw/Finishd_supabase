@@ -12,6 +12,7 @@ import 'package:finishd/notification/mainScreent.dart';
 import 'package:finishd/provider/MovieProvider.dart';
 import 'package:finishd/provider/onboarding_provider.dart';
 import 'package:finishd/provider/user_provider.dart';
+import 'package:finishd/provider/theme_provider.dart';
 
 import 'package:finishd/SplashScreen/splash_screen.dart';
 import 'package:finishd/onboarding/CategoriesTypeMove.dart';
@@ -44,6 +45,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => MovieProvider()),
         ChangeNotifierProvider(create: (_) => OnboardingProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
         Provider<AuthService>(create: (_) => AuthService()),
       ],
       child: MyApp(navigatorKey: navigatorKey),
@@ -59,29 +61,35 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      navigatorKey: navigatorKey,
-      debugShowCheckedModeBanner: false,
-      title: 'Finishd',
-      theme: AppTheme.lightTheme,
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, _) {
+        return MaterialApp(
+          navigatorKey: navigatorKey,
+          debugShowCheckedModeBanner: false,
+          title: 'Finishd',
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: themeProvider.themeMode,
 
-      initialRoute: '/',
-      routes: {
-        '/': (context) => const SplashScreen(),
-        '/home': (context) => LandingScreen(),
-        '/signup': (context) => SignUpScreen(),
-        '/login': (context) => Login(),
-        'genre': (context) => GenreSelectionScreen(),
-        'showSelect': (context) => ShowSelectionScreen(),
-        'streaming': (context) => ServiceSelectionScreen(),
-        'welcome': (context) => CompletionScreen(),
-        'homepage': (context) => HomePage(),
-        'Search_discover': (context) => SearchScreen(),
-        'settings': (context) => SettingsScreen(),
-        'homesearch': (context) => SearchScreenHome(),
-        'notification': (context) => NotificationScreen(),
-        'comment': (context) => CommentsScreen(),
-        'friends': (context) => FriendsScreen(),
+          initialRoute: '/',
+          routes: {
+            '/': (context) => const SplashScreen(),
+            '/home': (context) => LandingScreen(),
+            '/signup': (context) => SignUpScreen(),
+            '/login': (context) => Login(),
+            'genre': (context) => GenreSelectionScreen(),
+            'showSelect': (context) => ShowSelectionScreen(),
+            'streaming': (context) => ServiceSelectionScreen(),
+            'welcome': (context) => CompletionScreen(),
+            'homepage': (context) => HomePage(),
+            'Search_discover': (context) => SearchScreen(),
+            'settings': (context) => SettingsScreen(),
+            'homesearch': (context) => SearchScreenHome(),
+            'notification': (context) => NotificationScreen(),
+            'comment': (context) => CommentsScreen(),
+            'friends': (context) => FriendsScreen(),
+          },
+        );
       },
     );
   }
@@ -95,8 +103,8 @@ class HomePage extends StatefulWidget {
 }
 
 final List<Widget> _pages = [
-   Watchlist(),
- 
+  Watchlist(),
+
   Discover(),
   Home(),
   Messages(),
@@ -127,23 +135,23 @@ class _HomePageState extends State<HomePage> {
         iconSize: 30,
         enableFeedback: true,
         unselectedItemColor: Colors.blueGrey,
-        
+
         // 🔥 Make transparent on Home tab
         backgroundColor: _selectedIndex == 2
             ? Colors.transparent
-            : Colors.white,
+            : null,
 
         // ⚡ Remove shadow when transparent
         elevation: _selectedIndex == 4 ? 8 : 8,
 
         items: const [
-           BottomNavigationBarItem(
+          BottomNavigationBarItem(
             icon: Icon(Icons.watch_later_outlined),
             label: 'Watchlist',
           ),
-       
+
           BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Discover'),
-            BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: "Home"),
+          BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: "Home"),
           BottomNavigationBarItem(
             icon: Icon(Icons.messenger_outline_sharp),
             label: "Messages",

@@ -50,17 +50,17 @@ class _RecsTabState extends State<RecsTab> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.recommend_outlined, size: 64, color: Colors.grey),
+                Icon(Icons.recommend_outlined, size: 64, ),
                 SizedBox(height: 16),
                 Text(
                   'No recommendations yet',
-                  style: TextStyle(fontSize: 18, color: Colors.grey),
+                  style: TextStyle(fontSize: 18, ),
                 ),
                 SizedBox(height: 8),
                 Text(
                   'When friends recommend movies,\\nthey will appear here.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey),
+                 
                 ),
               ],
             ),
@@ -165,7 +165,7 @@ class _RecsTabState extends State<RecsTab> {
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                          
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -181,11 +181,7 @@ class _RecsTabState extends State<RecsTab> {
                       ],
                     ),
                   ),
-                  const Icon(
-                    Icons.remove_red_eye_outlined,
-                    color: Color(0xFF1A8927),
-                    size: 28,
-                  ),
+                 
                 ],
               ),
               const SizedBox(height: 12),
@@ -241,7 +237,7 @@ class _RecsTabState extends State<RecsTab> {
                             ? 'Recommended by $firstUsername'
                             : 'Recommended by $recommenderCount friends',
                         style: TextStyle(
-                          color: Colors.grey.shade600,
+                       
                           fontSize: 13,
                         ),
                         overflow: TextOverflow.ellipsis,

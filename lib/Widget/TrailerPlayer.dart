@@ -27,10 +27,13 @@ class _AnimatedTrailerCoverState extends State<AnimatedTrailerCover> {
     super.initState();
     _controller = YoutubePlayerController(
       initialVideoId: widget.youtubeKey,
+
       flags: const YoutubePlayerFlags(
         // CHANGED: Set autoPlay to false, so the user must initiate playback.
         autoPlay: false, 
         controlsVisibleAtStart: true,
+        disableDragSeek: true,
+        
       ),
     );
   }
@@ -106,7 +109,7 @@ class _AnimatedTrailerCoverState extends State<AnimatedTrailerCover> {
                   child: const Icon(
                     Icons.play_circle_fill_rounded,
                     color: Colors.white,
-                    size: 70,
+                    size: 90,
                   ),
                 ),
               ),

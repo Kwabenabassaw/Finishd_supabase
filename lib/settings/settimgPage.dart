@@ -1,11 +1,16 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../provider/theme_provider.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+
     // Define the data structure for the settings sections
     final List<Map<String, dynamic>> sections = [
       {
@@ -35,7 +40,22 @@ class SettingsScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      appBar: AppBar(centerTitle: true, title: const Text('Settings')),
+      appBar: AppBar(
+        centerTitle: true,
+        title: const Text('Settings'),
+        actions: [
+          // Theme toggle icon
+          IconButton(
+            icon: Icon(
+              isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+              color: isDark ? Colors.amber : Colors.blueGrey,
+            ),
+            tooltip: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+            onPressed: () => themeProvider.toggleTheme(),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -124,14 +144,15 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.bold,
-          color: Colors.black,
+          color: isDark ? Colors.white : Colors.black,
         ),
       ),
     );
@@ -147,26 +168,26 @@ class _SettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20),
       leading: Icon(
         icon,
-        color: Colors
-            .black87, // Slightly softer black for icons usually looks better
+        color: isDark ? Colors.white70 : Colors.black87,
         size: 24,
       ),
       title: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 15,
-          color: Colors.black87,
+          color: isDark ? Colors.white : Colors.black87,
           fontWeight: FontWeight.w400,
         ),
       ),
-      trailing: const Icon(
+      trailing: Icon(
         Icons.arrow_forward_ios,
         size: 14,
-        color: Colors.black54,
+        color: isDark ? Colors.white54 : Colors.black54,
       ),
       onTap: onTap ?? () {},
     );

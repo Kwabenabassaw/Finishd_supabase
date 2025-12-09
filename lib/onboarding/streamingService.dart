@@ -288,6 +288,7 @@ class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
           TextButton(
             onPressed: () {
               print('Skipped this step');
+              Navigator.pushReplacementNamed(context, 'welcome');
             },
             child: const Text(
               'Skip this step',

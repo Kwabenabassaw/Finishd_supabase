@@ -82,18 +82,26 @@ class PushNotificationService {
         '/trending_list',
         arguments: data['date'],
       );
-    } else if (type == 'new_episode') {
-      // Navigate to TV Details
-      final tmdbId = int.tryParse(data['tmdbId'] ?? '');
+    } else if (type == 'new_episode' || type == 'recommended') {
+      // Navigate to TV Show Details
+      // Support both 'tmdbId' and 'tmdb_id' formats
+      final tmdbId = int.tryParse(data['tmdb_id'] ?? data['tmdbId'] ?? '');
       if (tmdbId != null) {
-        // Assuming you have a route that takes an ID or object
-        // You might need to fetch the full object or pass just the ID
-        // For now, passing ID map
         navigatorKey.currentState?.pushNamed(
           '/tv_details',
-          arguments: {'id': tmdbId},
+          arguments: {
+            'id': tmdbId,
+            'season': int.tryParse(data['season'] ?? ''),
+            'episode': int.tryParse(data['episode'] ?? ''),
+          },
         );
       }
+    } else if (type == 'trending_digest') {
+      // Navigate to Trending/Discover page
+      navigatorKey.currentState?.pushNamed(
+        '/trending_list',
+        arguments: data['date'],
+      );
     } else if (type == 'chat') {
       final chatId = data['chatId'];
       navigatorKey.currentState?.pushNamed('/chat', arguments: chatId);

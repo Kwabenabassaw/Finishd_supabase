@@ -112,8 +112,9 @@ class _CommentsScreenState extends State<CommentsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      // Simulating the "Modal" look with a rounded top container if this were a bottom sheet
       body: SafeArea(
         child: Column(
           children: [
@@ -125,11 +126,13 @@ class _CommentsScreenState extends State<CommentsScreen> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black.withOpacity(0.8),
+                  color: isDark
+                      ? Colors.white.withOpacity(0.8)
+                      : Colors.black.withOpacity(0.8),
                 ),
               ),
             ),
-            
+
             // --- Comment List ---
             Expanded(
               child: ListView.builder(
@@ -140,19 +143,21 @@ class _CommentsScreenState extends State<CommentsScreen> {
                 },
               ),
             ),
-            
+
             // --- Bottom Input Bar ---
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                 border: Border(
-                  top: BorderSide(color: Colors.grey.shade200, width: 1),
+                  top: BorderSide(
+                    color: isDark ? Colors.white12 : Colors.grey.shade200,
+                    width: 1,
+                  ),
                 ),
               ),
               child: Row(
                 children: [
-                  // We could add a user avatar here, but the image just shows text
                   Expanded(
                     child: TextField(
                       decoration: InputDecoration(
@@ -165,16 +170,24 @@ class _CommentsScreenState extends State<CommentsScreen> {
                         isDense: true,
                         contentPadding: EdgeInsets.zero,
                       ),
-                      style: const TextStyle(
-                        color: Colors.black,
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black,
                         fontSize: 15,
                       ),
                       cursorColor: Colors.blue,
                     ),
                   ),
-                  Icon(Icons.alternate_email, color: Colors.grey.shade800, size: 24),
+                  Icon(
+                    Icons.alternate_email,
+                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade800,
+                    size: 24,
+                  ),
                   const SizedBox(width: 16),
-                  Icon(Icons.sentiment_satisfied_alt, color: Colors.grey.shade800, size: 24),
+                  Icon(
+                    Icons.sentiment_satisfied_alt,
+                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade800,
+                    size: 24,
+                  ),
                 ],
               ),
             ),
@@ -205,7 +218,7 @@ class CommentItem extends StatelessWidget {
             backgroundImage: NetworkImage(comment.avatarUrl),
           ),
           const SizedBox(width: 12),
-          
+
           // Content Column
           Expanded(
             child: Column(
@@ -228,12 +241,12 @@ class CommentItem extends StatelessWidget {
                         Icons.verified,
                         color: Colors.lightBlue,
                         size: 14,
-                      )
+                      ),
                     ],
                   ],
                 ),
                 const SizedBox(height: 4),
-                
+
                 // Comment Text & Time
                 RichText(
                   text: TextSpan(
@@ -251,7 +264,7 @@ class CommentItem extends StatelessWidget {
                     ],
                   ),
                 ),
-                
+
                 // View Replies Section
                 if (comment.replyCount > 0) ...[
                   const SizedBox(height: 12),
@@ -277,31 +290,24 @@ class CommentItem extends StatelessWidget {
                         Icons.keyboard_arrow_down,
                         size: 16,
                         color: Colors.grey.shade500,
-                      )
+                      ),
                     ],
                   ),
-                ]
+                ],
               ],
             ),
           ),
-          
+
           // Like Button Column
           const SizedBox(width: 8),
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.favorite_border,
-                size: 20,
-                color: Colors.grey,
-              ),
+              const Icon(Icons.favorite_border, size: 20, color: Colors.grey),
               const SizedBox(height: 2),
               Text(
                 comment.likes,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                ),
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ],
           ),

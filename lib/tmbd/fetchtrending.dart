@@ -38,6 +38,31 @@ class Trending {
       return [];
     }
   }
+    Future<List<MediaItem>> getNowPlaying() async {
+    try{
+       final  nowPlaying = await tmdb.v3.movies.getNowPlaying(language: "en-US", region: "US", page: 2);
+    final results = List.from(nowPlaying['results'] ?? []);
+    return results.map((e) => MediaItem.fromJson(e)).toList();
+    }
+   catch(e){
+    print(e);
+    return [];
+   }
+
+    
+  }
+
+  Future<List<MediaItem>> TopRatedTv ()async{
+    try{
+      Map result = await tmdb.v3.tv.getTopRated();
+      List list = result['results'] ?? [];
+      return list.map((json) => MediaItem.fromJson(json)).toList();
+
+    }catch(e){
+      print(e);
+      return [];
+    }
+  }
 
   // ---------------------------------------------------------------------------
   // ✅ FETCH TRENDING MOVIES

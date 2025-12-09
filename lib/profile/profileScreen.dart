@@ -105,19 +105,26 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget build(BuildContext context) {
     final bool isCurrentUser = _currentUserId == widget.uid;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
+        title: Text(
           'Profile',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
         actions: [
           if (isCurrentUser)
             IconButton(
-              icon: const Icon(Icons.settings, color: Colors.black),
+              icon: Icon(
+                Icons.settings,
+                color: isDark ? Colors.white : Colors.black,
+              ),
               onPressed: () {
                 Navigator.pushNamed(context, 'settings');
               },
@@ -223,9 +230,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                         },
                         color: const Color(0xFF1A8927),
                         child: SingleChildScrollView(
-                          padding: const EdgeInsets.symmetric(vertical:20 ),
+                          padding: const EdgeInsets.symmetric(vertical: 20),
                           physics: const NeverScrollableScrollPhysics(),
-                         
+
                           child: Column(
                             children: [
                               const SizedBox(height: 10),
@@ -253,7 +260,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                               ),
                               // User Email
                               Text(
-                                user.email,
+                                user.firstName,
                                 style: const TextStyle(
                                   fontSize: 14,
                                   color: Colors.grey,
@@ -343,8 +350,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     style: TextStyle(color: Colors.white),
                                   ),
                                   style: ElevatedButton.styleFrom(
-                                  fixedSize: Size(200, 50),
-                                  
+                                    fixedSize: Size(200, 50),
+
                                     backgroundColor: const Color.fromARGB(
                                       255,
                                       3,
@@ -353,7 +360,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(10),
-
                                     ),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 30,
@@ -363,13 +369,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 )
                               else
                                 ElevatedButton(
-                                  
-
                                   onPressed: _isCheckingFollow
                                       ? null
                                       : _toggleFollow,
                                   style: ElevatedButton.styleFrom(
-                                    
                                     backgroundColor: _isFollowing
                                         ? Colors.grey.shade300
                                         : const Color.fromARGB(255, 3, 130, 7),
@@ -378,14 +381,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                                         : Colors.white,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(10),
-
                                     ),
-                                   
+
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 40,
                                       vertical: 10,
                                     ),
-                                      
                                   ),
                                   child: _isCheckingFollow
                                       ? const SizedBox(
@@ -435,7 +436,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                                 child: const Icon(
                                                   Icons.chat_bubble_outline,
                                                   size: 20,
-                                                  color: Colors.black,
+                                               
                                                 ),
                                               ),
                                             ],
@@ -454,7 +455,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     user.bio,
                                     style: const TextStyle(
                                       fontSize: 16,
-                                      color: Colors.black87,
+                                     
                                     ),
                                     textAlign: TextAlign.center,
                                   ),
@@ -524,7 +525,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             count.toString(),
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-          Text(label, style: const TextStyle(fontSize: 16, color: Colors.grey)),
+          Text(label, style: const TextStyle(fontSize: 16, )),
         ],
       ),
     );
@@ -534,12 +535,12 @@ class _ProfileScreenState extends State<ProfileScreen>
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16.0),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
+        border: Border(bottom: BorderSide(color: Colors.grey.shade700)),
       ),
       child: TabBar(
         controller: _tabController,
         indicatorColor: Colors.green.shade900, // Active tab indicator color
-        labelColor: Colors.black, // Active tab text color
+        // Active tab text color
         unselectedLabelColor: Colors.grey, // Inactive tab text color
         labelStyle: const TextStyle(fontWeight: FontWeight.bold),
         unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),

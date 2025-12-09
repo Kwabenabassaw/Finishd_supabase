@@ -138,17 +138,15 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 1,
-          title: _buildSearchField(),
-        ),
+        appBar: AppBar(elevation: 1, title: _buildSearchField(isDark)),
         body: Column(
           children: [
-            _buildTabBar(),
+            _buildTabBar(isDark),
             Expanded(
               child: TabBarView(
                 children: [
@@ -166,16 +164,24 @@ class _SearchScreenState extends State<SearchScreen> {
 
   // --- Widgets ---
 
-  Widget _buildSearchField() {
+  Widget _buildSearchField(bool isDark) {
     return TextField(
       controller: _searchController,
       onChanged: _onSearchChanged,
+      style: TextStyle(color: isDark ? Colors.white : Colors.black),
       decoration: InputDecoration(
         hintText: "Search movies, shows, people...",
-        prefixIcon: const Icon(Icons.search),
+        hintStyle: TextStyle(color: Colors.grey.shade500),
+        prefixIcon: Icon(
+          Icons.search,
+          color: isDark ? Colors.white54 : Colors.grey,
+        ),
         suffixIcon: _searchController.text.isNotEmpty
             ? IconButton(
-                icon: const Icon(Icons.clear),
+                icon: Icon(
+                  Icons.clear,
+                  color: isDark ? Colors.white54 : Colors.grey,
+                ),
                 onPressed: () {
                   _searchController.clear();
                   _performSearch('');
@@ -183,7 +189,7 @@ class _SearchScreenState extends State<SearchScreen> {
               )
             : null,
         filled: true,
-        fillColor: Colors.grey[200],
+        fillColor: isDark ? Colors.grey.shade800 : Colors.grey[200],
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(30),
           borderSide: BorderSide.none,
@@ -192,13 +198,13 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildTabBar() {
-    return const TabBar(
-      indicatorColor: Colors.black,
-      labelColor: Colors.black,
+  Widget _buildTabBar(bool isDark) {
+    return TabBar(
+      indicatorColor: isDark ? Colors.white : Colors.black,
+      labelColor: isDark ? Colors.white : Colors.black,
       unselectedLabelColor: Colors.grey,
-      labelStyle: TextStyle(fontWeight: FontWeight.bold),
-      tabs: [
+      labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+      tabs: const [
         Tab(text: "All"),
         Tab(text: "Movies"),
         Tab(text: "TV Shows"),
@@ -268,7 +274,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) =>  GenericDetailsScreen()),
+              MaterialPageRoute(builder: (_) => GenericDetailsScreen()),
             );
           },
           child: Column(

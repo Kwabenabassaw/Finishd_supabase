@@ -16,7 +16,7 @@ class Getproviders {
 
   Future <List<WatchProvider>> getMovieprovide  ()async{
     try {
-      Map provider = await tmdb.v3.watchProviders.getMovieProviders(watchRegion: "US");
+      Map provider = await tmdb.v3.watchProviders.getMovieProviders(watchRegion: "US",language: "en");
       List result = provider['results'];
       
       return result.map((json)=>WatchProvider.fromJson(json)).toList();
