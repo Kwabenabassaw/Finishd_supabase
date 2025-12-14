@@ -56,9 +56,16 @@ class _SearchScreenState extends State<SearchScreen> {
       provider.setShows(shows);
       provider.setPopular(popular);
       provider.setUpcoming(upcoming);
-      _allResults = movies
+
+      // Combine both movies AND shows for the "All" tab
+      final moviesAsResults = movies
           .map((e) => provider.convertMediaItemToResult(e))
-          .toList(); // This line is causing the error
+          .toList();
+      final showsAsResults = shows
+          .map((e) => provider.convertMediaItemToResult(e))
+          .toList();
+
+      _allResults = [...moviesAsResults, ...showsAsResults];
 
       setState(() {
         _isLoading = false;

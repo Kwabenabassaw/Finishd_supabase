@@ -2,6 +2,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../provider/theme_provider.dart';
+import 'edit_streaming_services.dart';
+import 'edit_genres.dart';
+import 'edit_favorite_content.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -10,34 +13,6 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
-
-    // Define the data structure for the settings sections
-    final List<Map<String, dynamic>> sections = [
-      {
-        'title': 'Playback',
-        'items': [
-          {'icon': Icons.closed_caption_outlined, 'title': 'Subtitles'},
-          {'icon': Icons.play_circle_outline, 'title': 'Autoplay Next Episode'},
-        ],
-      },
-      {
-        'title': 'App Preferences',
-        'items': [
-          {'icon': Icons.contrast, 'title': 'Theme'},
-          {'icon': Icons.language, 'title': 'Language'},
-          {'icon': Icons.notifications_none_outlined, 'title': 'Notifications'},
-          {'icon': Icons.public, 'title': 'Streaming Services'},
-        ],
-      },
-      {
-        'title': 'About',
-        'items': [
-          {'icon': Icons.help_outline, 'title': 'Help & Support'},
-          {'icon': Icons.description_outlined, 'title': 'Terms & Privacy'},
-          {'icon': Icons.web_asset_outlined, 'title': 'App Version'},
-        ],
-      },
-    ];
 
     return Scaffold(
       appBar: AppBar(
@@ -63,25 +38,95 @@ class SettingsScreen extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.only(top: 10),
                 children: [
-                  // Map over the sections list to generate widgets dynamically
-                  ...sections.expand((section) {
-                    bool isLastSection = section == sections.last;
-                    return [
-                      _SectionHeader(title: section['title'] as String),
-                      ...(section['items'] as List<Map<String, dynamic>>).map(
-                        (item) => _SettingsTile(
-                          icon: item['icon'] as IconData,
-                          title: item['title'] as String,
+                  // Playback Section
+                  _SectionHeader(title: 'Playback'),
+                  _SettingsTile(
+                    icon: Icons.closed_caption_outlined,
+                    title: 'Subtitles',
+                  ),
+                  _SettingsTile(
+                    icon: Icons.play_circle_outline,
+                    title: 'Autoplay Next Episode',
+                  ),
+                  const SizedBox(height: 10),
+                  const Divider(height: 1, indent: 20, endIndent: 20),
+                  const SizedBox(height: 20),
+
+                  // App Preferences Section
+                  _SectionHeader(title: 'App Preferences'),
+                  _SettingsTile(
+                    icon: Icons.contrast,
+                    title: 'Theme',
+                    onTap: () => themeProvider.toggleTheme(),
+                  ),
+                  _SettingsTile(icon: Icons.language, title: 'Language'),
+                  _SettingsTile(
+                    icon: Icons.notifications_none_outlined,
+                    title: 'Notifications',
+                  ),
+                  const SizedBox(height: 10),
+                  const Divider(height: 1, indent: 20, endIndent: 20),
+                  const SizedBox(height: 20),
+
+                  // User Preferences Section (NEW)
+                  _SectionHeader(title: 'Your Preferences'),
+                  _SettingsTile(
+                    icon: Icons.live_tv,
+                    title: 'Streaming Services',
+                    subtitle: 'Manage your subscriptions',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const EditStreamingServicesScreen(),
                         ),
-                      ),
-                      // Add separator if it's not the last section
-                      if (!isLastSection) ...[
-                        const SizedBox(height: 10),
-                        const Divider(height: 1, indent: 20, endIndent: 20),
-                        const SizedBox(height: 20),
-                      ],
-                    ];
-                  }),
+                      );
+                    },
+                  ),
+                  _SettingsTile(
+                    icon: Icons.category,
+                    title: 'Genres',
+                    subtitle: 'Your favorite genres',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const EditGenresScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _SettingsTile(
+                    icon: Icons.movie_filter,
+                    title: 'Favorite Shows & Movies',
+                    subtitle: 'Content you love',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const EditFavoriteContentScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  const Divider(height: 1, indent: 20, endIndent: 20),
+                  const SizedBox(height: 20),
+
+                  // About Section
+                  _SectionHeader(title: 'About'),
+                  _SettingsTile(
+                    icon: Icons.help_outline,
+                    title: 'Help & Support',
+                  ),
+                  _SettingsTile(
+                    icon: Icons.description_outlined,
+                    title: 'Terms & Privacy',
+                  ),
+                  _SettingsTile(
+                    icon: Icons.web_asset_outlined,
+                    title: 'App Version',
+                  ),
                 ],
               ),
             ),
@@ -89,8 +134,12 @@ class SettingsScreen extends StatelessWidget {
             // --- Logout Button Area ---
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: Color(0xFFEEEEEE))),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: isDark ? Colors.grey[800]! : const Color(0xFFEEEEEE),
+                  ),
+                ),
               ),
               child: SizedBox(
                 width: double.infinity,
@@ -135,7 +184,7 @@ class SettingsScreen extends StatelessWidget {
   }
 }
 
-// --- Helper Widgets to keep code clean ---
+// --- Helper Widgets ---
 
 class _SectionHeader extends StatelessWidget {
   final String title;
@@ -162,9 +211,15 @@ class _SectionHeader extends StatelessWidget {
 class _SettingsTile extends StatelessWidget {
   final IconData icon;
   final String title;
+  final String? subtitle;
   final VoidCallback? onTap;
 
-  const _SettingsTile({required this.icon, required this.title, this.onTap});
+  const _SettingsTile({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -184,6 +239,15 @@ class _SettingsTile extends StatelessWidget {
           fontWeight: FontWeight.w400,
         ),
       ),
+      subtitle: subtitle != null
+          ? Text(
+              subtitle!,
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? Colors.white54 : Colors.grey[600],
+              ),
+            )
+          : null,
       trailing: Icon(
         Icons.arrow_forward_ios,
         size: 14,

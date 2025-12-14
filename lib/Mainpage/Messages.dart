@@ -1,5 +1,6 @@
 import 'package:finishd/Chat/chatlist.dart';
 import 'package:finishd/Mainpage/Tabs/recs_tab.dart';
+import 'package:finishd/Mainpage/Tabs/comms_tab.dart';
 import 'package:finishd/Chat/NewChat.dart';
 import 'package:flutter/material.dart';
 
@@ -62,7 +63,9 @@ class _MessagesState extends State<Messages>
       ),
       floatingActionButton: _tabController.index == 2
           ? Padding(
-              padding: const EdgeInsets.only(bottom: 80.0),
+              padding: MediaQuery.of(context).size.width > 600
+                  ? const EdgeInsets.only(bottom: 80.0)
+                  : const EdgeInsets.only(bottom: 70.0),
               child: FloatingActionButton(
                 backgroundColor: const Color(0xFF1A8927),
                 child: const Icon(Icons.add, color: Colors.white),
@@ -80,15 +83,12 @@ class _MessagesState extends State<Messages>
       body: TabBarView(
         controller: _tabController,
         children: [
-          const Center(child: Text("Comming Soon")),
+          const CommsTab(), // Community tab
           Container(
             margin: const EdgeInsets.only(left: 0, right: 0, bottom: 50),
             child: const RecsTab(),
           ),
-          Container(
-            margin: const EdgeInsets.only(left: 0, right: 0, bottom: 70),
-            child: const ChatListScreen(),
-          ),
+          Container(child: const ChatListScreen()),
         ],
       ),
     );

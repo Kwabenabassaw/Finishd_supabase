@@ -17,17 +17,50 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:finishd/MovieDetails/movie_recommenders_screen.dart';
 import 'package:finishd/Widget/related_content_section.dart';
 import 'package:finishd/Widget/ratings_display_widget.dart';
-
+import 'package:finishd/services/tmdb_sync_service.dart';
+import 'package:finishd/Widget/streaming_section.dart';
+import 'package:finishd/Community/community_detail_screen.dart';
 // --- Placeholder/Mock Data Models ---
 // Replace these with your actual TMDB models (Movie, CastMember, Season)
 
 TvService tvService = TvService();
 
 // --- The Main Widget ---
-class MovieDetailsScreen extends StatelessWidget {
+
+// ... other imports ...
+
+class MovieDetailsScreen extends StatefulWidget {
   final MovieDetails movie;
 
   const MovieDetailsScreen({super.key, required this.movie});
+
+  @override
+  State<MovieDetailsScreen> createState() => _MovieDetailsScreenState();
+}
+
+class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
+  final TmdbSyncService _syncService = TmdbSyncService();
+  late MovieDetails _movie;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _movie = widget.movie;
+    _syncFullDetails();
+  }
+
+  Future<void> _syncFullDetails() async {
+    final synced = await _syncService.getMovieDetails(_movie.id);
+    if (synced != null && mounted) {
+      setState(() {
+        _movie = synced;
+        _isLoading = false;
+      });
+    } else {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,9 +72,8 @@ class MovieDetailsScreen extends StatelessWidget {
             expandedHeight: 100,
             flexibleSpace: FlexibleSpaceBar(
               title: Text(
-                movie.title,
-                style: TextStyle(
-                  
+                _movie.title,
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -50,23 +82,20 @@ class MovieDetailsScreen extends StatelessWidget {
             ),
             actions: [
               IconButton(
-                icon: const Icon(Icons.more_vert, ),
+                icon: const Icon(Icons.more_vert),
                 onPressed: () {
-                  // Convert TvShowDetails to MovieListItem
                   final movieItem = MovieListItem(
-                    id: movie.id.toString(),
-                    title: movie.title,
-                    posterPath: movie.posterPath,
+                    id: _movie.id.toString(),
+                    title: _movie.title,
+                    posterPath: _movie.posterPath,
                     mediaType: 'movie',
                     addedAt: DateTime.now(),
                   );
-
                   showMovieActionDrawer(context, movieItem);
                 },
               ),
             ],
           ),
-          // 2. The Main Content Body
           SliverList(
             delegate: SliverChildListDelegate([
               Padding(
@@ -75,62 +104,87 @@ class MovieDetailsScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     const SizedBox(height: 10),
-                    // Title and Runtime
-                    FutureBuilder(
-                      future: tvService.getMovieTrailerKey(movie.id),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return AnimatedTrailerCoverShimmer();
-                        }
-                        if (snapshot.hasError) {
-                          return const Text("Couldn't load trailer");
-                        }
-                        if (!snapshot.hasData || snapshot.data == null) {
-                          return SizedBox(
-                            height: 200,
-                            child: Image.network(
-                              "https://image.tmdb.org/t/p/w500${movie.posterPath}",
-                              fit: BoxFit.cover,
-                              height: 100,
-                              width: double.infinity,
-                            ),
-                          );
-                        }
+                    // Logic to use _movie.videos if available directly, else fallback to FutureBuilder
+                    if (_movie.videos.isNotEmpty)
+                      AnimatedTrailerCover(
+                        poster: _movie.posterPath.toString(),
+                        youtubeKey: _movie.videos
+                            .firstWhere(
+                              (v) => v.site == 'YouTube' && v.type == 'Trailer',
+                              orElse: () => _movie.videos.first,
+                            )
+                            .key,
+                      )
+                    else
+                      FutureBuilder(
+                        future: tvService.getMovieTrailerKey(_movie.id),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return AnimatedTrailerCoverShimmer();
+                          }
+                          if (snapshot.hasError) {
+                            return const Text("Couldn't load trailer");
+                          }
+                          if (!snapshot.hasData || snapshot.data == null) {
+                            return SizedBox(
+                              height: 200,
+                              child: Image.network(
+                                "https://image.tmdb.org/t/p/w500${_movie.posterPath}",
+                                fit: BoxFit.cover,
+                                height: 100,
+                                width: double.infinity,
+                              ),
+                            );
+                          }
 
-                        return AnimatedTrailerCover(
-                          poster: movie.posterPath.toString(),
-                          youtubeKey: snapshot.data!,
-                        );
-                      },
-                    ),
-                    _buildTitleAndRuntime(movie.title),
+                          return AnimatedTrailerCover(
+                            poster: _movie.posterPath.toString(),
+                            youtubeKey: snapshot.data!,
+                          );
+                        },
+                      ),
+                    _buildTitleAndRuntime(_movie.title),
                     const SizedBox(height: 5),
 
-                    // Genres
                     _buildGenres(
-                      movie.genres.map((genre) => genre.name).toList(),
+                      _movie.genres.map((genre) => genre.name).toList(),
                     ),
-                    //Streaming Service
-                    Moviestreamingprovider(
-                      showId: movie.id,
-                      title: movie.title,
+
+                    // NEW Streaming Section
+                    const SizedBox(height: 15),
+                    StreamingSection(
+                      watchProviders: _movie.watchProviders,
+                      title: _movie.title,
+                      tmdbId: _movie.id.toString(),
                     ),
+
+                    if (_movie.watchProviders == null && !_isLoading)
+                      const Text(
+                        "Currently unavailable to stream in your region.",
+                        style: TextStyle(color: Colors.grey),
+                      ),
+
                     const SizedBox(height: 15),
 
-                    // Ratings from multiple sources
                     RatingsDisplayWidget(
-                      tmdbId: movie.id,
-                      tmdbRating: movie.voteAverage,
+                      tmdbId: _movie.id,
+                      tmdbRating: _movie.voteAverage,
                     ),
-                    //Overview
+
+                    const SizedBox(height: 15),
+
+                    // Community button - Start discussing this movie
+                    _buildCommunityButton(),
+
+                    const SizedBox(height: 15),
+
                     Text(
-                      movie.overview!,
+                      _movie.overview ?? '',
                       style: const TextStyle(fontSize: 16, height: 1.5),
                     ),
                     const SizedBox(height: 25),
 
-                    // Cast Section
                     const Text(
                       'Cast',
                       style: TextStyle(
@@ -139,25 +193,16 @@ class MovieDetailsScreen extends StatelessWidget {
                       ),
                     ),
                     SizedBox(height: 4),
-                    MovieCastAvatar(movieId: movie.id),
+                    MovieCastAvatar(movieId: _movie.id),
 
-                    // _buildCastSection(movie.cast),
-                    // const SizedBox(height: 25),
-
-                    // Recommended Section (Placeholder for complex logic)
                     _buildRecommendedSection(),
                     const SizedBox(height: 25),
 
-                    // Related Movies Section
                     RelatedContentSection(
-                      contentId: movie.id,
+                      contentId: _movie.id,
                       mediaType: 'movie',
-                      title: movie.title,
+                      title: _movie.title,
                     ),
-
-                    // // Seasons/Episodes Section
-                    // _buildSeasonsSection(movie.seasons),
-                    // const SizedBox(height: 40),
                   ],
                 ),
               ),
@@ -171,8 +216,6 @@ class MovieDetailsScreen extends StatelessWidget {
   // -------------------------------------------------------------------
   // Helper Widget Builders (Defined outside the build method for clarity)
   // -------------------------------------------------------------------
-
-
 
   Widget fancyScoreWithLabel(double score, {required String label}) {
     // Convert score (assumed 0-10) to percentage (0-100)
@@ -314,7 +357,7 @@ class MovieDetailsScreen extends StatelessWidget {
         // Runtime
         const Text('•', style: TextStyle(color: Colors.black54, fontSize: 16)),
         Text(
-          movie.runtime.toString(),
+          _movie.runtime.toString(),
           style: const TextStyle(color: Colors.black54, fontSize: 16),
         ),
         const Text(
@@ -324,8 +367,6 @@ class MovieDetailsScreen extends StatelessWidget {
       ],
     );
   }
-
- 
 
   Widget _buildRecommendedSection() {
     final user = FirebaseAuth.instance.currentUser;
@@ -337,7 +378,7 @@ class MovieDetailsScreen extends StatelessWidget {
     return StreamBuilder<List<Recommendation>>(
       stream: recommendationService.getMyRecommendationsForMovie(
         user.uid,
-        movie.id.toString(),
+        _movie.id.toString(),
       ),
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -363,8 +404,8 @@ class MovieDetailsScreen extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (context) => MovieRecommendersScreen(
-                          movieId: movie.id.toString(),
-                          movieTitle: movie.title,
+                          movieId: _movie.id.toString(),
+                          movieTitle: _movie.title,
                         ),
                       ),
                     );
@@ -429,4 +470,52 @@ class MovieDetailsScreen extends StatelessWidget {
     );
   }
 
+  /// Build a button to navigate to the community for this movie
+  Widget _buildCommunityButton() {
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CommunityDetailScreen(
+              showId: _movie.id,
+              showTitle: _movie.title,
+              posterPath: _movie.posterPath,
+              mediaType: 'movie',
+            ),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A8927).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF1A8927), width: 1.5),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.forum_outlined, color: Color(0xFF1A8927)),
+            const SizedBox(width: 8),
+            const Text(
+              'Join the Discussion',
+              style: TextStyle(
+                color: Color(0xFF1A8927),
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const Spacer(),
+            const Icon(
+              Icons.arrow_forward_ios,
+              color: Color(0xFF1A8927),
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

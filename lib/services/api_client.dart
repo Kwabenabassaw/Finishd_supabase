@@ -112,7 +112,7 @@ class ApiClient {
   Future<List<FeedItem>> getPersonalizedFeedV2({
     bool refresh = false,
     int limit = 50,
-    int page = 1,
+    int page = 3,
   }) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -146,7 +146,7 @@ class ApiClient {
   }
 
   /// Get global trending feed (no auth required for content)
-  Future<List<FeedItem>> getGlobalFeed({int limit = 50}) async {
+  Future<List<FeedItem>> getGlobalFeed({int limit = 20}) async {
     try {
       final queryParams = {'limit': limit.toString()};
       final response = await get('/feed/global', queryParams: queryParams);
@@ -302,6 +302,7 @@ class ApiClient {
   }
 
   /// Check for new episodes of shows user is watching
+  /// DEPRECATED: This is slow (5-15s) - use getEpisodeAlertsFast() instead
   Future<List<Map<String, dynamic>>> checkNewEpisodes() async {
     try {
       final response = await get('/episodes/check');
@@ -314,6 +315,28 @@ class ApiClient {
       return [];
     } catch (e) {
       print('❌ Error checking episodes: $e');
+      return [];
+    }
+  }
+
+  /// Get pre-computed episode alerts (FAST - ~50ms)
+  /// This reads from Firestore cache instead of querying TMDB for each show
+  Future<List<Map<String, dynamic>>> getEpisodeAlertsFast({
+    int limit = 50,
+  }) async {
+    try {
+      final queryParams = {'limit': limit.toString()};
+      final response = await get('/episodes/alerts', queryParams: queryParams);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> alerts = data['alerts'] ?? [];
+        print('⚡ Fast alerts: ${alerts.length} pre-computed alerts');
+        return alerts.cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (e) {
+      print('❌ Error fetching fast alerts: $e');
       return [];
     }
   }
@@ -388,6 +411,38 @@ class ApiClient {
     } catch (e) {
       print('❌ Error fetching recommendations: $e');
       return [];
+    }
+  }
+
+  /// Send chat notification via backend
+  Future<bool> sendChatNotification({
+    required String receiverUid,
+    required String senderUid,
+    required String messageText,
+    required String chatId,
+  }) async {
+    try {
+      final response = await post(
+        '/chat/notify',
+        body: {
+          'receiver_uid': receiverUid,
+          'sender_uid': senderUid,
+          'message_text': messageText,
+          'chat_id': chatId,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        print('✅ Chat notification sent successfully');
+        return true;
+      } else {
+        print('⚠️ Chat notification failed: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Error sending chat notification: $e');
+      // Non-critical error, don't block message send
+      return false;
     }
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:finishd/services/auth_service.dart';
 
@@ -251,15 +252,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       spacing: 10,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Image.asset('assets/glogo.png'),
+                      FaIcon(
+              FontAwesomeIcons.google,
+              size: 24.0,
+               // Google's primary brand color is red/blue/green/yellow
+            ),
                         const Text(
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.right,
                           'Contiune With Google ',
 
                           style: TextStyle(
-                            fontSize: 18,
+                          
                             fontWeight: FontWeight.bold,
+                            fontSize: 18,
                             color: Colors.grey,
                           ),
                         ),
@@ -284,10 +290,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       elevation: 0,
                     ),
                     child: Row(
-                      spacing: 10,
+                      spacing: 14,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Image.asset('assets/apple.png'),
+                       FaIcon(
+              FontAwesomeIcons.apple,
+              size: 24.0,
+             // Google's primary brand color is red/blue/green/yellow
+            ),
                         const Text(
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.right,

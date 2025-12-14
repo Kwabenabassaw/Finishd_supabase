@@ -111,6 +111,9 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
     YoutubePlayerController controller,
     YoutubeFeedProvider provider,
   ) {
+    // Ensure playing via post-frame callback
+    _ensurePlaying(controller, provider);
+
     return AbsorbPointer(
       // BLOCK all gestures from the YouTube player
       // This prevents the bouncing/scroll conflict with PageView
@@ -133,15 +136,51 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
               ),
               onReady: () {
                 debugPrint('[YTItem] Player ready for index ${widget.index}');
+                // Force play if this is the current video
+                if (provider.currentIndex == widget.index) {
+                  controller.play();
+                }
               },
               onEnded: (metaData) {
                 debugPrint('[YTItem] Video ended at index ${widget.index}');
+                controller.play();
               },
             ),
           ),
         ),
       ),
     );
+  }
+
+  void _ensurePlaying(
+    YoutubePlayerController controller,
+    YoutubeFeedProvider provider,
+  ) {
+    // Use delayed callback with retry for reliable autoplay
+    _tryAutoPlay(controller, provider, 0);
+  }
+
+  void _tryAutoPlay(
+    YoutubePlayerController controller,
+    YoutubeFeedProvider provider,
+    int attempt,
+  ) {
+    if (attempt >= 3) return; // Max 3 attempts
+
+    Future.delayed(Duration(milliseconds: 200 + (attempt * 150)), () {
+      if (!mounted) return;
+      if (provider.currentIndex != widget.index) return;
+
+      if (!controller.value.isPlaying) {
+        debugPrint(
+          '[YTItem] Auto-play attempt ${attempt + 1} for index ${widget.index}',
+        );
+        controller.play();
+
+        // Retry if still not playing
+        _tryAutoPlay(controller, provider, attempt + 1);
+      }
+    });
   }
 
   /// Play/Pause gesture detector
@@ -416,7 +455,13 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
         _buildActionButton(
           icon: Icons.share_outlined,
           label: 'Share',
-          onTap: () => showShareBottomSheet(context),
+          onTap: () => showVideoShareSheet(
+            context,
+            videoId: video.videoId,
+            videoTitle: video.title,
+            videoThumbnail: video.thumbnailUrl,
+            videoChannel: video.channelName,
+          ),
         ),
         const SizedBox(height: 24),
 

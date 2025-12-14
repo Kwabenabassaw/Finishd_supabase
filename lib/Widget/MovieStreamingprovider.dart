@@ -48,6 +48,7 @@ class _StreamingproviderState extends State<Moviestreamingprovider> {
                           DeepLinkService.openStreamingProvider(
                             provider,
                             widget.title,
+                            usInfo.link,
                           );
                         },
                         child: Column(

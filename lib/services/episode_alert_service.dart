@@ -4,13 +4,15 @@ import 'package:finishd/services/api_client.dart';
 class EpisodeAlertService {
   final ApiClient _apiClient = ApiClient();
 
-  /// Check for new episodes of shows the user is watching
+  /// Get pre-computed episode alerts (FAST - reads from Firestore cache)
+  /// This replaces the slow checkNewEpisodes which queried TMDB for each show
   Future<List<EpisodeAlert>> checkNewEpisodes() async {
     try {
-      final alerts = await _apiClient.checkNewEpisodes();
+      // Use fast endpoint that reads from pre-computed cache
+      final alerts = await _apiClient.getEpisodeAlertsFast();
       return alerts.map((a) => EpisodeAlert.fromJson(a)).toList();
     } catch (e) {
-      print('❌ Error checking new episodes: $e');
+      print('❌ Error fetching episode alerts: $e');
       return [];
     }
   }
@@ -95,6 +97,18 @@ class EpisodeAlert {
       stillPath != null ? 'https://image.tmdb.org/t/p/w500$stillPath' : '';
 
   String get episodeLabel => 'S$seasonNumber E$episodeNumber';
+
+  Map<String, dynamic> toJson() => {
+    'showId': showId,
+    'showName': showName,
+    'showPosterPath': showPosterPath,
+    'seasonNumber': seasonNumber,
+    'episodeNumber': episodeNumber,
+    'episodeName': episodeName,
+    'airDate': airDate,
+    'overview': overview,
+    'stillPath': stillPath,
+  };
 }
 
 /// Model for upcoming episode

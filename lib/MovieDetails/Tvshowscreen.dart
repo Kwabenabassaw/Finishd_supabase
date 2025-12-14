@@ -1,3 +1,10 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:finishd/MovieDetails/MovieScreen.dart';
+import 'package:finishd/MovieDetails/SeasonDetailsScreen.dart';
+import 'package:finishd/MovieDetails/movie_recommenders_screen.dart';
+import 'package:finishd/Widget/ratings_display_widget.dart';
+import 'package:finishd/Widget/related_content_section.dart';
+import 'package:flutter/material.dart';
 import 'package:finishd/LoadingWidget/playerloading.dart';
 import 'package:finishd/Model/movie_list_item.dart';
 import 'package:finishd/Model/tvdetail.dart';
@@ -12,29 +19,14 @@ import 'package:finishd/Model/user_model.dart';
 import 'package:finishd/services/recommendation_service.dart';
 import 'package:finishd/services/user_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:finishd/MovieDetails/movie_recommenders_screen.dart';
-import 'package:finishd/MovieDetails/SeasonDetailsScreen.dart';
-import 'package:finishd/Widget/related_content_section.dart';
-import 'package:finishd/Widget/ratings_display_widget.dart';
+import 'package:finishd/services/tmdb_sync_service.dart';
+import 'package:finishd/Widget/streaming_section.dart';
+import 'package:finishd/Community/community_detail_screen.dart';
 
-// --- Placeholder/Mock Data Models ---
-// Replace these with your actual TMDB models (Movie, CastMember, Season)
-class TvShow {
-  final int id;
-  final TvShowDetails show;
+// ... other imports ...
 
-  TvShow({required this.id, required this.show});
-}
-
-TvService tvService = TvService();
-bool loadingService = false;
-
-// --- The Main Widget ---
 class ShowDetailsScreen extends StatefulWidget {
   final TvShowDetails movie;
-
   const ShowDetailsScreen({super.key, required this.movie});
 
   @override
@@ -42,37 +34,57 @@ class ShowDetailsScreen extends StatefulWidget {
 }
 
 class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
+  final TmdbSyncService _syncService = TmdbSyncService();
+  late TvShowDetails _show;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _show = widget.movie;
+    _syncFullDetails();
+  }
+
+  Future<void> _syncFullDetails() async {
+    final synced = await _syncService.getTvShowDetails(_show.id);
+    if (synced != null && mounted) {
+      setState(() {
+        _show = synced;
+        _isLoading = false;
+      });
+    } else {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: CustomScrollView(
         slivers: <Widget>[
-          // 1. App Bar and Video Player Placeholder
+          // ... SliverAppBar ...
           SliverAppBar(
             pinned: true,
             expandedHeight: 100,
             actions: [
               IconButton(
-                icon: const Icon(Icons.more_vert,),
+                icon: const Icon(Icons.more_vert),
                 onPressed: () {
-                  // Convert TvShowDetails to MovieListItem
                   final movieItem = MovieListItem(
-                    id: widget.movie.id.toString(),
-                    title: widget.movie.name,
-                    posterPath: widget.movie.posterPath,
+                    id: _show.id.toString(),
+                    title: _show.name,
+                    posterPath: _show.posterPath,
                     mediaType: 'tv',
                     addedAt: DateTime.now(),
                   );
-
                   showMovieActionDrawer(context, movieItem);
                 },
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
               title: Text(
-                widget.movie.name,
-                style: TextStyle(
-                  
+                _show.name,
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -80,7 +92,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
               centerTitle: true,
             ),
           ),
-          // 2. The Main Content Body
+
           SliverList(
             delegate: SliverChildListDelegate([
               Padding(
@@ -90,44 +102,58 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                   children: <Widget>[
                     Stack(
                       children: [
-                        FutureBuilder(
-                          future: tvService.getTVShowTrailerKey(
-                            widget.movie.id.toString(),
+                        // Logic to use _show.videos if available directly, else fallback to FutureBuilder
+                        if (_show.videos.isNotEmpty)
+                          AnimatedTrailerCover(
+                            poster: _show.posterPath.toString(),
+                            youtubeKey: _show.videos
+                                .firstWhere(
+                                  (v) =>
+                                      v.site == 'YouTube' &&
+                                      v.type == 'Trailer',
+                                  orElse: () => _show.videos.first,
+                                )
+                                .key,
+                          )
+                        else
+                          FutureBuilder(
+                            future: tvService.getTVShowTrailerKey(
+                              _show.id.toString(),
+                            ),
+                            // ... existing builder logic ...
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return AnimatedTrailerCoverShimmer();
+                              }
+                              if (snapshot.hasError) {
+                                return _buildcover(
+                                  context,
+                                  _show.posterPath.toString(),
+                                );
+                              }
+                              if (!snapshot.hasData || snapshot.data == null) {
+                                return SizedBox(
+                                  height: 200,
+                                  child: Image.network(
+                                    "https://image.tmdb.org/t/p/w500${_show.posterPath}",
+                                    fit: BoxFit.cover,
+                                    height: 100,
+                                    width: double.infinity,
+                                  ),
+                                );
+                              }
+                              final trailerKey = snapshot.data! as String;
+                              return AnimatedTrailerCover(
+                                poster: _show.posterPath.toString(),
+                                youtubeKey: trailerKey,
+                              );
+                            },
                           ),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return AnimatedTrailerCoverShimmer();
-                            }
-                            if (snapshot.hasError) {
-                              return _buildcover(
-                                context,
-                                widget.movie.posterPath.toString(),
-                              );
-                            }
-                            if (!snapshot.hasData || snapshot.data == null) {
-                              return SizedBox(
-                                height: 200,
-                                child: Image.network(
-                                  "https://image.tmdb.org/t/p/w500${widget.movie.posterPath}",
-                                  fit: BoxFit.cover,
-                                  height: 100,
-                                  width: double.infinity,
-                                ),
-                              );
-                            }
-                            final trailerKey = snapshot.data!;
-                            return AnimatedTrailerCover(
-                              poster: widget.movie.posterPath.toString(),
-                              youtubeKey: trailerKey,
-                            );
-                          },
-                        ),
                       ],
                     ),
 
-                    // Title and Runtime
-                    _buildTitleAndRuntime(widget.movie.name),
+                    _buildTitleAndRuntime(_show.name),
                     const SizedBox(height: 5),
                     Row(
                       spacing: 10,
@@ -140,41 +166,49 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                         ),
                         Flexible(
                           child: Text(
-                            widget.movie.firstAirDate,
+                            _show.firstAirDate,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
                         Flexible(
                           child: Text(
-                            widget.movie.status,
+                            _show.status,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(color: Colors.grey),
                           ),
                         ),
                       ],
                     ),
-      Text(
-                      widget.movie.genres.map((genre) => genre.name).join(", "),
+                    Text(_show.genres.map((genre) => genre.name).join(", ")),
+
+                    // NEW Streaming Section
+                    const SizedBox(height: 15),
+                    StreamingSection(
+                      watchProviders: _show.watchProviders,
+                      title: _show.name,
+                      tmdbId: _show.id.toString(),
                     ),
 
-                    Streamingprovider(
-                      showId: widget.movie.id.toString(),
-                      title: widget.movie.name,
-                    ),
+                    if (_show.watchProviders == null && !_isLoading)
+                      const Text(
+                        "Currently unavailable to stream in your region.",
+                        style: TextStyle(color: Colors.grey),
+                      ),
+
+                    const SizedBox(height: 15),
 
                     SizedBox(height: 15),
-                    
 
                     // Ratings from multiple sources
                     RatingsDisplayWidget(
-                      tmdbId: widget.movie.id,
-                      tmdbRating: widget.movie.voteAverage,
+                      tmdbId: _show.id,
+                      tmdbRating: _show.voteAverage,
                     ),
 
                     SizedBox(height: 5),
+
                     // Genres
-              
                     const SizedBox(height: 16),
 
                     // Streaming Services (Logos)
@@ -183,9 +217,14 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
 
                     // Description/Overview
                     Text(
-                      widget.movie.overview,
+                      _show.overview,
                       style: const TextStyle(fontSize: 16, height: 1.5),
                     ),
+                    const SizedBox(height: 20),
+
+                    // Community button - Start discussing this show
+                    _buildCommunityButton(),
+
                     const SizedBox(height: 25),
                     const Text(
                       'Cast',
@@ -195,7 +234,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                       ),
                     ),
                     SizedBox(height: 4),
-                    CastAvatar(showId: widget.movie.id),
+                    CastAvatar(showId: _show.id),
                     // const SizedBox(height: 25),
 
                     // Cast Section
@@ -207,13 +246,13 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                     const SizedBox(height: 25),
 
                     // Seasons/Episodes Section
-                    _buildSeasonsSection(context, widget.movie.seasons),
+                    _buildSeasonsSection(context, _show.seasons),
 
                     // Related TV Shows Section
                     RelatedContentSection(
-                      contentId: widget.movie.id,
+                      contentId: _show.id,
                       mediaType: 'tv',
-                      title: widget.movie.name,
+                      title: _show.name,
                     ),
                   ],
                 ),
@@ -263,62 +302,6 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
     );
   }
 
-  Widget _buildSliverAppBar(BuildContext context) {
-    return SliverAppBar(
-      expandedHeight: 250.0, // Height of the video player area
-      pinned: true,
-      backgroundColor: Colors.white,
-
-      flexibleSpace: FlexibleSpaceBar(
-        centerTitle: false,
-        background: AspectRatio(
-          aspectRatio: 16 / 9,
-          // Video Player Placeholder Area
-          child: Container(
-            color: Colors.black, // Background of the player
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Replace with your actual video player widget (e.g., video_player, youtube_player_flutter)
-                CachedNetworkImage(
-                  imageUrl:
-                      "https://image.tmdb.org/t/p/w500${widget.movie.posterPath}", // Placeholder image matching the visual
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  height: double.infinity,
-                  errorWidget: (context, url, error) => const Center(
-                    child: Icon(Icons.error, color: Colors.white),
-                  ),
-                ),
-                // Play Button
-                const Icon(
-                  Icons.play_circle_fill,
-                  color: Colors.white,
-                  size: 50,
-                ),
-                // Custom progress bar/timeline (Mocked with a simple row)
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Row(children: [
-                        
-
-               
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildTitleAndRuntime(String title) {
     return Row(
       children: [
@@ -330,33 +313,6 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  // Widget _buildGenres(<Genre> genres) {
-  Widget _buildStreamingServices(List<String> services) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: services
-          .map(
-            (service) => Container(
-              padding: const EdgeInsets.all(8.0),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              // Placeholder for service logos
-              child: Text(
-                service.toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black54,
-                ),
-              ),
-            ),
-          )
-          .toList(),
     );
   }
 
@@ -565,7 +521,10 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                               color: Colors.grey,
                               height: cardHeight,
                               width: cardWidth,
-                              child: const Icon(Icons.error, color: Colors.white),
+                              child: const Icon(
+                                Icons.error,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
@@ -588,6 +547,55 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  /// Build a button to navigate to the community for this show
+  Widget _buildCommunityButton() {
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CommunityDetailScreen(
+              showId: _show.id,
+              showTitle: _show.name,
+              posterPath: _show.posterPath,
+              mediaType: 'tv',
+            ),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A8927).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF1A8927), width: 1.5),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.forum_outlined, color: Color(0xFF1A8927)),
+            const SizedBox(width: 8),
+            const Text(
+              'Join the Discussion',
+              style: TextStyle(
+                color: Color(0xFF1A8927),
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const Spacer(),
+            const Icon(
+              Icons.arrow_forward_ios,
+              color: Color(0xFF1A8927),
+              size: 16,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

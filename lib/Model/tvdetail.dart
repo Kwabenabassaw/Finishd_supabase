@@ -1,3 +1,6 @@
+import 'package:finishd/Model/tmdb_extras.dart';
+import 'package:finishd/Model/Watchprovider.dart';
+
 class TvShowDetails {
   final int id;
   final String name;
@@ -19,6 +22,9 @@ class TvShowDetails {
   final String type;
   final double voteAverage;
   final int voteCount;
+  final List<Video> videos;
+  final List<Cast> cast;
+  final WatchProvidersResponse? watchProviders;
 
   TvShowDetails({
     required this.id,
@@ -41,9 +47,32 @@ class TvShowDetails {
     required this.type,
     required this.voteAverage,
     required this.voteCount,
+    this.videos = const [],
+    this.cast = const [],
+    this.watchProviders,
   });
 
   factory TvShowDetails.fromJson(Map<String, dynamic> json) {
+    var videosList = <Video>[];
+    if (json['videos'] != null && json['videos']['results'] != null) {
+      videosList = (json['videos']['results'] as List)
+          .map((v) => Video.fromJson(v))
+          .toList();
+    }
+
+    var castList = <Cast>[];
+    if (json['credits'] != null && json['credits']['cast'] != null) {
+      castList = (json['credits']['cast'] as List)
+          .map((c) => Cast.fromJson(c))
+          .toList();
+    }
+
+    WatchProvidersResponse? providers;
+    if (json['watch/providers'] != null &&
+        json['watch/providers']['results'] != null) {
+      providers = WatchProvidersResponse.fromJson(json['watch/providers']);
+    }
+
     return TvShowDetails(
       id: json['id'] ?? 0,
       name: json['name'] ?? 'Unknown',
@@ -73,6 +102,9 @@ class TvShowDetails {
       type: json['type'] ?? 'Unknown',
       voteAverage: (json['vote_average'] ?? 0).toDouble(),
       voteCount: json['vote_count'] ?? 0,
+      videos: videosList,
+      cast: castList,
+      watchProviders: providers,
     );
   }
 }
@@ -84,10 +116,7 @@ class Genre {
   Genre({required this.id, required this.name});
 
   factory Genre.fromJson(Map<String, dynamic> json) {
-    return Genre(
-      id: json['id'] ?? 0,
-      name: json['name'] ?? 'Unknown',
-    );
+    return Genre(id: json['id'] ?? 0, name: json['name'] ?? 'Unknown');
   }
 }
 

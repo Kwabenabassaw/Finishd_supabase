@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:finishd/services/auth_service.dart';
-
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 // Define the primary color (Green from the image)
 const Color primaryGreen = Color(0xFF1E88E5);
 
@@ -211,7 +211,11 @@ class _LoginState extends State<Login> {
                       spacing: 10,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Image.asset('assets/glogo.png', width: 24, height: 24),
+                        FaIcon(
+              FontAwesomeIcons.google,
+              size:24.0,
+             
+            ),
                         const Text(
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.right,
@@ -244,10 +248,14 @@ class _LoginState extends State<Login> {
                       elevation: 0,
                     ),
                     child: Row(
-                      spacing: 10,
+                      spacing: 14,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Image.asset('assets/apple.png', width: 24, height: 24),
+                        FaIcon(
+              FontAwesomeIcons.apple,
+              size: 24.0,
+              
+            ),
                         const Text(
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.right,

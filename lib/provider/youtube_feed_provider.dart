@@ -168,24 +168,37 @@ class YoutubeFeedProvider extends ChangeNotifier {
   }
 
   /// Plays the video at index with retry mechanism
-  /// Retries up to 5 times if controller isn't ready yet
+  /// Retries up to 5 times if controller isn't ready or video doesn't start
   void _playWithRetry(int index, [int attempt = 0]) {
     if (_isDisposed || _currentIndex != index) return;
+    if (attempt >= 5) {
+      debugPrint('[YTFeed] ⚠️ Failed to play index $index after 5 attempts');
+      return;
+    }
 
     final controller = _controllers[index];
 
     if (controller != null) {
       debugPrint('[YTFeed] ▶️ Playing index $index (attempt $attempt)');
       controller.play();
-    } else if (attempt < 5) {
-      // Controller not ready yet, retry with increasing delay
-      final delay = Duration(milliseconds: 100 + (attempt * 100));
+
+      // Verify it actually started playing after a short delay
+      Future.delayed(Duration(milliseconds: 300 + (attempt * 200)), () {
+        if (_isDisposed || _currentIndex != index) return;
+
+        final currentController = _controllers[index];
+        if (currentController != null && !currentController.value.isPlaying) {
+          debugPrint('[YTFeed] ⚠️ Video at $index not playing, retrying...');
+          _playWithRetry(index, attempt + 1);
+        }
+      });
+    } else {
+      // Controller not ready yet, retry with delay
+      final delay = Duration(milliseconds: 150 + (attempt * 150));
       debugPrint(
         '[YTFeed] ⏳ Controller not ready for $index, retrying in ${delay.inMilliseconds}ms...',
       );
       Future.delayed(delay, () => _playWithRetry(index, attempt + 1));
-    } else {
-      debugPrint('[YTFeed] ⚠️ Failed to play index $index after 5 attempts');
     }
   }
 
@@ -254,7 +267,8 @@ class YoutubeFeedProvider extends ChangeNotifier {
       final controller = YoutubePlayerController(
         initialVideoId: videoId,
         flags: YoutubePlayerFlags(
-          autoPlay: index == _currentIndex, // Only current auto-plays
+          autoPlay:
+              false, // Don't rely on this - we'll manually play the current video
           mute: _isMuted, // Use the current mute state
           loop: true,
           disableDragSeek: true, // Prevents gesture conflicts

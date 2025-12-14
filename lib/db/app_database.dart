@@ -19,7 +19,7 @@ class AppDatabase {
 
     return await openDatabase(
       path,
-      version: 2, // Upgraded from 1 to 2 for notifications
+      version: 3, // Upgraded from 2 to 3 for TMDB cache
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -66,6 +66,16 @@ class AppDatabase {
         timestamp INTEGER NOT NULL
       )
     ''');
+
+    // 5. TMDB Full Metadata Cache (v3)
+    await db.execute('''
+      CREATE TABLE tmdb_cache (
+        id TEXT PRIMARY KEY,
+        type TEXT NOT NULL,
+        json TEXT NOT NULL,
+        timestamp INTEGER NOT NULL
+      )
+    ''');
   }
 
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -73,6 +83,18 @@ class AppDatabase {
       // Add notifications_cache table
       await db.execute('''
         CREATE TABLE IF NOT EXISTS notifications_cache (
+          id TEXT PRIMARY KEY,
+          type TEXT NOT NULL,
+          json TEXT NOT NULL,
+          timestamp INTEGER NOT NULL
+        )
+      ''');
+    }
+
+    if (oldVersion < 3) {
+      // Add tmdb_cache table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS tmdb_cache (
           id TEXT PRIMARY KEY,
           type TEXT NOT NULL,
           json TEXT NOT NULL,

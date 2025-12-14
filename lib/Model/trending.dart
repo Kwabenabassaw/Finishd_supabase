@@ -18,12 +18,13 @@ class MediaItem {
     required this.voteAverage,
     required this.mediaType,
     required this.releaseDate,
-    required this.genreIds, required String imageUrl,
+    required this.genreIds,
+    required String imageUrl,
   });
 
   factory MediaItem.fromJson(Map<String, dynamic> json, {String? type}) {
     return MediaItem(
-      id: json['id'],
+      id: json['id'] ?? 0,
       title: json['title'] ?? json['name'] ?? 'No Title',
       overview: json['overview'] ?? '',
       posterPath: json['poster_path'] ?? '',
@@ -33,7 +34,8 @@ class MediaItem {
       releaseDate: json['release_date'] ?? json['first_air_date'] ?? '',
       genreIds: (json['genre_ids'] as List<dynamic>? ?? [])
           .map((id) => id as int)
-          .toList(), imageUrl: '',
+          .toList(),
+      imageUrl: '',
     );
   }
 
@@ -57,7 +59,23 @@ class MediaItem {
       voteAverage: voteAverage ?? this.voteAverage,
       mediaType: mediaType ?? this.mediaType,
       releaseDate: releaseDate ?? this.releaseDate,
-      genreIds: genreIds ?? this.genreIds, imageUrl: '',
+      genreIds: genreIds ?? this.genreIds,
+      imageUrl: '',
     );
+  }
+
+  /// Convert to JSON for caching
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'overview': overview,
+      'poster_path': posterPath,
+      'backdrop_path': backdropPath,
+      'vote_average': voteAverage,
+      'media_type': mediaType,
+      'release_date': releaseDate,
+      'genre_ids': genreIds,
+    };
   }
 }

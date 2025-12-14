@@ -1,46 +1,43 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    
     // Helper function to check if user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
-
+    
     // Helper function to check if user is accessing their own document
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
 
+    // =========================================================================
+    // USERS & SUBCOLLECTIONS
+    // =========================================================================
+
     // Users collection
     match /users/{userId} {
-      // Allow read for any authenticated user (to view profiles, find friends, etc.)
       allow read: if isAuthenticated();
-      // Allow update only if it's the owner
       allow update: if isOwner(userId);
-      // Allow create if authenticated (for signup)
       allow create: if isAuthenticated() && isOwner(userId);
       
-      // Subcollections
-      
-      // Followers: 
-      // - Read: Allow anyone authenticated (to see who follows whom)
-      // - Write: Allow if the document ID in the subcollection matches the requestor's UID 
-      //   (i.e., I can add myself as a follower to someone else)
+      // My Communities Subcollection
+      match /my_communities/{showId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Followers / Following
       match /followers/{followerId} {
         allow read: if isAuthenticated();
         allow write: if isOwner(followerId);
       }
-      
-      // Following:
-      // - Read: Allow anyone authenticated
-      // - Write: Allow if the parent user ID matches the requestor's UID
-      //   (i.e., I can add someone to my following list)
       match /following/{followingId} {
         allow read: if isAuthenticated();
         allow write: if isOwner(userId);
       }
 
-      // Movie Lists (finished, watching, watchlist, favorites)
+      // Movie Lists
       match /finished/{movieId} {
         allow read: if isAuthenticated();
         allow write: if isOwner(userId);
@@ -59,24 +56,111 @@ service cloud.firestore {
       }
     }
 
-    // Movies collection (for caching ratings)
+    // =========================================================================
+    // COMMUNITY SYSTEM
+    // =========================================================================
+    
+    // Communities
+    match /communities/{showId} {
+      // Anyone can read (for discovery)
+      allow read: if true;
+      // Authenticated users can create (lazy creation)
+      allow create: if request.auth != null;
+      // Allow updating counters (memberCount, postCount, lastActivityAt)
+      allow update: if request.auth != null
+        && request.resource.data.diff(resource.data).affectedKeys()
+           .hasOnly(['memberCount', 'postCount', 'lastActivityAt']);
+      
+      // Members subcollection
+      match /members/{memberId} {
+        allow read: if true;
+        allow create, delete: if request.auth != null && request.auth.uid == memberId;
+      }
+    }
+    
+    // Community Posts
+    match /community_posts/{postId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.resource.data.authorId == request.auth.uid;
+      // Author updates content, others update counters
+      // Added 'score' to allowed fields for transactional voting updates
+      allow update: if request.auth != null
+        && (request.auth.uid == resource.data.authorId
+            || request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['upvotes', 'downvotes', 'score', 'commentCount', 'lastActivityAt']));
+      allow delete: if request.auth != null && request.auth.uid == resource.data.authorId;
+    }
+    
+    // Community Comments
+    match /community_comments/{commentId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.resource.data.authorId == request.auth.uid;
+      allow update: if request.auth != null
+        && (request.auth.uid == resource.data.authorId
+            || request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['upvotes', 'downvotes']));
+      allow delete: if request.auth != null && request.auth.uid == resource.data.authorId;
+    }
+    
+    // Community Votes
+    match /community_votes/{voteId} {
+      allow read: if true;
+      allow create, update: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
+
+    // =========================================================================
+    // VIDEO & FEED SYSTEMS
+    // =========================================================================
+
+    match /video_comments/{videoId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+        allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+        allow update: if request.auth != null;
+      }
+    }
+
+    // ----------------------------
+    // RECOMMENDATIONS
+    // ----------------------------
+    match /recommendations/{recId} {
+      allow create: if request.auth != null
+                    && request.resource.data.fromUserId == request.auth.uid;
+
+      allow read: if request.auth != null
+                  && (resource.data.toUserId == request.auth.uid
+                      || resource.data.fromUserId == request.auth.uid);
+
+      allow update, delete: if false;
+    }
+
     match /movies/{movieId}/ratings/{document=**} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
     }
 
-    // Feed cache collection (for personalized feed caching)
     match /feed_cache/{userId} {
-      allow read: if isAuthenticated() && isOwner(userId);
-      allow write: if isAuthenticated() && isOwner(userId);
+      allow read, write: if isAuthenticated() && isOwner(userId);
     }
+    
+    match /video_reactions/{videoId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+      match /reactions/{userId} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
     // Chats collection
     match /chats/{chatId} {
-      // Allow read if document doesn't exist (to check existence) OR if user is a participant
       allow read: if request.auth != null && (resource == null || request.auth.uid in resource.data.participants);
       allow create: if request.auth != null && request.resource.data.participants is list && request.auth.uid in request.resource.data.participants;
       allow update: if request.auth != null && request.auth.uid in resource.data.participants;
-
       match /messages/{messageId} {
         allow read: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
         allow create: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants && request.resource.data.senderId == request.auth.uid;

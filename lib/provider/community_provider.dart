@@ -1,0 +1,317 @@
+import 'package:flutter/material.dart';
+import 'package:finishd/Model/community_models.dart';
+import 'package:finishd/Model/trending.dart';
+import 'package:finishd/services/community_service.dart';
+import 'package:finishd/Model/trendingmovies.dart'; // Ensure correct import for TMDB service if needed
+import 'package:finishd/tmbd/fetchtrending.dart';
+
+class CommunityProvider extends ChangeNotifier {
+  final CommunityService _communityService = CommunityService();
+  final Trending _trending = Trending();
+
+  // My Communities
+  List<Community> _myCommunities = [];
+  bool _isLoadingMyCommunities = false;
+
+  // Discover Content
+  List<MediaItem> _discoverContent = [];
+  bool _isLoadingDiscover = false;
+  String _discoverFilter = 'trending'; // 'trending', 'tv', 'movie'
+
+  // Current Open Community (for detail screen)
+  Community? _currentCommunity;
+  List<CommunityPost> _currentPosts = [];
+  bool _isLoadingCommunityDetails = false;
+  bool _isMemberOfCurrent = false;
+  String _currentSortBy = 'createdAt';
+  Map<String, int> _currentUserVotes = {}; // postId -> vote
+
+  // Getters
+  List<Community> get myCommunities => _myCommunities;
+  bool get isLoadingMyCommunities => _isLoadingMyCommunities;
+
+  List<MediaItem> get discoverContent => _discoverContent;
+  bool get isLoadingDiscover => _isLoadingDiscover;
+  String get discoverFilter => _discoverFilter;
+
+  Community? get currentCommunity => _currentCommunity;
+  List<CommunityPost> get currentPosts => _currentPosts;
+  bool get isLoadingCommunityDetails => _isLoadingCommunityDetails;
+  bool get isMemberOfCurrent => _isMemberOfCurrent;
+  String get currentSortBy => _currentSortBy;
+  Map<String, int> get currentUserVotes => _currentUserVotes;
+
+  // --- Global Lists ---
+
+  Future<void> fetchMyCommunities() async {
+    _isLoadingMyCommunities = true;
+    notifyListeners();
+
+    try {
+      final results = await _communityService.getMyCommunities();
+      _myCommunities = results.map((c) => Community.fromJson(c)).toList();
+    } catch (e) {
+      print('Error fetching my communities: $e');
+    } finally {
+      _isLoadingMyCommunities = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchDiscoverContent() async {
+    _isLoadingDiscover = true;
+    notifyListeners();
+
+    try {
+      List<MediaItem> content = [];
+
+      // We need to know my communities to filter them out
+      if (_myCommunities.isEmpty) {
+        // Ensure my communities are loaded for filtering
+        final myResults = await _communityService.getMyCommunities();
+        _myCommunities = myResults.map((c) => Community.fromJson(c)).toList();
+      }
+      final myShowIds = _myCommunities.map((c) => c.showId).toSet();
+
+      if (_discoverFilter == 'trending' || _discoverFilter == 'movie') {
+        final movies = await _trending.fetchTrendingMovie();
+        content.addAll(movies);
+      }
+
+      if (_discoverFilter == 'trending' || _discoverFilter == 'tv') {
+        final shows = await _trending.fetchTrendingShow();
+        content.addAll(shows);
+      }
+
+      if (_discoverFilter == 'trending') {
+        content.shuffle();
+      }
+
+      // Filter out joined communities
+      _discoverContent = content
+          .where((item) => !myShowIds.contains(item.id))
+          .take(10)
+          .toList();
+    } catch (e) {
+      print('Error fetching discover content: $e');
+    } finally {
+      _isLoadingDiscover = false;
+      notifyListeners();
+    }
+  }
+
+  void setDiscoverFilter(String filter) {
+    if (_discoverFilter != filter) {
+      _discoverFilter = filter;
+      fetchDiscoverContent();
+    }
+  }
+
+  // --- Single Community Details ---
+
+  void clearCurrentCommunity() {
+    _currentCommunity = null;
+    _currentPosts = [];
+    _isMemberOfCurrent = false;
+    _currentUserVotes = {};
+    // Don't notify listeners here usually to avoid rebuilds during nav,
+    // but if needed: notifyListeners();
+  }
+
+  Future<void> loadCommunityDetails(int showId, {String? sortBy}) async {
+    _isLoadingCommunityDetails = true;
+    // We might not want to clear previous immediately if we want to show stale data while loading
+    // but for now let's be safe
+    if (sortBy != null) _currentSortBy = sortBy;
+
+    notifyListeners();
+
+    try {
+      // Fetch community info and posts in parallel
+      final results = await Future.wait([
+        _communityService.getCommunity(showId),
+        _communityService.isMember(showId),
+        _communityService.getPosts(showId: showId, sortBy: _currentSortBy),
+      ]);
+
+      final communityData = results[0] as Map<String, dynamic>?;
+      final isMember = results[1] as bool;
+      final postsData = results[2] as List<Map<String, dynamic>>;
+
+      _currentCommunity = communityData != null
+          ? Community.fromJson(communityData)
+          : null;
+      _isMemberOfCurrent = isMember;
+      _currentPosts = postsData.map((p) => CommunityPost.fromJson(p)).toList();
+
+      // Load votes in parallel
+      final voteFutures = _currentPosts.map((post) async {
+        final vote = await _communityService.getUserVote(post.id, showId);
+        return MapEntry(post.id, vote);
+      });
+
+      final votes = await Future.wait(voteFutures);
+      _currentUserVotes = Map.fromEntries(votes);
+    } catch (e) {
+      print('Error loading community details: $e');
+    } finally {
+      _isLoadingCommunityDetails = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> setSortBy(int showId, String sortBy) async {
+    if (_currentSortBy != sortBy) {
+      _currentSortBy = sortBy;
+      await loadCommunityDetails(showId);
+    }
+  }
+
+  Future<void> joinCommunity(int showId, Community? community) async {
+    // If we have details, ensure existence via service (requires updating service signature or separate call)
+    // Ideally service handles existence check. For now, assuming existence or service handles it.
+    await _communityService.joinCommunity(showId);
+    _isMemberOfCurrent = true;
+
+    // Optimistically update current community member count
+    if (_currentCommunity != null && _currentCommunity!.showId == showId) {
+      _currentCommunity = _currentCommunity!.copyWith(
+        memberCount: _currentCommunity!.memberCount + 1,
+      );
+    }
+
+    // Optimistically add to myCommunities if we have the data
+    if (community != null) {
+      // Check if already in list
+      if (!_myCommunities.any((c) => c.showId == showId)) {
+        _myCommunities.add(
+          community.copyWith(memberCount: community.memberCount + 1),
+        );
+      }
+    } else {
+      // Refresh list to be sure
+      fetchMyCommunities();
+    }
+
+    // Refresh discover to remove it
+    // fetchDiscoverContent(); // Optional: might be expensive to do every time
+
+    notifyListeners();
+  }
+
+  Future<void> leaveCommunity(int showId) async {
+    await _communityService.leaveCommunity(showId);
+    _isMemberOfCurrent = false;
+
+    // Optimistically update current community member count
+    if (_currentCommunity != null && _currentCommunity!.showId == showId) {
+      _currentCommunity = _currentCommunity!.copyWith(
+        memberCount: _currentCommunity!.memberCount - 1,
+      );
+    }
+
+    // Remove from myCommunities
+    _myCommunities.removeWhere((c) => c.showId == showId);
+
+    // Refresh discover to potentially add it back
+    // fetchDiscoverContent();
+
+    notifyListeners();
+  }
+
+  Future<void> voteOnPost(String postId, int showId, int vote) async {
+    final currentVote = _currentUserVotes[postId] ?? 0;
+    final newVote = currentVote == vote ? 0 : vote;
+
+    // Optimistic update
+    _currentUserVotes[postId] = newVote;
+
+    // Update the post score in the list locally for immediate feedback
+    final index = _currentPosts.indexWhere((p) => p.id == postId);
+    if (index != -1) {
+      // Simplify score update logic for UI
+      int scoreDelta = 0;
+      if (currentVote == 1) scoreDelta -= 1;
+      if (currentVote == -1) scoreDelta += 1;
+      if (newVote == 1) scoreDelta += 1;
+      if (newVote == -1) scoreDelta -= 1;
+
+      final post = _currentPosts[index];
+      // Split delta into upvotes/downvotes changes
+      int upvoteDelta = 0;
+      int downvoteDelta = 0;
+
+      // Reverse old vote
+      if (currentVote == 1) upvoteDelta -= 1;
+      if (currentVote == -1) downvoteDelta -= 1;
+
+      // Apply new vote
+      if (newVote == 1) upvoteDelta += 1;
+      if (newVote == -1) downvoteDelta += 1;
+
+      _currentPosts[index] = post.copyWith(
+        upvotes: post.upvotes + upvoteDelta,
+        downvotes: post.downvotes + downvoteDelta,
+        score: post.score + (upvoteDelta - downvoteDelta),
+      );
+    }
+    notifyListeners();
+
+    try {
+      await _communityService.voteOnPost(
+        postId: postId,
+        showId: showId,
+        vote: newVote,
+      );
+      // Optional: reload posts to get exact server-side counts if strict consistency needed
+      // loadCommunityDetails(showId);
+    } catch (e) {
+      // Revert if failed
+      _currentUserVotes[postId] = currentVote;
+      notifyListeners();
+      print("Vote failed: $e");
+    }
+  }
+
+  // --- Comments ---
+
+  Stream<List<Map<String, dynamic>>> getCommentsStream(String postId) {
+    return _communityService.getCommentsStream(postId);
+  }
+
+  Future<void> addComment({
+    required String postId,
+    required int showId,
+    required String content,
+    String? parentId,
+  }) async {
+    await _communityService.addComment(
+      postId: postId,
+      showId: showId,
+      content: content,
+      parentId: parentId,
+    );
+    // Update comment count locally for immediate feedback if needed
+    // reloadCommunityDetails(showId);
+  }
+
+  Future<String?> createPost({
+    required int showId,
+    required String showTitle,
+    String? posterPath,
+    required String mediaType,
+    required String content,
+    List<String> hashtags = const [],
+    bool isSpoiler = false,
+  }) async {
+    return _communityService.createPost(
+      showId: showId,
+      showTitle: showTitle,
+      posterPath: posterPath,
+      mediaType: mediaType,
+      content: content,
+      hashtags: hashtags,
+      isSpoiler: isSpoiler,
+    );
+  }
+}

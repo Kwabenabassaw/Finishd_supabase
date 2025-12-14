@@ -1,89 +1,103 @@
+import 'dart:io';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:finishd/Model/Watchprovider.dart';
 
 class DeepLinkService {
-  // Map of Provider IDs to their Search URLs
-  static final Map<int, String> _providerSearchUrls = {
-    // 🔥 Major Streaming Platforms
-    8: "https://www.netflix.com/search?q=", // Netflix
-    9: "https://www.amazon.com/s?k=", // Amazon Prime Video
-    337: "https://www.disneyplus.com/search?q=", // Disney+
-    15: "https://www.hulu.com/search?q=", // Hulu
-    350: "https://tv.apple.com/search?term=", // Apple TV+
-    384: "https://www.max.com/search?q=", // Max (HBO Max)
-    531: "https://www.paramountplus.com/search/?q=", // Paramount+
-    386: "https://www.peacocktv.com/search?q=", // Peacock
-    // 🔥 Rent / Buy Platforms
-    192: "https://www.youtube.com/results?search_query=", // YouTube
-    3: "https://play.google.com/store/search?q=", // Google Play Movies
-    7: "https://www.vudu.com/content/movies/search?q=", // Vudu
-    68: "https://www.microsoft.com/en-us/search?q=", // Microsoft Store
-    2: "https://itunes.apple.com/search?term=", // iTunes (Apple)
-    // 🔥 Other Popular Streaming Services
-    296: "https://www.crunchyroll.com/search?q=", // Crunchyroll
-    122: "https://www.amctheatres.com/search?q=", // AMC+
-    257: "https://watch.amazon.com/search?q=", // Amazon Channels
-    190: "https://www.criterionchannel.com/search?q=", // Criterion Channel
-    177: "https://www.starz.com/us/en/search?q=", // Starz
-    151: "https://www.showtime.com/#/search?q=", // Showtime
-    188: "https://www.nowtv.com/search?q=", // Now TV (UK)
-    283: "https://www.bbc.co.uk/iplayer/search?q=", // BBC iPlayer
-    232: "https://www.itv.com/search?q=", // ITV Hub
-    100: "https://www.sky.com/search?q=", // Sky Go
-    // 🔥 Anime Streaming
-    72: "https://www.funimation.com/search/?q=", // Funimation
-    27: "https://www.hidive.com/search?q=", // HIDIVE
-    // 🔥 Free Streaming Services
-    175: "https://tubitv.com/search?q=", // Tubi
-    201: "https://www.pluto.tv/search/?q=", // Pluto TV
-    237: "https://therokuchannel.roku.com/search?q=", // Roku Channel
-    // 🔥 European / Global
-    35: "https://www.canalplus.com/search?q=", // Canal+
-    426: "https://www.cmore.com/sok?q=", // C More
-    356: "https://www.viaplay.com/search?q=", // Viaplay
+  /// Maps TMDB Provider IDs to app URL schemes
+  static final Map<int, String> _providerSchemes = {
+    8: 'nflx://', // Netflix
+    9: 'primevideo://', // Amazon Prime
+    337: 'disneyplus://', // Disney+
+    384: 'hbomax://', // HBO Max (now Max)
+    15: 'hulu://', // Hulu
+    2: 'videos://', // Apple TV
+    531: 'paramountplus://', // Paramount+
+    386: 'peacocktv://', // Peacock
+    350: 'appletv://', // Apple TV+
+    1899: 'max://', // Max (new)
   };
 
-  /// Opens the streaming provider app or website.
-  ///
-  /// Tries to open the app using `LaunchMode.externalApplication`.
-  /// If the app is installed, the OS should handle the deep link (Universal Link / App Link).
-  /// If not, it opens in the browser.
+  /// Maps TMDB Provider IDs to their official website search/browse URLs
+  static final Map<int, String> _providerWebUrls = {
+    8: 'https://www.netflix.com/search?q=', // Netflix search
+    9: 'https://www.amazon.com/s?k=', // Prime Video search
+    337: 'https://www.disneyplus.com/search/', // Disney+ search
+    384: 'https://www.max.com/search?q=', // Max search
+    15: 'https://www.hulu.com/search?q=', // Hulu search
+    2: 'https://tv.apple.com/search?term=', // Apple TV search
+    531: 'https://www.paramountplus.com/search/', // Paramount+
+    386: 'https://www.peacocktv.com/search?q=', // Peacock
+    350: 'https://tv.apple.com/search?term=', // Apple TV+
+    1899: 'https://www.max.com/search?q=', // Max
+  };
+
+  /// Maps TMDB Provider IDs to their home page URLs (fallback)
+  static final Map<int, String> _providerHomeUrls = {
+    8: 'https://www.netflix.com',
+    9: 'https://www.primevideo.com',
+    337: 'https://www.disneyplus.com',
+    384: 'https://www.max.com',
+    15: 'https://www.hulu.com',
+    2: 'https://tv.apple.com',
+    531: 'https://www.paramountplus.com',
+    386: 'https://www.peacocktv.com',
+    350: 'https://tv.apple.com',
+    1899: 'https://www.max.com',
+  };
+
+  /// Tries to launch the streaming app or website.
+  Future<void> launchProvider({
+    required int providerId,
+    required String providerName,
+    required String title,
+  }) async {
+    // 1. Try to open the installed app (mobile only)
+    if (Platform.isAndroid || Platform.isIOS) {
+      final scheme = _providerSchemes[providerId];
+      if (scheme != null) {
+        final Uri appUri = Uri.parse(scheme);
+        if (await canLaunchUrl(appUri)) {
+          await launchUrl(appUri, mode: LaunchMode.externalApplication);
+          return;
+        }
+      }
+    }
+
+    // 2. Try to open the platform's search page with the title
+    final searchUrl = _providerWebUrls[providerId];
+    if (searchUrl != null) {
+      final encodedTitle = Uri.encodeComponent(title);
+      final Uri searchUri = Uri.parse('$searchUrl$encodedTitle');
+      if (await canLaunchUrl(searchUri)) {
+        await launchUrl(searchUri, mode: LaunchMode.externalApplication);
+        return;
+      }
+    }
+
+    // 3. Fallback to the platform's home page
+    final homeUrl = _providerHomeUrls[providerId];
+    if (homeUrl != null) {
+      final Uri homeUri = Uri.parse(homeUrl);
+      if (await canLaunchUrl(homeUri)) {
+        await launchUrl(homeUri, mode: LaunchMode.externalApplication);
+        return;
+      }
+    }
+
+    print('Could not launch $providerName');
+  }
+
+  /// Static helper to be compatible with existing calls
   static Future<void> openStreamingProvider(
     WatchProvider provider,
     String title,
+    String? webUrl, // Kept for backward compatibility but not used
   ) async {
-    final urlString = _getProviderUrl(provider.providerId, title);
-
-    if (urlString == null) {
-      print(
-        "❌ Provider ID ${provider.providerId} not supported for deep linking.",
-      );
-      return;
-    }
-
-    final uri = Uri.parse(urlString);
-
-    try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(
-          uri,
-          mode: LaunchMode
-              .externalApplication, // This forces the OS to try opening the app
-        );
-      } else {
-        print("❌ Could not launch: $urlString");
-      }
-    } catch (e) {
-      print("❌ Error launching URL: $e");
-    }
-  }
-
-  static String? _getProviderUrl(int providerId, String title) {
-    if (!_providerSearchUrls.containsKey(providerId)) {
-      return null;
-    }
-
-    final encodedTitle = Uri.encodeComponent(title);
-    return _providerSearchUrls[providerId]! + encodedTitle;
+    final service = DeepLinkService();
+    await service.launchProvider(
+      providerId: provider.providerId,
+      providerName: provider.providerName,
+      title: title,
+    );
   }
 }

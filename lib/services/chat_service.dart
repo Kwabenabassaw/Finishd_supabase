@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:finishd/models/chat_model.dart';
 import 'package:finishd/models/message_model.dart';
+import 'package:finishd/services/api_client.dart';
 
 class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ApiClient _apiClient = ApiClient();
 
   // Generate consistent Chat ID
   String getChatId(String userA, String userB) {
@@ -70,7 +72,130 @@ class ChatService {
       'unreadCounts.$receiverId': FieldValue.increment(1),
     });
 
+    // Commit Firestore write
     await batch.commit();
+
+    // Trigger FCM push notification via backend
+    // This is non-blocking - if it fails, message is still delivered via Firestore
+    _sendPushNotification(
+      senderId: senderId,
+      receiverId: receiverId,
+      text: text,
+      chatId: chatId,
+    );
+  }
+
+  /// Send Video Link with rich preview metadata
+  Future<void> sendVideoLink({
+    required String chatId,
+    required String senderId,
+    required String receiverId,
+    required String videoId,
+    required String videoTitle,
+    required String videoThumbnail,
+    required String videoChannel,
+  }) async {
+    final messageRef = _firestore
+        .collection('chats')
+        .doc(chatId)
+        .collection('messages')
+        .doc();
+
+    final videoUrl = 'https://youtu.be/$videoId';
+
+    final messageData = {
+      'senderId': senderId,
+      'receiverId': receiverId,
+      'text': videoUrl,
+      'type': 'video_link',
+      'mediaUrl': '',
+      'timestamp': FieldValue.serverTimestamp(),
+      'isRead': false,
+      'videoId': videoId,
+      'videoTitle': videoTitle,
+      'videoThumbnail': videoThumbnail,
+      'videoChannel': videoChannel,
+    };
+
+    final batch = _firestore.batch();
+
+    // Add message
+    batch.set(messageRef, messageData);
+
+    // Update chat metadata
+    final chatRef = _firestore.collection('chats').doc(chatId);
+    batch.update(chatRef, {
+      'lastMessage': '🎬 Shared a video',
+      'lastMessageTime': FieldValue.serverTimestamp(),
+      'lastMessageSender': senderId,
+      'unreadCounts.$receiverId': FieldValue.increment(1),
+    });
+
+    await batch.commit();
+
+    // Trigger FCM push notification
+    _sendPushNotification(
+      senderId: senderId,
+      receiverId: receiverId,
+      text: '🎬 Shared a video: $videoTitle',
+      chatId: chatId,
+    );
+  }
+
+  /// Send Movie/TV Recommendation with rich preview metadata
+  Future<void> sendRecommendation({
+    required String chatId,
+    required String senderId,
+    required String receiverId,
+    required String movieId,
+    required String movieTitle,
+    required String? moviePoster,
+    required String mediaType,
+  }) async {
+    final messageRef = _firestore
+        .collection('chats')
+        .doc(chatId)
+        .collection('messages')
+        .doc();
+
+    final messageData = {
+      'senderId': senderId,
+      'receiverId': receiverId,
+      'text': '🎬 Recommended: $movieTitle',
+      'type': 'recommendation',
+      'mediaUrl': '',
+      'timestamp': FieldValue.serverTimestamp(),
+      'isRead': false,
+      'movieId': movieId,
+      'movieTitle': movieTitle,
+      'moviePoster': moviePoster,
+      'mediaType': mediaType,
+    };
+
+    final batch = _firestore.batch();
+
+    // Add message
+    batch.set(messageRef, messageData);
+
+    // Update chat metadata
+    final chatRef = _firestore.collection('chats').doc(chatId);
+    batch.update(chatRef, {
+      'lastMessage':
+          '🎬 Recommended a ${mediaType == 'movie' ? 'movie' : 'show'}',
+      'lastMessageTime': FieldValue.serverTimestamp(),
+      'lastMessageSender': senderId,
+      'unreadCounts.$receiverId': FieldValue.increment(1),
+    });
+
+    await batch.commit();
+
+    // Trigger FCM push notification
+    _sendPushNotification(
+      senderId: senderId,
+      receiverId: receiverId,
+      text: '🎬 Recommended: $movieTitle',
+      chatId: chatId,
+    );
   }
 
   // Get Messages Stream
@@ -156,5 +281,28 @@ class ChatService {
     // await _firestore.collection('chats').doc(chatId).update({
     //   'typing.$userId': isTyping
     // });
+  }
+
+  /// Send push notification via backend
+  /// This is called asynchronously after Firestore write
+  /// Non-blocking: if it fails, message is still delivered via Firestore
+  void _sendPushNotification({
+    required String senderId,
+    required String receiverId,
+    required String text,
+    required String chatId,
+  }) {
+    // Fire-and-forget: don't await or block message send
+    _apiClient
+        .sendChatNotification(
+          receiverUid: receiverId,
+          senderUid: senderId,
+          messageText: text,
+          chatId: chatId,
+        )
+        .catchError((error) {
+          print('⚠️ Chat notification failed (non-critical): $error');
+          return false; // Return false on error
+        });
   }
 }

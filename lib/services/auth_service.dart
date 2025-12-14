@@ -91,6 +91,10 @@ class AuthService {
   // Sign In with Google
   Future<UserCredential?> signInWithGoogle() async {
     try {
+      // Force sign-out before sign-in to show account picker
+      // This allows users to switch between Google accounts
+      await _googleSignIn.signOut();
+
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return null; // user canceled
 
@@ -148,7 +152,16 @@ class AuthService {
 
   // Sign Out
   Future<void> signOut() async {
-    await _googleSignIn.signOut();
+    // Disconnect Google Sign-In to fully clear cached account
+    // This allows switching to a different Google account on next sign-in
+    try {
+      await _googleSignIn.disconnect();
+    } catch (e) {
+      // disconnect() throws error if user never signed in with Google
+      // or if already disconnected - fallback to signOut()
+      await _googleSignIn.signOut();
+    }
+
     await _auth.signOut();
   }
 

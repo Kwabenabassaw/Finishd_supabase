@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
 class AppTheme {
+  // Convenience color constants for dark theme
+  static const backgroundColor = Color(0xFF0A1A0F); // Dark green tint
+  static const cardBackground = Color(0xFF132218); // Slightly lighter
+  static const primaryGreen = Color(0xFF00E676); // Bright green accent
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,

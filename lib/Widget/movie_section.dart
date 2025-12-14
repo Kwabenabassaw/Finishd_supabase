@@ -14,12 +14,14 @@ class MovieSection extends StatelessWidget {
   final String title;
   final List<MediaItem> items;
   final Trending movieApi;
+  final VoidCallback? onSeeAllTap;
 
   const MovieSection({
     super.key,
     required this.title,
     required this.items,
     required this.movieApi,
+    this.onSeeAllTap,
   });
 
   @override
@@ -35,11 +37,34 @@ class MovieSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+            ),
+            if (onSeeAllTap != null)
+              GestureDetector(
+                onTap: onSeeAllTap,
+                child: const Row(
+                  children: [
+                    Text(
+                      "See All",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    SizedBox(width: 4),
+                    Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                  ],
+                ),
+              ),
+          ],
         ),
-       
+        const SizedBox(height: 8),
         SizedBox(
           height: listHeight,
           child: ListView.builder(
@@ -152,7 +177,6 @@ class MovieSection extends StatelessWidget {
             },
           ),
         ),
-       
       ],
     );
   }

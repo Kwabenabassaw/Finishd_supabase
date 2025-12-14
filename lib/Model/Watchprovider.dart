@@ -15,9 +15,9 @@ class WatchProvider {
   factory WatchProvider.fromJson(Map<String, dynamic> json) {
     return WatchProvider(
       logoPath: json['logo_path'],
-      providerId: json['provider_id'],
-      providerName: json['provider_name'],
-      displayPriority: json['display_priority'],
+      providerId: json['provider_id'] ?? 0,
+      providerName: json['provider_name'] ?? 'Unknown',
+      displayPriority: json['display_priority'] ?? 0,
     );
   }
 }
@@ -52,20 +52,15 @@ class WatchProvidersResponse {
   final int id;
   final Map<String, CountryWatchInfo> results;
 
-  WatchProvidersResponse({
-    required this.id,
-    required this.results,
-  });
+  WatchProvidersResponse({required this.id, required this.results});
 
   factory WatchProvidersResponse.fromJson(Map<String, dynamic> json) {
-    final rawResults = json['results'] as Map<String, dynamic>;
+    final rawResults = json['results'] as Map<String, dynamic>? ?? {};
     return WatchProvidersResponse(
-      id: json['id'],
+      id: json['id'] ?? 0,
       results: rawResults.map(
-        (countryCode, countryData) => MapEntry(
-          countryCode,
-          CountryWatchInfo.fromJson(countryData),
-        ),
+        (countryCode, countryData) =>
+            MapEntry(countryCode, CountryWatchInfo.fromJson(countryData)),
       ),
     );
   }

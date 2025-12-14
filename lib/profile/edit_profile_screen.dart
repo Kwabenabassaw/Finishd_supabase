@@ -95,11 +95,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Edit Profile',
-          style: TextStyle(color: Colors.black),
-        ),
-        backgroundColor: Colors.white,
+        title: const Text('Edit Profile'),
+
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
         actions: [
@@ -158,44 +155,100 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               // First Name
               TextFormField(
                 controller: _firstNameController,
-                decoration: const InputDecoration(labelText: 'First Name'),
-                validator: (value) =>
-                    value!.isEmpty ? 'Please enter your first name' : null,
+                decoration: const InputDecoration(
+                  labelText: 'First Name',
+                  hintText: 'Enter your first name',
+                ),
+                maxLength: 30,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter your first name';
+                  }
+                  if (value.trim().length < 2) {
+                    return 'First name must be at least 2 characters';
+                  }
+                  if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value.trim())) {
+                    return 'First name can only contain letters';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 10),
 
               // Last Name
               TextFormField(
                 controller: _lastNameController,
-                decoration: const InputDecoration(labelText: 'Last Name'),
-                validator: (value) =>
-                    value!.isEmpty ? 'Please enter your last name' : null,
+                decoration: const InputDecoration(
+                  labelText: 'Last Name',
+                  hintText: 'Enter your last name',
+                ),
+                maxLength: 30,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter your last name';
+                  }
+                  if (value.trim().length < 2) {
+                    return 'Last name must be at least 2 characters';
+                  }
+                  if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value.trim())) {
+                    return 'Last name can only contain letters';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 10),
 
               // Username
               TextFormField(
                 controller: _usernameController,
-                decoration: const InputDecoration(labelText: 'Username'),
-                validator: (value) =>
-                    value!.isEmpty ? 'Please enter a username' : null,
+                decoration: const InputDecoration(
+                  labelText: 'Username',
+                  hintText: 'Enter a unique username',
+                  prefixText: '@',
+                ),
+                maxLength: 20,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter a username';
+                  }
+                  if (value.trim().length < 3) {
+                    return 'Username must be at least 3 characters';
+                  }
+                  if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(value.trim())) {
+                    return 'Username can only contain letters, numbers, and underscores';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 10),
 
               // Bio
               TextFormField(
                 controller: _bioController,
-                decoration: const InputDecoration(labelText: 'Bio'),
+                decoration: InputDecoration(
+                  labelText: 'Bio',
+                  hintText: 'Write a short bio about yourself',
+                  helperText: '${_bioController.text.length}/150 characters',
+                ),
                 maxLength: 150,
+                onChanged: (value) =>
+                    setState(() {}), // Trigger rebuild for counter
               ),
               const SizedBox(height: 10),
 
               // Description
               TextFormField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Description'),
+                decoration: InputDecoration(
+                  labelText: 'Description',
+                  hintText: 'Tell others more about yourself',
+                  helperText:
+                      '${_descriptionController.text.length}/250 characters',
+                ),
                 maxLength: 250,
                 maxLines: 3,
+                onChanged: (value) =>
+                    setState(() {}), // Trigger rebuild for counter
               ),
             ],
           ),

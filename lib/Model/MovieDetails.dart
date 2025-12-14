@@ -1,3 +1,6 @@
+import 'package:finishd/Model/tmdb_extras.dart';
+import 'package:finishd/Model/Watchprovider.dart';
+
 class MovieDetails {
   final bool adult;
   final String? backdropPath;
@@ -23,6 +26,9 @@ class MovieDetails {
   final bool? video;
   final double? voteAverage;
   final int? voteCount;
+  final List<Video> videos;
+  final List<Cast> cast;
+  final WatchProvidersResponse? watchProviders;
 
   MovieDetails({
     required this.adult,
@@ -49,9 +55,32 @@ class MovieDetails {
     this.video,
     this.voteAverage,
     this.voteCount,
+    this.videos = const [],
+    this.cast = const [],
+    this.watchProviders,
   });
 
   factory MovieDetails.fromJson(Map<String, dynamic> json) {
+    var videosList = <Video>[];
+    if (json['videos'] != null && json['videos']['results'] != null) {
+      videosList = (json['videos']['results'] as List)
+          .map((v) => Video.fromJson(v))
+          .toList();
+    }
+
+    var castList = <Cast>[];
+    if (json['credits'] != null && json['credits']['cast'] != null) {
+      castList = (json['credits']['cast'] as List)
+          .map((c) => Cast.fromJson(c))
+          .toList();
+    }
+
+    WatchProvidersResponse? providers;
+    if (json['watch/providers'] != null &&
+        json['watch/providers']['results'] != null) {
+      providers = WatchProvidersResponse.fromJson(json['watch/providers']);
+    }
+
     return MovieDetails(
       adult: json['adult'] ?? false,
       backdropPath: json['backdrop_path'],
@@ -60,19 +89,21 @@ class MovieDetails {
           .map((e) => Genre.fromJson(e))
           .toList(),
       homepage: json['homepage'],
-      id: json['id'],
+      id: json['id'] ?? 0,
       imdbId: json['imdb_id'],
       originalLanguage: json['original_language'],
       originalTitle: json['original_title'],
       overview: json['overview'],
       popularity: (json['popularity'] ?? 0).toDouble(),
       posterPath: json['poster_path'],
-      productionCompanies: (json['production_companies'] as List<dynamic>? ?? [])
-          .map((e) => ProductionCompany.fromJson(e))
-          .toList(),
-      productionCountries: (json['production_countries'] as List<dynamic>? ?? [])
-          .map((e) => ProductionCountry.fromJson(e))
-          .toList(),
+      productionCompanies:
+          (json['production_companies'] as List<dynamic>? ?? [])
+              .map((e) => ProductionCompany.fromJson(e))
+              .toList(),
+      productionCountries:
+          (json['production_countries'] as List<dynamic>? ?? [])
+              .map((e) => ProductionCountry.fromJson(e))
+              .toList(),
       releaseDate: json['release_date'],
       revenue: json['revenue'],
       runtime: json['runtime'],
@@ -81,10 +112,13 @@ class MovieDetails {
           .toList(),
       status: json['status'],
       tagline: json['tagline'],
-      title: json['title'],
+      title: json['title'] ?? 'Unknown',
       video: json['video'],
       voteAverage: (json['vote_average'] ?? 0).toDouble(),
       voteCount: json['vote_count'],
+      videos: videosList,
+      cast: castList,
+      watchProviders: providers,
     );
   }
 }
@@ -98,10 +132,7 @@ class Genre {
   Genre({required this.id, required this.name});
 
   factory Genre.fromJson(Map<String, dynamic> json) {
-    return Genre(
-      id: json['id'],
-      name: json['name'],
-    );
+    return Genre(id: json['id'] ?? 0, name: json['name'] ?? 'Unknown');
   }
 }
 
@@ -120,9 +151,9 @@ class ProductionCompany {
 
   factory ProductionCompany.fromJson(Map<String, dynamic> json) {
     return ProductionCompany(
-      id: json['id'],
+      id: json['id'] ?? 0,
       logoPath: json['logo_path'],
-      name: json['name'],
+      name: json['name'] ?? 'Unknown',
       originCountry: json['origin_country'],
     );
   }
@@ -135,10 +166,7 @@ class ProductionCountry {
   ProductionCountry({this.iso31661, this.name});
 
   factory ProductionCountry.fromJson(Map<String, dynamic> json) {
-    return ProductionCountry(
-      iso31661: json['iso_3166_1'],
-      name: json['name'],
-    );
+    return ProductionCountry(iso31661: json['iso_3166_1'], name: json['name']);
   }
 }
 

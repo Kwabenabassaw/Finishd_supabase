@@ -14,14 +14,15 @@ import 'package:provider/provider.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:finishd/Model/user_preferences.dart';
 import 'package:finishd/services/user_preferences_service.dart';
+import 'package:finishd/services/discover_cache_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:finishd/Discover/provider_content_screen.dart';
+import 'package:finishd/Discover/see_all_screen.dart';
 
 final Trending movieApi = Trending();
 final Fetchdiscover getDiscover = Fetchdiscover();
 final Airingtoday airingToday = Airingtoday();
-
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -34,6 +35,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   bool isLoading = true;
   String? error;
   final UserPreferencesService _prefsService = UserPreferencesService();
+  final DiscoverCacheService _cacheService = DiscoverCacheService();
   UserPreferences? _userPreferences;
 
   @override
@@ -44,18 +46,67 @@ class _ExploreScreenState extends State<ExploreScreen> {
     fetchData();
   }
 
-  Future<void> fetchData() async {
+  /// Fetch with cache-first strategy (6-hour TTL)
+  Future<List<MediaItem>> _fetchWithCache(
+    String cacheKey,
+    Future<List<MediaItem>> Function() fetchFn,
+  ) async {
+    // Try cache first
+    final cached = await _cacheService.getCached(cacheKey);
+    if (cached != null && cached.isNotEmpty) {
+      return cached;
+    }
+
+    // Fetch from network
+    final data = await fetchFn();
+
+    // Save to cache
+    if (data.isNotEmpty) {
+      await _cacheService.saveToCache(cacheKey, data);
+    }
+
+    return data;
+  }
+
+  Future<void> fetchData({bool forceRefresh = false}) async {
     try {
-      final movies = List<MediaItem>.from(await movieApi.fetchTrendingMovie());
-      final shows = List<MediaItem>.from(await movieApi.fetchTrendingShow());
-      final popular = List<MediaItem>.from(await movieApi.fetchpopularMovies());
-      final upcoming = List<MediaItem>.from(await movieApi.fetchUpcoming());
-      final discover = List<MediaItem>.from(await getDiscover.fetchDiscover());
-      final airingTodayshow = List<MediaItem>.from(
-        await airingToday.fetchAiringToday(),
+      // Clear cache if force refresh
+      if (forceRefresh) {
+        await _cacheService.clearCache();
+      }
+
+      final movies = await _fetchWithCache(
+        DiscoverCacheService.keyTrendingMovies,
+        () => movieApi.fetchTrendingMovie(),
       );
-      final nowPlaying = List<MediaItem>.from(await movieApi.getNowPlaying() );
-      final topRatedTv = List<MediaItem>.from(await movieApi.TopRatedTv() );
+      final shows = await _fetchWithCache(
+        DiscoverCacheService.keyTrendingShows,
+        () => movieApi.fetchTrendingShow(),
+      );
+      final popular = await _fetchWithCache(
+        DiscoverCacheService.keyPopular,
+        () => movieApi.fetchpopularMovies(),
+      );
+      final upcoming = await _fetchWithCache(
+        DiscoverCacheService.keyUpcoming,
+        () => movieApi.fetchUpcoming(),
+      );
+      final discover = await _fetchWithCache(
+        DiscoverCacheService.keyDiscover,
+        () => getDiscover.fetchDiscover(),
+      );
+      final airingTodayshow = await _fetchWithCache(
+        DiscoverCacheService.keyAiringToday,
+        () => airingToday.fetchAiringToday(),
+      );
+      final nowPlaying = await _fetchWithCache(
+        DiscoverCacheService.keyNowPlaying,
+        () => movieApi.getNowPlaying(),
+      );
+      final topRatedTv = await _fetchWithCache(
+        DiscoverCacheService.keyTopRatedTv,
+        () => movieApi.TopRatedTv(),
+      );
 
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid != null) {
@@ -81,6 +132,24 @@ class _ExploreScreenState extends State<ExploreScreen> {
         isLoading = false;
       });
     }
+  }
+
+  void _navigateToSeeAll(
+    BuildContext context,
+    String title,
+    ContentCategory category,
+    List<MediaItem> initialItems,
+  ) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SeeAllScreen(
+          title: title,
+          category: category,
+          initialItems: initialItems,
+        ),
+      ),
+    );
   }
 
   @override
@@ -146,45 +215,87 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       title: "Discover",
                       items: provider.discover,
                       movieApi: movieApi,
+                      onSeeAllTap: () => _navigateToSeeAll(
+                        context,
+                        "Discover",
+                        ContentCategory.discover,
+                        provider.discover,
+                      ),
                     ),
 
                     MovieSection(
                       title: "Trending Movies",
                       items: provider.movies,
                       movieApi: movieApi,
+                      onSeeAllTap: () => _navigateToSeeAll(
+                        context,
+                        "Trending Movies",
+                        ContentCategory.trendingMovies,
+                        provider.movies,
+                      ),
                     ),
 
                     MovieSection(
                       title: "Trending Shows",
                       items: provider.shows,
                       movieApi: movieApi,
+                      onSeeAllTap: () => _navigateToSeeAll(
+                        context,
+                        "Trending Shows",
+                        ContentCategory.trendingShows,
+                        provider.shows,
+                      ),
                     ),
+
                     // MovieSection(
                     //   title: "Top Rated TV",
                     //   items: provider.topRatedTv,
                     //   movieApi: movieApi,
                     // ),
-
                     MovieSection(
                       title: "Popular",
                       items: provider.popular,
                       movieApi: movieApi,
+                      onSeeAllTap: () => _navigateToSeeAll(
+                        context,
+                        "Popular",
+                        ContentCategory.popular,
+                        provider.popular,
+                      ),
                     ),
                     MovieSection(
                       title: "Now Playing",
                       items: provider.nowPlaying,
                       movieApi: movieApi,
+                      onSeeAllTap: () => _navigateToSeeAll(
+                        context,
+                        "Now Playing",
+                        ContentCategory.nowPlaying,
+                        provider.nowPlaying,
+                      ),
                     ),
 
                     MovieSection(
                       title: "Upcoming",
                       items: provider.upcoming,
                       movieApi: movieApi,
+                      onSeeAllTap: () => _navigateToSeeAll(
+                        context,
+                        "Upcoming",
+                        ContentCategory.upcoming,
+                        provider.upcoming,
+                      ),
                     ),
                     MovieSection(
                       title: "Airing Today",
                       items: provider.airingToday,
                       movieApi: movieApi,
+                      onSeeAllTap: () => _navigateToSeeAll(
+                        context,
+                        "Airing Today",
+                        ContentCategory.airingToday,
+                        provider.airingToday,
+                      ),
                     ),
                   ],
                 ),

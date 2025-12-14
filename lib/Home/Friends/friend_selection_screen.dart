@@ -22,6 +22,8 @@ class _FriendSelectionScreenState extends State<FriendSelectionScreen> {
 
   List<UserModel> _friends = [];
   Set<String> _selectedUserIds = {};
+  Set<String> _alreadyRecommendedUserIds =
+      {}; // Friends who already got this movie
   bool _isLoading = true;
   bool _isSending = false;
 
@@ -34,15 +36,27 @@ class _FriendSelectionScreenState extends State<FriendSelectionScreen> {
   Future<void> _fetchFriends() async {
     if (_currentUserId.isEmpty) return;
     try {
-      // Fetching followers as "friends" for now, consistent with FriendsTab
-      List<String> followerIds = await _userService.getFollowers(
-        _currentUserId,
-      );
+      // Fetch friends and already-recommended users in parallel
+      final followerIdsFuture = _userService.getFollowers(_currentUserId);
+      final alreadyRecommendedFuture = _recommendationService
+          .getAlreadyRecommendedFriends(
+            fromUserId: _currentUserId,
+            movieId: widget.movie.id,
+          );
+
+      final results = await Future.wait([
+        followerIdsFuture,
+        alreadyRecommendedFuture,
+      ]);
+      final List<String> followerIds = results[0] as List<String>;
+      final Set<String> alreadyRecommended = results[1] as Set<String>;
+
       List<UserModel> friends = await _userService.getUsers(followerIds);
 
       if (mounted) {
         setState(() {
           _friends = friends;
+          _alreadyRecommendedUserIds = alreadyRecommended;
           _isLoading = false;
         });
       }
@@ -62,19 +76,30 @@ class _FriendSelectionScreenState extends State<FriendSelectionScreen> {
     setState(() => _isSending = true);
 
     try {
-      await _recommendationService.sendRecommendation(
+      final result = await _recommendationService.sendRecommendation(
         fromUserId: _currentUserId,
         toUserIds: _selectedUserIds.toList(),
         movie: widget.movie,
       );
 
+      final int sent = result['sent'] ?? 0;
+      final int skipped = result['skipped'] ?? 0;
+
       if (mounted) {
+        String message;
+        if (sent > 0 && skipped == 0) {
+          message = 'Recommended to $sent friend${sent > 1 ? 's' : ''}!';
+        } else if (sent > 0 && skipped > 0) {
+          message =
+              'Recommended to $sent friend${sent > 1 ? 's' : ''}. $skipped already had it.';
+        } else {
+          message = 'Already recommended to all selected friends!';
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Recommended to ${_selectedUserIds.length} friend${_selectedUserIds.length > 1 ? 's' : ''}!',
-            ),
-            backgroundColor: const Color(0xFF1A8927),
+            content: Text(message),
+            backgroundColor: sent > 0 ? const Color(0xFF1A8927) : Colors.orange,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -264,25 +289,33 @@ class _FriendSelectionScreenState extends State<FriendSelectionScreen> {
                     itemBuilder: (context, index) {
                       final user = _friends[index];
                       final isSelected = _selectedUserIds.contains(user.uid);
+                      final isAlreadyRecommended = _alreadyRecommendedUserIds
+                          .contains(user.uid);
 
                       return GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            if (isSelected) {
-                              _selectedUserIds.remove(user.uid);
-                            } else {
-                              _selectedUserIds.add(user.uid);
-                            }
-                          });
-                        },
+                        onTap: isAlreadyRecommended
+                            ? null
+                            : () {
+                                setState(() {
+                                  if (isSelected) {
+                                    _selectedUserIds.remove(user.uid);
+                                  } else {
+                                    _selectedUserIds.add(user.uid);
+                                  }
+                                });
+                              },
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
                           curve: Curves.easeInOut,
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: isAlreadyRecommended
+                                ? Colors.grey.shade100
+                                : Colors.white,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: isSelected
+                              color: isAlreadyRecommended
+                                  ? Colors.grey.shade300
+                                  : isSelected
                                   ? const Color(0xFF1A8927)
                                   : Colors.grey.shade200,
                               width: isSelected ? 2.5 : 1,
@@ -299,91 +332,115 @@ class _FriendSelectionScreenState extends State<FriendSelectionScreen> {
                           ),
                           child: Stack(
                             children: [
-                              Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    // Profile image with selection overlay
-                                    Stack(
-                                      alignment: Alignment.topCenter,
-                                      children: [
-                                        Center(
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                color: isSelected
-                                                    ? const Color(0xFF1A8927)
-                                                    : Colors.grey.shade300,
-                                                width: 3,
+                              Opacity(
+                                opacity: isAlreadyRecommended ? 0.5 : 1.0,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      // Profile image with selection overlay
+                                      Stack(
+                                        alignment: Alignment.topCenter,
+                                        children: [
+                                          Center(
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: isSelected
+                                                      ? const Color(0xFF1A8927)
+                                                      : Colors.grey.shade300,
+                                                  width: 3,
+                                                ),
+                                              ),
+                                              child: CircleAvatar(
+                                                radius: 40,
+                                                backgroundColor:
+                                                    Colors.grey.shade200,
+                                                backgroundImage:
+                                                    user.profileImage.isNotEmpty
+                                                    ? CachedNetworkImageProvider(
+                                                        user.profileImage,
+                                                      )
+                                                    : const AssetImage(
+                                                            'assets/noimage.jpg',
+                                                          )
+                                                          as ImageProvider,
                                               ),
                                             ),
-                                            child: CircleAvatar(
-                                              radius: 40,
-                                              backgroundColor:
-                                                  Colors.grey.shade200,
-                                              backgroundImage:
-                                                  user.profileImage.isNotEmpty
-                                                  ? CachedNetworkImageProvider(
-                                                      user.profileImage,
-                                                    )
-                                                  : const AssetImage(
-                                                          'assets/noimage.jpg',
-                                                        )
-                                                        as ImageProvider,
-                                            ),
                                           ),
-                                        ),
-                                        if (isSelected)
-                                          Container(
-                                            width: 86,
-                                            height: 86,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              color: const Color(
-                                                0xFF1A8927,
-                                              ).withOpacity(0.3),
+                                          if (isSelected)
+                                            Container(
+                                              width: 86,
+                                              height: 86,
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                color: const Color(
+                                                  0xFF1A8927,
+                                                ).withOpacity(0.3),
+                                              ),
+                                              child: const Icon(
+                                                Icons.check_circle,
+                                                color: Colors.white,
+                                                size: 40,
+                                              ),
                                             ),
-                                            child: const Icon(
-                                              Icons.check_circle,
-                                              color: Colors.white,
-                                              size: 40,
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 12),
-                                    // Username
-                                    Text(
-                                      user.username.isNotEmpty
-                                          ? user.username
-                                          : 'User',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: isSelected
-                                            ? const Color(0xFF1A8927)
-                                            : Colors.black87,
+                                        ],
                                       ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    // Full name
-                                    if (user.firstName.isNotEmpty)
+                                      const SizedBox(height: 12),
+                                      // Username
                                       Text(
-                                        '${user.firstName} ${user.lastName}',
+                                        user.username.isNotEmpty
+                                            ? user.username
+                                            : 'User',
                                         style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey.shade600,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: isSelected
+                                              ? const Color(0xFF1A8927)
+                                              : Colors.black87,
                                         ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         textAlign: TextAlign.center,
                                       ),
-                                  ],
+                                      const SizedBox(height: 4),
+                                      // Full name or "Already sent" badge
+                                      if (isAlreadyRecommended)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.orange.shade100,
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'Already sent',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.orange.shade800,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        )
+                                      else if (user.firstName.isNotEmpty)
+                                        Text(
+                                          '${user.firstName} ${user.lastName}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.center,
+                                        ),
+                                    ],
+                                  ),
                                 ),
                               ),
                               // Selection checkmark badge

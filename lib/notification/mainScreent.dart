@@ -38,27 +38,47 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
     // 1. Try loading from cache first (instant display)
     try {
+      final cachedAll = await NotificationCacheService.getNotifications('all');
+      final cachedEpisodes = await NotificationCacheService.getNotifications(
+        'new_episodes',
+      );
       final cachedTV = await NotificationCacheService.getNotifications('tv');
       final cachedRecs = await NotificationCacheService.getNotifications(
         'recommendations',
       );
 
-      if ((cachedTV != null && cachedTV.isNotEmpty) ||
-          (cachedRecs != null && cachedRecs.isNotEmpty)) {
-        setState(() {
-          if (cachedTV != null) {
-            _tvNotifications = cachedTV
-                .map((n) => TVNotification.fromJson(n))
-                .toList();
-          }
-          if (cachedRecs != null) {
-            _recommendations = cachedRecs
-                .map((r) => RecommendedShow.fromJson(r))
-                .toList();
-          }
-          _isLoading = false;
-        });
+      bool hasCache = false;
 
+      if (cachedAll != null && cachedAll.isNotEmpty) {
+        _allNotifications = cachedAll
+            .map((n) => AppNotification.fromJson(n))
+            .toList();
+        hasCache = true;
+      }
+
+      if (cachedEpisodes != null && cachedEpisodes.isNotEmpty) {
+        _newEpisodes = cachedEpisodes
+            .map((e) => EpisodeAlert.fromJson(e))
+            .toList();
+        hasCache = true;
+      }
+
+      if (cachedTV != null && cachedTV.isNotEmpty) {
+        _tvNotifications = cachedTV
+            .map((n) => TVNotification.fromJson(n))
+            .toList();
+        hasCache = true;
+      }
+
+      if (cachedRecs != null && cachedRecs.isNotEmpty) {
+        _recommendations = cachedRecs
+            .map((r) => RecommendedShow.fromJson(r))
+            .toList();
+        hasCache = true;
+      }
+
+      if (hasCache) {
+        setState(() => _isLoading = false);
         print('📦 Loaded notifications from cache');
 
         // 2. Refresh from network in background
@@ -98,7 +118,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
       _episodeService.getRecommendations(),
     ]);
 
-    // Cache the raw JSON data for TV and recommendations
+    // Cache the raw JSON data
+    final allData = (results[0] as List<AppNotification>)
+        .map((n) => n.toJson())
+        .toList();
+    final episodesData = (results[1] as List<EpisodeAlert>)
+        .map((e) => e.toJson())
+        .toList();
     final tvData = (results[2] as List<TVNotification>)
         .map((n) => n.toJson())
         .toList();
@@ -106,6 +132,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
         .map((r) => r.toJson())
         .toList();
 
+    await NotificationCacheService.saveNotifications('all', allData);
+    await NotificationCacheService.saveNotifications(
+      'new_episodes',
+      episodesData,
+    );
     await NotificationCacheService.saveNotifications('tv', tvData);
     await NotificationCacheService.saveNotifications(
       'recommendations',

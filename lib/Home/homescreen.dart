@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../provider/youtube_feed_provider.dart';
 import '../Feed/youtube_video_item.dart';
+import '../Feed/tiktok_scroll_wrapper.dart';
 import '../services/cache/feed_cache_service.dart';
 
 /// HomeScreen using Provider for state management.
@@ -12,7 +13,7 @@ import '../services/cache/feed_cache_service.dart';
 /// - Centralized state via YoutubeFeedProvider
 /// - YouTube native player (youtube_player_flutter) for better performance
 /// - 3-controller window strategy for memory management
-/// - TikTok-style vertical scrolling
+/// - TikTok-style vertical scrolling using tiktoklikescroller package
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -21,7 +22,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
-  final PageController _pageController = PageController();
   late YoutubeFeedProvider _provider;
 
   @override
@@ -35,7 +35,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _pageController.dispose();
     _provider.dispose();
     super.dispose();
   }
@@ -257,20 +256,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
             return Stack(
               children: [
-                // Main PageView with TikTok-style scrolling
+                // Main TikTok-style scroller
                 RefreshIndicator(
                   onRefresh: provider.refresh,
-                  child: PageView.builder(
-                    controller: _pageController,
-                    scrollDirection: Axis.vertical,
-                    physics: const _TikTokScrollPhysics(),
-                    itemCount: provider.videos.length,
-                    onPageChanged: provider.onPageChanged,
-                    itemBuilder: (context, index) {
-                      // Use YoutubeVideoItem which internally uses youtube_player_flutter
-                      return YoutubeVideoItem(index: index);
-                    },
-                  ),
+                  child: const TikTokScrollWrapper(),
                 ),
 
                 // Top Bar Overlay
@@ -359,22 +348,4 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
     );
   }
-}
-
-/// Custom scroll physics for TikTok-style snapping
-/// Uses critically damped spring to eliminate bounce
-class _TikTokScrollPhysics extends ScrollPhysics {
-  const _TikTokScrollPhysics({super.parent});
-
-  @override
-  _TikTokScrollPhysics applyTo(ScrollPhysics? ancestor) {
-    return _TikTokScrollPhysics(parent: buildParent(ancestor));
-  }
-
-  @override
-  SpringDescription get spring => const SpringDescription(
-    mass: 0.65, // Standard mass
-    stiffness: 380, // High stiffness for quick snap
-    damping: 100, // High damping = NO bounce (critically damped)
-  );
 }

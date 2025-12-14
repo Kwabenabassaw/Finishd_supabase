@@ -16,7 +16,7 @@ class MovieItem {
   // Example fromJson if you're using TMDB Result
   factory MovieItem.fromTmdbResult(Map<String, dynamic> json) {
     return MovieItem(
-      id: json['id'] as int,
+      id: json['id'] ?? 0,
       title:
           json['title'] as String? ??
           json['name'] as String?, // handle movie/tv title

@@ -1,4 +1,6 @@
 import 'package:finishd/LoadingWidget/StreamingLoading.dart';
+import 'package:finishd/Methods/OpenProvider.dart';
+
 import 'package:finishd/services/deep_link_service.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:flutter/material.dart';
@@ -49,6 +51,7 @@ class _StreamingproviderState extends State<Streamingprovider> {
                           DeepLinkService.openStreamingProvider(
                             provider,
                             widget.title,
+                            usInfo.link,
                           );
                         },
                         child: Column(

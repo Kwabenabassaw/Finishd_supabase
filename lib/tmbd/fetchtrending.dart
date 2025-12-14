@@ -38,27 +38,28 @@ class Trending {
       return [];
     }
   }
-    Future<List<MediaItem>> getNowPlaying() async {
-    try{
-       final  nowPlaying = await tmdb.v3.movies.getNowPlaying(language: "en-US", region: "US", page: 2);
-    final results = List.from(nowPlaying['results'] ?? []);
-    return results.map((e) => MediaItem.fromJson(e)).toList();
-    }
-   catch(e){
-    print(e);
-    return [];
-   }
 
-    
+  Future<List<MediaItem>> getNowPlaying() async {
+    try {
+      final nowPlaying = await tmdb.v3.movies.getNowPlaying(
+        language: "en-US",
+        region: "US",
+        page: 2,
+      );
+      final results = List.from(nowPlaying['results'] ?? []);
+      return results.map((e) => MediaItem.fromJson(e)).toList();
+    } catch (e) {
+      print(e);
+      return [];
+    }
   }
 
-  Future<List<MediaItem>> TopRatedTv ()async{
-    try{
+  Future<List<MediaItem>> TopRatedTv() async {
+    try {
       Map result = await tmdb.v3.tv.getTopRated();
       List list = result['results'] ?? [];
       return list.map((json) => MediaItem.fromJson(json)).toList();
-
-    }catch(e){
+    } catch (e) {
       print(e);
       return [];
     }
@@ -157,7 +158,10 @@ class Trending {
 
   Future<MovieDetails> fetchMovieDetails(int movieId) async {
     try {
-      final result = await tmdb.v3.movies.getDetails(movieId);
+      final result = await tmdb.v3.movies.getDetails(
+        movieId,
+        appendToResponse: 'videos,credits,watch/providers',
+      );
 
       // Cast Map<dynamic, dynamic> to Map<String, dynamic>
       final data = Map<String, dynamic>.from(result);
@@ -174,7 +178,10 @@ class Trending {
 
   Future<TvShowDetails?> fetchDetailsTvShow(int showId) async {
     try {
-      final result = await tmdb.v3.tv.getDetails(showId);
+      final result = await tmdb.v3.tv.getDetails(
+        showId,
+        appendToResponse: 'videos,credits,watch/providers',
+      );
       final data = Map<String, dynamic>.from(result);
       return TvShowDetails.fromJson(data);
     } catch (e) {
@@ -257,6 +264,124 @@ class Trending {
     } catch (e) {
       print("Error fetching season details: $e");
       return null;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // ✅ PAGINATED FETCH METHODS FOR SEE ALL SCREEN
+  // ---------------------------------------------------------------------------
+
+  Future<List<MediaItem>> fetchTrendingMoviePaginated(int page) async {
+    try {
+      Map result = await tmdb.v3.trending.getTrending(
+        mediaType: MediaType.movie,
+        timeWindow: TimeWindow.week,
+        language: 'en-US',
+        page: page,
+      );
+      List list = result['results'] ?? [];
+      return list.map((json) => MediaItem.fromJson(json)).toList();
+    } catch (e) {
+      print("Error fetching trending movies page $page: $e");
+      return [];
+    }
+  }
+
+  Future<List<MediaItem>> fetchTrendingShowPaginated(int page) async {
+    try {
+      Map result = await tmdb.v3.trending.getTrending(
+        mediaType: MediaType.tv,
+        timeWindow: TimeWindow.week,
+        language: 'en-US',
+        page: page,
+      );
+      List list = result['results'] ?? [];
+      return list.map((json) => MediaItem.fromJson(json)).toList();
+    } catch (e) {
+      print("Error fetching trending shows page $page: $e");
+      return [];
+    }
+  }
+
+  Future<List<MediaItem>> fetchPopularMoviesPaginated(int page) async {
+    try {
+      Map result = await tmdb.v3.movies.getPopular(page: page);
+      List list = result['results'] ?? [];
+      return list
+          .map((json) => MediaItem.fromJson(json).copyWith(mediaType: "movie"))
+          .toList();
+    } catch (e) {
+      print("Error fetching popular movies page $page: $e");
+      return [];
+    }
+  }
+
+  Future<List<MediaItem>> getNowPlayingPaginated(int page) async {
+    try {
+      final result = await tmdb.v3.movies.getNowPlaying(
+        language: "en-US",
+        region: "US",
+        page: page,
+      );
+      final results = List.from(result['results'] ?? []);
+      return results
+          .map((e) => MediaItem.fromJson(e).copyWith(mediaType: "movie"))
+          .toList();
+    } catch (e) {
+      print("Error fetching now playing page $page: $e");
+      return [];
+    }
+  }
+
+  Future<List<MediaItem>> fetchUpcomingPaginated(int page) async {
+    try {
+      Map result = await tmdb.v3.movies.getUpcoming(page: page);
+      List list = result['results'] ?? [];
+      return list
+          .map((json) => MediaItem.fromJson(json).copyWith(mediaType: "movie"))
+          .toList();
+    } catch (e) {
+      print("Error fetching upcoming page $page: $e");
+      return [];
+    }
+  }
+
+  Future<List<MediaItem>> fetchAiringTodayPaginated(int page) async {
+    try {
+      Map result = await tmdb.v3.tv.getAiringToday(page: page);
+      List list = result['results'] ?? [];
+      return list
+          .map((json) => MediaItem.fromJson(json).copyWith(mediaType: "tv"))
+          .toList();
+    } catch (e) {
+      print("Error fetching airing today page $page: $e");
+      return [];
+    }
+  }
+
+  Future<List<MediaItem>> fetchTopRatedTvPaginated(int page) async {
+    try {
+      Map result = await tmdb.v3.tv.getTopRated(page: page);
+      List list = result['results'] ?? [];
+      return list
+          .map((json) => MediaItem.fromJson(json).copyWith(mediaType: "tv"))
+          .toList();
+    } catch (e) {
+      print("Error fetching top rated TV page $page: $e");
+      return [];
+    }
+  }
+
+  Future<List<MediaItem>> fetchDiscoverPaginated(int page) async {
+    try {
+      Map result = await tmdb.v3.discover.getMovies(page: page);
+      List list = result['results'] ?? [];
+      return list
+          .map((json) => MediaItem.fromJson(json).copyWith(mediaType: "movie"))
+          .toList();
+    } catch (e) {
+      print("Error fetching discover page $page: $e");
+      return [];
     }
   }
 }

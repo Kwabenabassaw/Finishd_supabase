@@ -8,11 +8,13 @@ environment:
   sdk: ^3.9.2
 
 dependencies:
+
   flutter:
     sdk: flutter
 
   # UI & Icons
   cupertino_icons: ^1.0.8
+  font_awesome_flutter: ^10.7.0
  
   # API / Networking
   http: ^1.2.0
@@ -43,6 +45,7 @@ dependencies:
   youtube_player_flutter: ^9.0.3
   youtube_player_iframe: ^5.2.2
   visibility_detector: ^0.4.0+2
+  tiktoklikescroller: ^0.2.8
 
   # Firebase
   firebase_core: ^3.8.1
@@ -60,6 +63,7 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^5.0.0
   flutter_native_splash: ^2.4.0
+  flutter_launcher_icons: ^0.14.3
 
 flutter:
   uses-material-design: true
@@ -73,6 +77,8 @@ flutter:
     - assets/FinishdIcon.png
     - assets/noimage.jpg
     - assets/Finishdlogo.png
+    - assets/launcher_icon.png
+    - assets/launcher_icon_foreground.png
   fonts:
     - family: Inter
       fonts:
@@ -122,9 +128,39 @@ flutter:
           weight: 900
           style: italic  
 
-flutter_native_splash:
-  color: "#1A8927"
-  image: assets/FinishdIcon.png
-  android_12:
-    image: assets/FinishdIcon.png
-    color: "#1A8927"
+
+# ============================================
+# Flutter Launcher Icons Configuration
+# ============================================
+flutter_launcher_icons:
+  # Android Configuration
+  android: true
+  ios: true
+  
+  # Main icon (used for iOS and Android legacy icons)
+  # Must be 1024x1024 PNG with no transparency for iOS
+  image_path: "assets/launcher_icon.png"
+  
+  # Android Adaptive Icon Configuration (Android 8.0+)
+  # Foreground: Your logo/icon (transparent PNG, 1024x1024)
+  # Background: Solid color or image
+  adaptive_icon_foreground: "assets/launcher_icon_foreground.png"
+  adaptive_icon_background: "#1A8927"  # Your brand green color
+  
+  # Android specific settings
+  min_sdk_android: 21
+  
+  # iOS specific settings
+  remove_alpha_ios: true  # Removes transparency for iOS (required by Apple)
+  
+  # Web support (optional)
+  web:
+    generate: false
+  
+  # Windows support (optional)
+  windows:
+    generate: false
+  
+  # macOS support (optional)
+  macos:
+    generate: false

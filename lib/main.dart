@@ -13,6 +13,7 @@ import 'package:finishd/provider/MovieProvider.dart';
 import 'package:finishd/provider/onboarding_provider.dart';
 import 'package:finishd/provider/user_provider.dart';
 import 'package:finishd/provider/theme_provider.dart';
+import 'package:finishd/provider/community_provider.dart';
 
 import 'package:finishd/SplashScreen/splash_screen.dart';
 import 'package:finishd/onboarding/CategoriesTypeMove.dart';
@@ -46,6 +47,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => OnboardingProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => CommunityProvider()),
         Provider<AuthService>(create: (_) => AuthService()),
       ],
       child: MyApp(navigatorKey: navigatorKey),
@@ -137,9 +139,7 @@ class _HomePageState extends State<HomePage> {
         unselectedItemColor: Colors.blueGrey,
 
         // 🔥 Make transparent on Home tab
-        backgroundColor: _selectedIndex == 2
-            ? Colors.transparent
-            : null,
+        backgroundColor: _selectedIndex == 2 ? Colors.transparent : null,
 
         // ⚡ Remove shadow when transparent
         elevation: _selectedIndex == 4 ? 8 : 8,

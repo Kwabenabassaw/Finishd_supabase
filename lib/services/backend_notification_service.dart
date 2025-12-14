@@ -93,7 +93,7 @@ class AppNotification {
 
   String get timeAgo {
     if (createdAt == null) return '';
-    
+
     final now = DateTime.now();
     final difference = now.difference(createdAt!);
 
@@ -107,4 +107,15 @@ class AppNotification {
       return 'Just now';
     }
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'type': type,
+    'title': title,
+    'body': body,
+    'data': data,
+    'imageUrl': imageUrl,
+    'read': read,
+    'createdAt': createdAt?.millisecondsSinceEpoch,
+  };
 }
