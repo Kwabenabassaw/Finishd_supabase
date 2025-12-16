@@ -77,8 +77,15 @@ flutter:
     - assets/FinishdIcon.png
     - assets/noimage.jpg
     - assets/Finishdlogo.png
+    - assets/finishd.svg
     - assets/launcher_icon.png
+    - assets/finishdlogo3.png
+    - assets/finishdlogo4.png
     - assets/launcher_icon_foreground.png
+    - assets/landing/Avatar.webp
+    - assets/landing/StrangerThings.webp
+    - assets/landing/House.webp
+    - assets/landing/Badlands.jpg
   fonts:
     - family: Inter
       fonts:

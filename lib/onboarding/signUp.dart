@@ -58,8 +58,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
         if (result['isNewUser'] == true) {
           Navigator.pushReplacementNamed(context, 'genre');
         } else {
-          // Existing user (signed in), skip onboarding
-          Navigator.pushReplacementNamed(context, 'homepage');
+          // Existing user - check if they completed onboarding
+          if (result['onboardingCompleted'] == true) {
+            // Onboarding complete, go to homepage
+            Navigator.pushReplacementNamed(context, 'homepage');
+          } else {
+            // Onboarding not complete, continue with onboarding
+            Navigator.pushReplacementNamed(context, 'genre');
+          }
         }
       }
     } catch (e) {
@@ -76,16 +82,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Future<void> _signUpWithGoogle() async {
     setState(() => _isLoading = true);
     try {
-      await Provider.of<AuthService>(context, listen: false).signInWithGoogle();
+      final result = await Provider.of<AuthService>(
+        context,
+        listen: false,
+      ).signInWithGoogle();
+      if (result == null) {
+        // User canceled
+        setState(() => _isLoading = false);
+        return;
+      }
+
       if (mounted) {
-        // Check if new user? For now just go to homepage or genre.
-        // Usually social auth logs you in. If it's a new user, maybe we should go to genre?
-        // But detecting if it's a new user with social auth requires checking creation time or a flag.
-        // For simplicity, let's go to homepage as per login flow, or genre if we want to force onboarding.
-        // The user request says "On successful login, redirect the user to the home screen."
-        // But this is "Signup".
-        // Let's assume social auth acts as login if account exists.
-        Navigator.pushReplacementNamed(context, 'genre');
+        // Check if new user or if existing user hasn't completed onboarding
+        if (result['isNewUser'] == true ||
+            result['onboardingCompleted'] != true) {
+          Navigator.pushReplacementNamed(context, 'genre');
+        } else {
+          // Existing user with completed onboarding
+          Navigator.pushReplacementNamed(context, 'homepage');
+        }
       }
     } catch (e) {
       if (mounted) {

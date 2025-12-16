@@ -15,7 +15,7 @@ class AuthService {
   User? get currentUser => _auth.currentUser;
 
   // Sign Up with Email & Password
-  // Returns a map with 'credential' and 'isNewUser' flag
+  // Returns a map with 'credential', 'isNewUser', and 'onboardingCompleted' flags
   Future<Map<String, dynamic>> signUpWithEmailAndPassword({
     required String email,
     required String password,
@@ -35,7 +35,11 @@ class AuthService {
         lastName: lastName,
       );
 
-      return {'credential': result, 'isNewUser': true};
+      return {
+        'credential': result,
+        'isNewUser': true,
+        'onboardingCompleted': false,
+      };
     } on FirebaseAuthException catch (e) {
       // If email already exists, sign them in instead
       if (e.code == 'email-already-in-use') {
@@ -44,7 +48,15 @@ class AuthService {
             email: email,
             password: password,
           );
-          return {'credential': result, 'isNewUser': false};
+          // Check if existing user has completed onboarding
+          final onboardingCompleted = await hasCompletedOnboarding(
+            result.user!.uid,
+          );
+          return {
+            'credential': result,
+            'isNewUser': false,
+            'onboardingCompleted': onboardingCompleted,
+          };
         } catch (signInError) {
           throw 'Account exists but password is incorrect.';
         }
@@ -52,6 +64,16 @@ class AuthService {
       throw e.message ?? 'An error occurred during sign up.';
     } catch (e) {
       throw 'An unexpected error occurred.';
+    }
+  }
+
+  /// Check if user has completed onboarding
+  Future<bool> hasCompletedOnboarding(String userId) async {
+    try {
+      final doc = await _firestore.collection('users').doc(userId).get();
+      return doc.exists && doc.data()?['onboardingCompleted'] == true;
+    } catch (e) {
+      return false;
     }
   }
 
@@ -89,7 +111,8 @@ class AuthService {
   }
 
   // Sign In with Google
-  Future<UserCredential?> signInWithGoogle() async {
+  // Returns a map with 'credential', 'isNewUser', and 'onboardingCompleted' flags
+  Future<Map<String, dynamic>?> signInWithGoogle() async {
     try {
       // Force sign-out before sign-in to show account picker
       // This allows users to switch between Google accounts
@@ -108,10 +131,26 @@ class AuthService {
 
       UserCredential result = await _auth.signInWithCredential(credential);
 
-      // Check if user document exists, if not create it
-      await _checkAndCreateUserDocument(result.user);
+      // Check if user document exists
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(result.user!.uid)
+          .get();
+      final isNewUser = !userDoc.exists;
 
-      return result;
+      // Create user document if it doesn't exist
+      if (isNewUser) {
+        await _checkAndCreateUserDocument(result.user);
+      }
+
+      final onboardingCompleted =
+          userDoc.exists && userDoc.data()?['onboardingCompleted'] == true;
+
+      return {
+        'credential': result,
+        'isNewUser': isNewUser,
+        'onboardingCompleted': onboardingCompleted,
+      };
     } catch (e) {
       throw 'Google sign-in failed: $e';
     }

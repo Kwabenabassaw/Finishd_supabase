@@ -67,9 +67,25 @@ class _LoginState extends State<Login> {
   Future<void> _loginWithGoogle() async {
     setState(() => _isLoading = true);
     try {
-      await Provider.of<AuthService>(context, listen: false).signInWithGoogle();
+      final result = await Provider.of<AuthService>(
+        context,
+        listen: false,
+      ).signInWithGoogle();
+      if (result == null) {
+        // User canceled
+        setState(() => _isLoading = false);
+        return;
+      }
+
       if (mounted) {
-        Navigator.pushReplacementNamed(context, 'homepage');
+        // Check if new user or if existing user hasn't completed onboarding
+        if (result['isNewUser'] == true ||
+            result['onboardingCompleted'] != true) {
+          Navigator.pushReplacementNamed(context, 'genre');
+        } else {
+          // Existing user with completed onboarding
+          Navigator.pushReplacementNamed(context, 'homepage');
+        }
       }
     } catch (e) {
       if (mounted) {
