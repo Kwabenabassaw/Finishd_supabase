@@ -44,31 +44,27 @@ class _CommsTabState extends State<CommsTab> {
         slivers: [
           // Search bar
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: theme.cardColor,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: theme.dividerColor),
-                ),
+          
                 child: Row(
                   children: [
-                    Icon(Icons.search, color: theme.hintColor),
-                    const SizedBox(width: 12),
+
+                 
                     Expanded(
-                      child: TextField(
-                        decoration: InputDecoration(
-                          hintText: 'Search shows and movies...',
-                          hintStyle: TextStyle(color: theme.hintColor),
-                          border: InputBorder.none,
+                      
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: TextField(
+                          decoration: InputDecoration(
+                            hintText: 'Search shows and movies...',
+                            hintStyle: TextStyle(color: theme.hintColor),
+                            border: InputBorder.none,
+                          ),
                         ),
                       ),
                     ),
                   ],
-                ),
-              ),
+                
+              
             ),
           ),
 
@@ -295,7 +291,7 @@ class _CommsTabState extends State<CommsTab> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withOpacity(0.28),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -324,8 +320,8 @@ class _CommsTabState extends State<CommsTab> {
                     child: community.posterUrl != null
                         ? Image.network(
                             community.posterUrl!,
-                            width: 50,
-                            height: 70,
+                            width: 100,
+                            height: 100,
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => Container(
                               width: 50,
@@ -358,6 +354,7 @@ class _CommsTabState extends State<CommsTab> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 6),
+                      
                       Row(
                         children: [
                           // Green dot
@@ -383,24 +380,22 @@ class _CommsTabState extends State<CommsTab> {
                                 color: theme.hintColor.withOpacity(0.7),
                               ),
                             ),
+
+                            
                           ],
                         ],
                       ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
 
+                      
             // Recent Post Section
             if (community.recentPostContent != null &&
                 community.recentPostContent!.isNotEmpty) ...[
-              const SizedBox(height: 14),
+              const SizedBox(height: 5),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
+               
+                  vertical: 5,
                 ),
                 decoration: BoxDecoration(
                   color: theme.scaffoldBackgroundColor,
@@ -431,6 +426,12 @@ class _CommsTabState extends State<CommsTab> {
                 ),
               ),
             ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
           ],
         ),
       ),

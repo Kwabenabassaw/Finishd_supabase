@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:finishd/provider/onboarding_provider.dart';
 
 // Define the primary green color
-const Color primaryGreen = Color(0xFF1E88E5);
+const Color primaryGreen = Color(0xFF1A8927);
 
 // Data model for genres
 class Genre {
@@ -143,13 +144,12 @@ class _GenreSelectionScreenState extends State<GenreSelectionScreen> {
               ),
             ),
 
-            // --- Bottom Navigation Button ---
             Container(
-              padding: const EdgeInsets.only(
+              padding: EdgeInsets.only(
                 left: 25.0,
                 right: 25.0,
                 top: 15.0,
-                bottom: 25.0,
+                bottom: MediaQuery.of(context).padding.bottom + 25.0,
               ),
               // Optional: Add a subtle shadow/border to separate the button area
               decoration: BoxDecoration(
@@ -164,6 +164,8 @@ class _GenreSelectionScreenState extends State<GenreSelectionScreen> {
                 child: ElevatedButton(
                   onPressed: isContinueEnabled
                       ? () {
+                          // Add haptic feedback
+                          HapticFeedback.mediumImpact();
                           // Action when Continue is pressed
                           print(
                             'Selected Genres: ${onboardingProvider.selectedGenres}',
@@ -171,7 +173,8 @@ class _GenreSelectionScreenState extends State<GenreSelectionScreen> {
                           print(
                             'Selected Genre IDs: ${onboardingProvider.selectedGenreIds}',
                           );
-                          Navigator.pushReplacementNamed(context, 'showSelect');
+                          // Use pushNamed for back navigation support
+                          Navigator.pushNamed(context, 'showSelect');
                         }
                       : null, // Button is disabled if not enough genres are selected
                   style: ElevatedButton.styleFrom(

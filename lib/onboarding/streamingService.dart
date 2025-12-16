@@ -3,6 +3,7 @@ import 'package:finishd/Model/Watchprovider.dart';
 import 'package:finishd/Model/movieprovider.dart';
 import 'package:finishd/tmbd/getproviders.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:finishd/Model/user_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:finishd/provider/onboarding_provider.dart';
@@ -24,10 +25,39 @@ class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
   bool _isLoading = true;
   String? _error;
 
+  // Search functionality
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
   @override
   void initState() {
     super.initState();
     _loadServices();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text.toLowerCase();
+    });
+  }
+
+  List<WatchProvider> get _filteredServices {
+    if (_cachedServices == null) return [];
+    if (_searchQuery.isEmpty) return _cachedServices!;
+    return _cachedServices!
+        .where(
+          (service) =>
+              service.providerName.toLowerCase().contains(_searchQuery),
+        )
+        .toList();
   }
 
   Future<void> _loadServices() async {
@@ -105,9 +135,9 @@ class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
                                 mainAxisSpacing: 15.0,
                                 childAspectRatio: 0.85,
                               ),
-                          itemCount: _cachedServices!.length,
+                          itemCount: _filteredServices.length,
                           itemBuilder: (context, index) {
-                            final service = _cachedServices![index];
+                            final service = _filteredServices[index];
                             final isSelected = onboardingProvider
                                 .isProviderSelected(service.providerId);
                             return ServiceLogoTile(
@@ -181,20 +211,27 @@ class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
 
   Widget _buildSearchBar() {
     return Container(
-      height: 50,
-      padding: const EdgeInsets.symmetric(horizontal: 15),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade300),
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: const TextField(
+      padding: const EdgeInsets.symmetric(horizontal: 15),
+      child: TextField(
+        controller: _searchController,
         decoration: InputDecoration(
-          hintText: '',
-          hintStyle: TextStyle(color: Colors.grey),
-          prefixIcon: Icon(Icons.search, color: Colors.grey),
+          hintText: 'Search streaming services...',
+          hintStyle: const TextStyle(color: Colors.grey),
+          prefixIcon: const Icon(Icons.search, color: Colors.grey),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear, color: Colors.grey),
+                  onPressed: () {
+                    _searchController.clear();
+                  },
+                )
+              : null,
           border: InputBorder.none,
-          contentPadding: EdgeInsets.only(top: 15),
+          contentPadding: const EdgeInsets.only(top: 15),
         ),
       ),
     );
@@ -222,6 +259,7 @@ class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
             height: 55,
             child: ElevatedButton(
               onPressed: () async {
+                HapticFeedback.mediumImpact();
                 if (onboardingProvider.selectedProviders.isNotEmpty) {
                   showDialog(
                     context: context,
@@ -287,6 +325,7 @@ class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
           const SizedBox(height: 15),
           TextButton(
             onPressed: () {
+              HapticFeedback.lightImpact();
               print('Skipped this step');
               Navigator.pushReplacementNamed(context, 'welcome');
             },

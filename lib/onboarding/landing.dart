@@ -15,7 +15,6 @@ class _ImageCardBackgroundState extends State<ImageCardBackground>
   @override
   void initState() {
     super.initState();
-    super.initState();
     _controller = AnimationController(
       duration: Duration(seconds: 3), // animation duration
       vsync: this,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 // Define the primary green color
-const Color primaryGreen = Color(0xFF1A8927); 
+const Color primaryGreen = Color(0xFF1A8927);
 
 class CompletionScreen extends StatelessWidget {
   const CompletionScreen({super.key});
@@ -65,7 +65,7 @@ class CompletionScreen extends StatelessWidget {
 
   // Helper widget for the styled app logo
   Widget _buildAppLogo() {
-    // Note: The logo in the image is a custom vector/asset. 
+    // Note: The logo in the image is a custom vector/asset.
     // This is a placeholder using a custom drawing style.
     return Container(
       width: 80,
@@ -91,12 +91,15 @@ class CompletionScreen extends StatelessWidget {
         left: 25.0,
         right: 25.0,
         top: 20.0,
-        bottom: MediaQuery.of(context).padding.bottom + 20, // Account for safe area
+        bottom:
+            MediaQuery.of(context).padding.bottom + 20, // Account for safe area
       ),
       decoration: BoxDecoration(
         // FIXED: Moved color property inside BoxDecoration
         color: Colors.white, // White background for the safe area
-        border: Border(top: BorderSide(color: Colors.grey.shade200, width: 1.0)),
+        border: Border(
+          top: BorderSide(color: Colors.grey.shade200, width: 1.0),
+        ),
       ),
       child: SizedBox(
         width: double.infinity,
@@ -104,12 +107,12 @@ class CompletionScreen extends StatelessWidget {
         child: ElevatedButton(
           onPressed: () {
             // Navigate to the main application home screen
-            // Navigator.of(context).pushReplacementNamed('/home');
             print('Navigating to Home Screen');
-            Navigator.restorablePushReplacementNamed(context, 'homepage');Navigator.of(context).pushNamedAndRemoveUntil(
-            'homepage', // The route name you want to go to
-            (Route<dynamic> route) => false, // This predicate ensures ALL previous routes are removed
-          );
+            Navigator.of(context).pushNamedAndRemoveUntil(
+              'homepage', // The route name you want to go to
+              (Route<dynamic> route) =>
+                  false, // This predicate ensures ALL previous routes are removed
+            );
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: primaryGreen,
@@ -150,7 +153,7 @@ class LogoPainter extends CustomPainter {
       ..lineTo(size.width * 0.40, size.height * 0.75)
       ..lineTo(size.width * 0.25, size.height * 0.75)
       ..close();
-    
+
     // Rotate and draw the path to match the image's perspective
     canvas.save();
     canvas.translate(size.width / 2, size.height / 2);

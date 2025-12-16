@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:finishd/services/auth_service.dart';
 
 // Define the primary color (Green from the image)
-const Color primaryGreen = Color(0xFF1E88E5);
+const Color primaryGreen = Color(0xFF1A8927);
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -41,6 +42,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
 
     setState(() => _isLoading = true);
+    HapticFeedback.mediumImpact();
 
     try {
       final result = await Provider.of<AuthService>(context, listen: false)
@@ -252,18 +254,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       spacing: 10,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                      FaIcon(
-              FontAwesomeIcons.google,
-              size: 24.0,
-               // Google's primary brand color is red/blue/green/yellow
-            ),
+                        FaIcon(
+                          FontAwesomeIcons.google,
+                          size: 24.0,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : Colors.grey,
+                          // Google's primary brand color is red/blue/green/yellow
+                        ),
                         const Text(
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.right,
                           'Contiune With Google ',
 
                           style: TextStyle(
-                          
                             fontWeight: FontWeight.bold,
                             fontSize: 18,
                             color: Colors.grey,
@@ -293,11 +297,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       spacing: 14,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                       FaIcon(
-              FontAwesomeIcons.apple,
-              size: 24.0,
-             // Google's primary brand color is red/blue/green/yellow
-            ),
+                        FaIcon(
+                          FontAwesomeIcons.apple,
+                          size: 24.0,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : Colors.grey,
+                          // Google's primary brand color is red/blue/green/yellow
+                        ),
                         const Text(
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.right,

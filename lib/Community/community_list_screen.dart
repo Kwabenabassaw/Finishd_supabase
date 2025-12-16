@@ -120,8 +120,8 @@ class _CommunityListScreenState extends State<CommunityListScreen>
         slivers: [
           // Search bar
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+            
+            
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
@@ -144,7 +144,7 @@ class _CommunityListScreenState extends State<CommunityListScreen>
                   ],
                 ),
               ),
-            ),
+            
           ),
 
           // Filter chips
@@ -282,9 +282,9 @@ class _CommunityListScreenState extends State<CommunityListScreen>
     String timeAgo = '';
     if (community.recentPostTime != null) {
       final diff = DateTime.now().difference(community.recentPostTime!);
-      if (diff.inMinutes < 60)
+      if (diff.inMinutes < 60) {
         timeAgo = '${diff.inMinutes}m ago';
-      else if (diff.inHours < 24)
+      } else if (diff.inHours < 24)
         timeAgo = '${diff.inHours}h ago';
       else
         timeAgo = '${diff.inDays}d ago';
@@ -310,9 +310,9 @@ class _CommunityListScreenState extends State<CommunityListScreen>
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withOpacity(0.15),
               blurRadius: 10,
-              offset: const Offset(0, 4),
+              offset: const Offset(0, 7),
             ),
           ],
         ),
@@ -336,12 +336,12 @@ class _CommunityListScreenState extends State<CommunityListScreen>
                     child: community.posterUrl != null
                         ? Image.network(
                             community.posterUrl!,
-                            width: 50,
+                            width: 100,
                             height: 70, // Slightly taller poster
                             fit: BoxFit.cover,
                           )
                         : Container(
-                            width: 50,
+                            width: 100,
                             height: 70,
                             color: Colors.grey[200],
                             child: Icon(Icons.movie, color: Colors.grey[400]),
@@ -420,7 +420,7 @@ class _CommunityListScreenState extends State<CommunityListScreen>
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
-                  vertical: 12,
+                  vertical: 0,
                 ),
                 decoration: BoxDecoration(
                   color: const Color(

@@ -8,10 +8,11 @@ import 'package:finishd/tmbd/Search.dart';
 import 'package:finishd/tmbd/fetchDiscover.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 // Define the primary green color
-const Color primaryGreen = Color(0xFF1E88E5);
+const Color primaryGreen = Color(0xFF1A8927);
 Fetchdiscover getDiscover = Fetchdiscover();
 SearchDiscover movieapi = SearchDiscover();
 
@@ -32,7 +33,6 @@ class ShowSelectionScreen extends StatefulWidget {
 }
 
 class _ShowSelectionScreenState extends State<ShowSelectionScreen> {
-
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   final Future<List<MediaItem>> sampleShows = getDiscover.fetchDiscover();
@@ -251,6 +251,7 @@ class _ShowSelectionScreenState extends State<ShowSelectionScreen> {
             height: 55,
             child: ElevatedButton(
               onPressed: () {
+                HapticFeedback.mediumImpact();
                 final onboardingProvider = Provider.of<OnboardingProvider>(
                   context,
                   listen: false,
@@ -264,7 +265,7 @@ class _ShowSelectionScreenState extends State<ShowSelectionScreen> {
                     'Selected Movies: ${onboardingProvider.selectedMovies}',
                   );
                   print('Selected Shows: ${onboardingProvider.selectedShows}');
-                  Navigator.pushReplacementNamed(context, 'streaming');
+                  Navigator.pushNamed(context, 'streaming');
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -286,11 +287,11 @@ class _ShowSelectionScreenState extends State<ShowSelectionScreen> {
             ),
           ),
           const SizedBox(height: 15),
-          // Skip Button
           TextButton(
             onPressed: () {
+              HapticFeedback.lightImpact();
               print('Skipped this step');
-              Navigator.pushReplacementNamed(context, 'streaming');
+              Navigator.pushNamed(context, 'streaming');
             },
             child: const Text(
               'Skip this step',

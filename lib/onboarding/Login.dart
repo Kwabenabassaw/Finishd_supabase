@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:finishd/services/auth_service.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+
 // Define the primary color (Green from the image)
-const Color primaryGreen = Color(0xFF1E88E5);
+const Color primaryGreen = Color(0xFF1A8927);
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -33,6 +35,7 @@ class _LoginState extends State<Login> {
     }
 
     setState(() => _isLoading = true);
+    HapticFeedback.mediumImpact();
 
     try {
       final result = await Provider.of<AuthService>(context, listen: false)
@@ -212,10 +215,12 @@ class _LoginState extends State<Login> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         FaIcon(
-              FontAwesomeIcons.google,
-              size:24.0,
-             
-            ),
+                          FontAwesomeIcons.google,
+                          size: 24.0,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : Colors.grey,
+                        ),
                         const Text(
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.right,
@@ -252,10 +257,12 @@ class _LoginState extends State<Login> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         FaIcon(
-              FontAwesomeIcons.apple,
-              size: 24.0,
-              
-            ),
+                          FontAwesomeIcons.apple,
+                          size: 24.0,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : Colors.grey,
+                        ),
                         const Text(
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.right,
