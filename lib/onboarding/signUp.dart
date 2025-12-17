@@ -1,3 +1,4 @@
+import 'package:finishd/onboarding/widgets/button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -134,15 +135,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+
       appBar: AppBar(
         // Makes the AppBar clear with white background
         elevation: 0,
       ),
       body: SingleChildScrollView(
+        
         padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 10.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
+        
             Image.asset('assets/icon2.png', fit: BoxFit.contain),
             Center(
               child: Container(
@@ -151,7 +155,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               ),
             ),
             const SizedBox(height: 30),
-
+         
             // 2. Title
             Text(
               'Join the Watch Party',
@@ -226,29 +230,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 SizedBox(
                   width: double.infinity,
                   height: 55,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _register,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1A8927),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.green)
-                        : const Text(
-                            'Register',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
+                  child: PrimaryButton(
+                    isLoading: _isLoading,
+                    onTap: () {
+                      if (!_isLoading) {
+                        _register();
+                      }
+                      
+                    },
+                    text: "Register",
                   ),
                 ),
-
                 const Text("Or With"),
+                const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,
                   height: 55,
@@ -269,14 +263,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       spacing: 10,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        FaIcon(
-                          FontAwesomeIcons.google,
-                          size: 24.0,
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white
-                              : Colors.grey,
-                          // Google's primary brand color is red/blue/green/yellow
-                        ),
+                        Image.asset('assets/glogo.png', width: 24, height: 24),
                         const Text(
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.right,
@@ -339,7 +326,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ),
           ],
         ),
+
       ),
+      
     );
   }
 }

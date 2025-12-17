@@ -85,9 +85,9 @@ class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
       context,
       listen: true,
     );
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Colors.white,
       body: Stack(
         children: [
           // --- Main Scrollable Content Area ---
@@ -105,12 +105,12 @@ class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
                   const SizedBox(height: 25),
                   _buildProgressHeader(),
                   const SizedBox(height: 25),
-                  const Text(
+                  Text(
                     'Your streaming\nservices',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                      color: isDark ? Colors.white : Colors.black,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -190,7 +190,7 @@ class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
             const Text(
               '75%',
               style: TextStyle(
-                color: Colors.black54,
+               
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -210,9 +210,10 @@ class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
   }
 
   Widget _buildSearchBar() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(12),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 15),
@@ -242,9 +243,10 @@ class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
       context,
       listen: false,
     );
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      color: Colors.white,
+      color: isDark ? const Color(0xFF121212) : Colors.white,
       padding: EdgeInsets.only(
         left: 25.0,
         right: 25.0,
@@ -358,6 +360,7 @@ class ServiceLogoTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -384,7 +387,7 @@ class ServiceLogoTile extends StatelessWidget {
             ),
             child: ClipOval(
               child: Container(
-                color: Colors.white,
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                 padding: const EdgeInsets.all(12),
                 child: CachedNetworkImage(
                   imageUrl:
@@ -408,7 +411,9 @@ class ServiceLogoTile extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected ? primaryGreen : Colors.black87,
+              color: isSelected
+                  ? primaryGreen
+                  : (isDark ? Colors.white : Colors.black87),
             ),
           ),
         ],

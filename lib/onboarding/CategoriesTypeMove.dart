@@ -41,6 +41,7 @@ class _GenreSelectionScreenState extends State<GenreSelectionScreen> {
     final onboardingProvider = Provider.of<OnboardingProvider>(context);
     final bool isContinueEnabled =
         onboardingProvider.selectedGenres.length >= _minSelections;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       // Wrap the content in a Column to place it above the bottom button
@@ -72,10 +73,10 @@ class _GenreSelectionScreenState extends State<GenreSelectionScreen> {
                           ),
                         ),
                         const SizedBox(width: 15),
-                        const Text(
+                        Text(
                           '25%',
                           style: TextStyle(
-                            color: Colors.black54,
+                            color: isDark ? Colors.white70 : Colors.black54,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -92,12 +93,12 @@ class _GenreSelectionScreenState extends State<GenreSelectionScreen> {
                     const SizedBox(height: 25),
 
                     // 2. Title
-                    const Text(
+                    Text(
                       'What do you love to watch?',
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                        color: isDark ? Colors.white : Colors.black,
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -153,9 +154,12 @@ class _GenreSelectionScreenState extends State<GenreSelectionScreen> {
               ),
               // Optional: Add a subtle shadow/border to separate the button area
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isDark ? const Color(0xFF121212) : Colors.white,
                 border: Border(
-                  top: BorderSide(color: Colors.grey.shade200, width: 1.0),
+                  top: BorderSide(
+                    color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                    width: 1.0,
+                  ),
                 ),
               ),
               child: SizedBox(
@@ -220,6 +224,7 @@ class GenreChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(15),
@@ -228,10 +233,12 @@ class GenreChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? Colors.green.shade800.withOpacity(0.1)
-              : Colors.white, // Light green fill when selected
+              : (isDark ? const Color(0xFF1E1E1E) : Colors.white),
           borderRadius: BorderRadius.circular(15),
           border: Border.all(
-            color: isSelected ? Colors.green.shade800 : Colors.grey.shade300,
+            color: isSelected
+                ? Colors.green.shade800
+                : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
             width: isSelected ? 2.0 : 1.0,
           ),
         ),
@@ -255,7 +262,9 @@ class GenreChip extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: isSelected ? Colors.green.shade800 : Colors.black,
+                  color: isSelected
+                      ? Colors.green.shade800
+                      : (isDark ? Colors.white : Colors.black),
                 ),
               ),
             ),

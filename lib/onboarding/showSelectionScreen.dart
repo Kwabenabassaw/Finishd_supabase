@@ -48,8 +48,8 @@ class _ShowSelectionScreenState extends State<ShowSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: Colors.white,
       // Use Stack to place the bottom buttons persistently over the scrollable content
       body: Stack(
         children: [
@@ -71,12 +71,12 @@ class _ShowSelectionScreenState extends State<ShowSelectionScreen> {
                   const SizedBox(height: 40),
 
                   // 2. Title and Subtitle
-                  const Text(
+                  Text(
                     'Shows you\'ve loved',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                      color: isDark ? Colors.white : Colors.black,
                     ),
                   ),
 
@@ -183,7 +183,7 @@ class _ShowSelectionScreenState extends State<ShowSelectionScreen> {
             const Text(
               '50%',
               style: TextStyle(
-                color: Colors.black54,
+             
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -200,12 +200,15 @@ class _ShowSelectionScreenState extends State<ShowSelectionScreen> {
 
   // Helper widget for the search bar
   Widget _buildSearchBar() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       height: 50,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(
+          color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+        ),
       ),
       child: TextField(
         controller: _searchController,
@@ -219,7 +222,7 @@ class _ShowSelectionScreenState extends State<ShowSelectionScreen> {
             }
           });
         },
-        style: const TextStyle(color: Colors.black),
+        style: TextStyle(color: isDark ? Colors.white : Colors.black),
         decoration: const InputDecoration(
           hintText: 'Search for shows...',
           hintStyle: TextStyle(color: Colors.grey),
@@ -233,8 +236,9 @@ class _ShowSelectionScreenState extends State<ShowSelectionScreen> {
 
   // Helper widget for the bottom buttons
   Widget _buildBottomButtonBar() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      color: Colors.white, // Background color for the bottom bar
+      color: isDark ? const Color(0xFF121212) : Colors.white,
       padding: EdgeInsets.only(
         left: 25.0,
         right: 25.0,

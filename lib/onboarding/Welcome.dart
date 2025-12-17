@@ -8,9 +8,10 @@ class CompletionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.white,
-      // Use Stack to layer the centered content and the bottom button
+      // Use theme-aware background
       body: Stack(
         children: [
           // 1. Centered Content (Icon, Title, Description)
@@ -25,13 +26,13 @@ class CompletionScreen extends StatelessWidget {
                   const SizedBox(height: 30),
 
                   // --- Title ---
-                  const Text(
+                  Text(
                     'You\'re all set!',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                      color: isDark ? Colors.white : Colors.black,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -63,7 +64,7 @@ class CompletionScreen extends StatelessWidget {
     );
   }
 
-  // Helper widget for the styled app logo
+  // Helper widget for the styled app logo (unused - kept for reference)
   Widget _buildAppLogo() {
     // Note: The logo in the image is a custom vector/asset.
     // This is a placeholder using a custom drawing style.
@@ -85,8 +86,8 @@ class CompletionScreen extends StatelessWidget {
 
   // Helper widget for the bottom button
   Widget _buildBottomButton(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      // FIX: Removed 'color: Colors.white,' from here
       padding: EdgeInsets.only(
         left: 25.0,
         right: 25.0,
@@ -95,10 +96,12 @@ class CompletionScreen extends StatelessWidget {
             MediaQuery.of(context).padding.bottom + 20, // Account for safe area
       ),
       decoration: BoxDecoration(
-        // FIXED: Moved color property inside BoxDecoration
-        color: Colors.white, // White background for the safe area
+        color: isDark ? const Color(0xFF121212) : Colors.white,
         border: Border(
-          top: BorderSide(color: Colors.grey.shade200, width: 1.0),
+          top: BorderSide(
+            color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+            width: 1.0,
+          ),
         ),
       ),
       child: SizedBox(

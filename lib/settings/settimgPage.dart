@@ -9,10 +9,35 @@ import 'edit_favorite_content.dart';
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
+  /// Get the icon for the current theme mode
+  IconData _getThemeIcon(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.system:
+        return Icons.brightness_auto;
+      case ThemeMode.light:
+        return Icons.light_mode_rounded;
+      case ThemeMode.dark:
+        return Icons.dark_mode_rounded;
+    }
+  }
+
+  /// Get the label for the current theme mode
+  String _getThemeLabel(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.system:
+        return 'System';
+      case ThemeMode.light:
+        return 'Light';
+      case ThemeMode.dark:
+        return 'Dark';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDark = themeProvider.isDarkMode;
+    final themeMode = themeProvider.themeMode;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -22,10 +47,12 @@ class SettingsScreen extends StatelessWidget {
           // Theme toggle icon
           IconButton(
             icon: Icon(
-              isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-              color: isDark ? Colors.amber : Colors.blueGrey,
+              _getThemeIcon(themeMode),
+              color: themeMode == ThemeMode.system
+                  ? (isDark ? Colors.blueAccent : Colors.blueGrey)
+                  : (isDark ? Colors.amber : Colors.blueGrey),
             ),
-            tooltip: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+            tooltip: 'Theme: ${_getThemeLabel(themeMode)} (tap to change)',
             onPressed: () => themeProvider.toggleTheme(),
           ),
           const SizedBox(width: 8),
@@ -57,6 +84,7 @@ class SettingsScreen extends StatelessWidget {
                   _SettingsTile(
                     icon: Icons.contrast,
                     title: 'Theme',
+                    subtitle: _getThemeLabel(themeMode),
                     onTap: () => themeProvider.toggleTheme(),
                   ),
                   _SettingsTile(icon: Icons.language, title: 'Language'),

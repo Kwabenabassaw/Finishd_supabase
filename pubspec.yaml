@@ -86,6 +86,16 @@ flutter:
     - assets/landing/StrangerThings.webp
     - assets/landing/House.webp
     - assets/landing/Badlands.jpg
+    - assets/landing/Homeland.webp
+    - assets/landing/morningshow.webp
+    - assets/landing/Slohorses.webp
+    - assets/landing/Merv.webp
+    - assets/landing/IT.webp
+    - assets/landing/Interstellar.webp
+    - assets/landing/Witcher.webp
+    - assets/FINISHD.png
+
+
   fonts:
     - family: Inter
       fonts:
@@ -135,7 +145,27 @@ flutter:
           weight: 900
           style: italic  
 
+# ============================================
+# Flutter Native Splash Configuration
+# ============================================
+flutter_native_splash:
+  # Background color of the splash screen (Matches your Landing Page)
+  color: "#ffffff"
 
+  # The logo to display in the center
+  # I picked this one based on your assets, but you can swap it for 'assets/finishdlogo4.png' if you prefer
+  image: "assets/FINISHD.png"
+
+  # Android 12+ specific settings (Required for newer phones)
+  android_12:
+    icon_background_color: "#ffffff"
+    image: "assets/FINISHD.png"
+
+  # iOS specific settings
+  ios: true
+  
+  # Web specific settings
+  web: false
 # ============================================
 # Flutter Launcher Icons Configuration
 # ============================================

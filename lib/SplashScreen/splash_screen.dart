@@ -97,14 +97,14 @@ class _SplashScreenState extends State<SplashScreen>
 
     // Show splash screen during loading and connectivity check
     return Scaffold(
-      backgroundColor: const Color(0xFF1A8927),
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       body: FadeTransition(
         opacity: _animation,
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset('assets/icon2.png'),
+              Image.asset('assets/Finishdlogo.png', width: 200, height: 200),
               if (_isCheckingConnectivity && _animationComplete) ...[
                 const SizedBox(height: 30),
                 const SizedBox(

@@ -1,3 +1,4 @@
+import 'package:finishd/onboarding/widgets/button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -184,29 +185,15 @@ class _LoginState extends State<Login> {
             Column(
               spacing: 10,
               children: [
-                SizedBox(
-                  width: double.infinity,
-                  height: 55,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _login,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1A8927),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                            'Login',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                  ),
+             
+                PrimaryButton(
+                  isLoading: _isLoading,
+                  onTap: () {
+                    if (!_isLoading) {
+                      _login();
+                    }
+                  },
+                  text: "Login",
                 ),
 
                 const Text("Or With"),
@@ -230,13 +217,8 @@ class _LoginState extends State<Login> {
                       spacing: 10,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        FaIcon(
-                          FontAwesomeIcons.google,
-                          size: 24.0,
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white
-                              : Colors.grey,
-                        ),
+                        Image.asset('assets/glogo.png', width: 24, height: 24),
+
                         const Text(
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.right,

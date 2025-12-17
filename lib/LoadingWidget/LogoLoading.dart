@@ -72,9 +72,9 @@ class _LogoLoadingScreenState extends State<LogoLoadingScreen>
               child: SizedBox(
                 // Constrain the size of the logo container
                 width: 250,
-                height: 100,
+                height: 250,
                 child: Image.asset(
-                  'assets/Finishdlogo.png', // The path to your renamed logo file
+                  'assets/FINISHD.png', // The path to your renamed logo file
                   fit: BoxFit.contain, // Ensures the entire logo is visible
                 ),
               ),
