@@ -2,7 +2,6 @@ import 'package:finishd/Discover/Search.dart';
 import 'package:finishd/Home/Friends/friendsTab.dart';
 import 'package:finishd/Home/Search.dart';
 import 'package:finishd/Home/commentScreen.dart';
-import 'package:finishd/Home/shareSceen.dart';
 import 'package:finishd/Mainpage/Discover.dart';
 import 'package:finishd/Mainpage/Home.dart';
 import 'package:finishd/Mainpage/Messages.dart';
@@ -14,6 +13,8 @@ import 'package:finishd/provider/onboarding_provider.dart';
 import 'package:finishd/provider/user_provider.dart';
 import 'package:finishd/provider/theme_provider.dart';
 import 'package:finishd/provider/community_provider.dart';
+import 'package:finishd/provider/actor_provider.dart';
+import 'dart:io' show Platform;
 
 import 'package:finishd/SplashScreen/splash_screen.dart';
 import 'package:finishd/onboarding/CategoriesTypeMove.dart';
@@ -24,7 +25,9 @@ import 'package:finishd/onboarding/showSelectionScreen.dart';
 import 'package:finishd/onboarding/signUp.dart';
 import 'package:finishd/onboarding/streamingService.dart';
 import 'package:finishd/settings/settimgPage.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 
 import 'package:firebase_core/firebase_core.dart';
@@ -48,6 +51,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => CommunityProvider()),
+        ChangeNotifierProvider(create: (_) => ActorProvider()),
         Provider<AuthService>(create: (_) => AuthService()),
       ],
       child: MyApp(navigatorKey: navigatorKey),
@@ -105,16 +109,16 @@ class HomePage extends StatefulWidget {
 }
 
 final List<Widget> _pages = [
-  Watchlist(),
+  Home(),
 
   Discover(),
-  Home(),
+  Watchlist(),
   Messages(),
   Profile(),
 ];
 
 class _HomePageState extends State<HomePage> {
-  int _selectedIndex = 2;
+  int _selectedIndex = 0;
 
   void _onItemTapped(int index) {
     setState(() {
@@ -134,29 +138,62 @@ class _HomePageState extends State<HomePage> {
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         showUnselectedLabels: false,
-        iconSize: 30,
+        iconSize: 24,
         enableFeedback: true,
-        unselectedItemColor: Colors.blueGrey,
+
+        unselectedItemColor: const Color.fromARGB(255, 1, 118, 32),
 
         // 🔥 Make transparent on Home tab
-        backgroundColor: _selectedIndex == 2 ? Colors.transparent : null,
+        backgroundColor: _selectedIndex == 0 ? Colors.transparent : null,
 
         // ⚡ Remove shadow when transparent
         elevation: _selectedIndex == 4 ? 8 : 8,
 
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.watch_later_outlined),
-            label: 'Watchlist',
-          ),
-
-          BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Discover'),
-          BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: "Home"),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.messenger_outline_sharp),
-            label: "Messages",
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+        items: [
+          if (Platform.isAndroid) ...[
+            BottomNavigationBarItem(
+              icon: FaIcon(FontAwesomeIcons.houseChimney),
+              label: "Home",
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.compass_fill),
+              label: 'Discover',
+            ),
+            BottomNavigationBarItem(
+              icon: FaIcon(FontAwesomeIcons.bookmark, size: 24.0),
+              label: 'Watchlist',
+            ),
+            BottomNavigationBarItem(
+              icon: FaIcon(FontAwesomeIcons.solidMessage),
+              label: "Messages",
+            ),
+            BottomNavigationBarItem(
+              icon: FaIcon(FontAwesomeIcons.userNinja, size: 24.0),
+              label: 'Profile',
+            ),
+          ],
+          if (Platform.isIOS) ...[
+            BottomNavigationBarItem(
+              icon: FaIcon(FontAwesomeIcons.houseChimney),
+              label: "Home",
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.explore),
+              label: 'Discover',
+            ),
+            BottomNavigationBarItem(
+              icon: FaIcon(FontAwesomeIcons.bookmark, size: 24.0),
+              label: 'Watchlist',
+            ),
+            BottomNavigationBarItem(
+              icon: FaIcon(FontAwesomeIcons.solidMessage),
+              label: "Messages",
+            ),
+            BottomNavigationBarItem(
+              icon: FaIcon(FontAwesomeIcons.userNinja, size: 24.0),
+              label: 'Profile',
+            ),
+          ],
         ],
       ),
     );

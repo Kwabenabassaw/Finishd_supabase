@@ -1,10 +1,8 @@
-import 'package:finishd/LoadingWidget/playerloading.dart';
+import 'dart:io';
+import 'dart:async';
 import 'package:finishd/Model/MovieDetails.dart';
 import 'package:finishd/Model/movie_list_item.dart';
-
 import 'package:finishd/Widget/Cast_avatar.dart';
-import 'package:finishd/Widget/MovieStreamingprovider.dart';
-import 'package:finishd/Widget/TrailerPlayer.dart';
 import 'package:finishd/Widget/movie_action_drawer.dart';
 import 'package:finishd/tmbd/fetch_trialler.dart';
 import 'package:finishd/Model/recommendation_model.dart';
@@ -20,6 +18,8 @@ import 'package:finishd/Widget/ratings_display_widget.dart';
 import 'package:finishd/services/tmdb_sync_service.dart';
 import 'package:finishd/Widget/streaming_section.dart';
 import 'package:finishd/Community/community_detail_screen.dart';
+import 'package:finishd/Widget/YouTubeTrailerPlayerDialog.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 // --- Placeholder/Mock Data Models ---
 // Replace these with your actual TMDB models (Movie, CastMember, Season)
 
@@ -41,7 +41,9 @@ class MovieDetailsScreen extends StatefulWidget {
 class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
   final TmdbSyncService _syncService = TmdbSyncService();
   late MovieDetails _movie;
-  bool _isLoading = true;
+  YoutubePlayerController? _previewController;
+  bool _showPreview = false;
+  Timer? _previewTimer;
 
   @override
   void initState() {
@@ -55,34 +57,111 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
     if (synced != null && mounted) {
       setState(() {
         _movie = synced;
-        _isLoading = false;
       });
-    } else {
-      if (mounted) setState(() => _isLoading = false);
+
+      // Initialize preview controller
+      String? youtubeKey;
+      if (_movie.videos.isNotEmpty) {
+        youtubeKey = _movie.videos
+            .firstWhere(
+              (v) => v.site == 'YouTube' && v.type == 'Trailer',
+              orElse: () => _movie.videos.first,
+            )
+            .key;
+      } else {
+        youtubeKey = await tvService.getMovieTrailerKey(_movie.id);
+      }
+
+      if (youtubeKey != null && mounted) {
+        _previewController =
+            YoutubePlayerController(
+              initialVideoId: youtubeKey,
+              flags: const YoutubePlayerFlags(
+                autoPlay: true,
+                mute: true,
+                disableDragSeek: true,
+                loop: true,
+                isLive: false,
+                forceHD: false,
+                enableCaption: false,
+              ),
+            )..addListener(() {
+              if (_previewController!.value.isReady &&
+                  !_showPreview &&
+                  mounted) {
+                setState(() => _showPreview = true);
+
+                // ⏱️ Stop preview after 10 seconds
+                _previewTimer = Timer(const Duration(seconds: 10), () {
+                  if (mounted) {
+                    setState(() {
+                      _showPreview = false;
+                    });
+                    // Slightly delay pausing to allow fade animation to complete
+                    Future.delayed(const Duration(milliseconds: 800), () {
+                      _previewController?.pause();
+                    });
+                  }
+                });
+              }
+            });
+      }
     }
   }
 
   @override
+  void dispose() {
+    _previewTimer?.cancel();
+    _previewController?.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final themeBackground = Theme.of(context).scaffoldBackgroundColor;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
+      backgroundColor: themeBackground,
       body: CustomScrollView(
+        physics: Platform.isIOS
+            ? const BouncingScrollPhysics()
+            : const ClampingScrollPhysics(),
         slivers: <Widget>[
           SliverAppBar(
+            expandedHeight: 400.0,
             pinned: true,
-            expandedHeight: 100,
-            flexibleSpace: FlexibleSpaceBar(
-              title: Text(
-                _movie.title,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+            stretch: true,
+            backgroundColor: themeBackground,
+            leading: IconButton(
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+               
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Platform.isIOS ? Icons.arrow_back_ios_new : Icons.arrow_back,
+       
+                  size: 20,
                 ),
               ),
-              centerTitle: true,
+              onPressed: () => Navigator.pop(context),
             ),
             actions: [
               IconButton(
-                icon: const Icon(Icons.more_vert),
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+               
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.more_vert,
+ 
+                    size: 20,
+                  ),
+                ),
                 onPressed: () {
                   final movieItem = MovieListItem(
                     id: _movie.id.toString(),
@@ -95,118 +174,256 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                 },
               ),
             ],
-          ),
-          SliverList(
-            delegate: SliverChildListDelegate([
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    const SizedBox(height: 10),
-                    // Logic to use _movie.videos if available directly, else fallback to FutureBuilder
-                    if (_movie.videos.isNotEmpty)
-                      AnimatedTrailerCover(
-                        poster: _movie.posterPath.toString(),
-                        youtubeKey: _movie.videos
-                            .firstWhere(
-                              (v) => v.site == 'YouTube' && v.type == 'Trailer',
-                              orElse: () => _movie.videos.first,
-                            )
-                            .key,
-                      )
-                    else
-                      FutureBuilder(
-                        future: tvService.getMovieTrailerKey(_movie.id),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return AnimatedTrailerCoverShimmer();
-                          }
-                          if (snapshot.hasError) {
-                            return const Text("Couldn't load trailer");
-                          }
-                          if (!snapshot.hasData || snapshot.data == null) {
-                            return SizedBox(
-                              height: 200,
-                              child: Image.network(
-                                "https://image.tmdb.org/t/p/w500${_movie.posterPath}",
-                                fit: BoxFit.cover,
-                                height: 100,
-                                width: double.infinity,
-                              ),
-                            );
-                          }
-
-                          return AnimatedTrailerCover(
-                            poster: _movie.posterPath.toString(),
-                            youtubeKey: snapshot.data!,
-                          );
-                        },
-                      ),
-                    _buildTitleAndRuntime(_movie.title),
-                    const SizedBox(height: 5),
-
-                    _buildGenres(
-                      _movie.genres.map((genre) => genre.name).toList(),
+            flexibleSpace: FlexibleSpaceBar(
+              stretchModes: const [
+                StretchMode.zoomBackground,
+                StretchMode.blurBackground,
+              ],
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Hero(
+                    tag: 'poster_${_movie.id}',
+                    child: CachedNetworkImage(
+                      imageUrl:
+                          "https://image.tmdb.org/t/p/original${_movie.posterPath}",
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) =>
+                          Container(color: Colors.black12),
+                      errorWidget: (context, url, error) =>
+                          const Icon(Icons.error),
                     ),
-
-                    // NEW Streaming Section
-                    const SizedBox(height: 15),
-                    StreamingSection(
-                      watchProviders: _movie.watchProviders,
-                      title: _movie.title,
-                      tmdbId: _movie.id.toString(),
-                    ),
-
-                    if (_movie.watchProviders == null && !_isLoading)
-                      const Text(
-                        "Currently unavailable to stream in your region.",
-                        style: TextStyle(color: Colors.grey),
-                      ),
-
-                    const SizedBox(height: 15),
-
-                    RatingsDisplayWidget(
-                      tmdbId: _movie.id,
-                      tmdbRating: _movie.voteAverage,
-                    ),
-
-                    const SizedBox(height: 15),
-
-                    // Community button - Start discussing this movie
-                    _buildCommunityButton(),
-
-                    const SizedBox(height: 15),
-
-                    Text(
-                      _movie.overview ?? '',
-                      style: const TextStyle(fontSize: 16, height: 1.5),
-                    ),
-                    const SizedBox(height: 25),
-
-                    const Text(
-                      'Cast',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                  ),
+                  if (_previewController != null)
+                    AnimatedOpacity(
+                      opacity: _showPreview ? 1.0 : 0.0,
+                      duration: const Duration(milliseconds: 800),
+                      child: YoutubePlayer(
+                        controller: _previewController!,
+                        showVideoProgressIndicator: false,
                       ),
                     ),
-                    SizedBox(height: 4),
-                    MovieCastAvatar(movieId: _movie.id),
-
-                    _buildRecommendedSection(),
-                    const SizedBox(height: 25),
-
-                    RelatedContentSection(
-                      contentId: _movie.id,
-                      mediaType: 'movie',
-                      title: _movie.title,
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.transparent,
+                          themeBackground,
+                        ],
+                        stops: const [0.0, 0.6, 1.0],
+                      ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ]),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  // Title and Metadata
+                  Text(
+                    _movie.title,
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).textTheme.titleLarge?.color,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Text(
+                        _movie.releaseDate?.substring(0, 4) ?? '',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      const SizedBox(width: 8),
+                      Text('•', style: TextStyle()),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${_movie.runtime} min',
+                        style: TextStyle( fontSize: 16),
+                      ),
+                      const SizedBox(width: 8),
+                      Text('•', style: TextStyle()),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _movie.genres.take(2).map((g) => g.name).join(', '),
+                          style: TextStyle(
+                           
+                            fontSize: 16,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Action Buttons Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            String? youtubeKey;
+                            if (_movie.videos.isNotEmpty) {
+                              youtubeKey = _movie.videos
+                                  .firstWhere(
+                                    (v) =>
+                                        v.site == 'YouTube' &&
+                                        v.type == 'Trailer',
+                                    orElse: () => _movie.videos.first,
+                                  )
+                                  .key;
+                            } else {
+                              youtubeKey = await tvService.getMovieTrailerKey(
+                                _movie.id,
+                              );
+                            }
+
+                            if (youtubeKey != null && mounted) {
+                              YouTubeTrailerPlayerDialog.show(
+                                context,
+                                youtubeKey,
+                              );
+                            } else if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Trailer not available'),
+                                ),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.play_arrow_rounded),
+                          label: const Text('Play Trailer'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF4ADE80),
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            textStyle: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.white.withOpacity(0.1)
+                              : Colors.black.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.add_rounded,
+                            color: Theme.of(context).iconTheme.color,
+                          ),
+                          onPressed: () {
+                            final movieItem = MovieListItem(
+                              id: _movie.id.toString(),
+                              title: _movie.title,
+                              posterPath: _movie.posterPath,
+                              mediaType: 'movie',
+                              addedAt: DateTime.now(),
+                            );
+                            showMovieActionDrawer(context, movieItem);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  // Streaming & Ratings
+                  StreamingSection(
+                    watchProviders: _movie.watchProviders,
+                    title: _movie.title,
+                    tmdbId: _movie.id.toString(),
+                  ),
+                  const SizedBox(height: 25),
+
+                  RatingsDisplayWidget(
+                    tmdbId: _movie.id,
+                    tmdbRating: _movie.voteAverage,
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  // overview
+                  Text(
+                    'Overview',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                     
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    _movie.overview ?? '',
+                    style: TextStyle(
+                      fontSize: 16,
+                      height: 1.6,
+             
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  // Community Section
+                  _buildCommunityButton(),
+
+                  const SizedBox(height: 30),
+
+                  // Cast
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Cast',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).textTheme.titleLarge?.color,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 15),
+                  MovieCastAvatar(movieId: _movie.id),
+
+                  const SizedBox(height: 30),
+
+                  // Recommendations
+                  _buildRecommendedSection(),
+
+                  const SizedBox(height: 30),
+
+                  // Related Content
+                  RelatedContentSection(
+                    contentId: _movie.id,
+                    mediaType: 'movie',
+                    title: _movie.title,
+                  ),
+                  const SizedBox(height: 50),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -216,157 +433,6 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
   // -------------------------------------------------------------------
   // Helper Widget Builders (Defined outside the build method for clarity)
   // -------------------------------------------------------------------
-
-  Widget fancyScoreWithLabel(double score, {required String label}) {
-    // Convert score (assumed 0-10) to percentage (0-100)
-    int percent = (score * 10).round();
-
-    // Determine the color based on the percentage
-    Color progressColor = percent >= 80
-        ? Colors
-              .green
-              .shade600 // Excellent
-        : percent >= 50
-        ? Colors
-              .amber
-              .shade600 // Good
-        : Colors.red.shade600; // Needs Improvement
-
-    // Determine a subtle background/fill color for the row
-    Color backgroundColor = progressColor.withOpacity(0.1);
-
-    return Container(
-      // Make the entire widget block slightly larger and give it a rounded background
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-      decoration: BoxDecoration(
-        color: backgroundColor, // Subtle colored background
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min, // Keep the row content snug
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Score Circle and Text (Larger Stack)
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              SizedBox(
-                width: 70, // Increased size
-                height: 70, // Increased size
-                child: CircularProgressIndicator(
-                  value: score / 10, // Convert to 0–1
-                  strokeWidth: 8, // Thicker stroke
-                  backgroundColor: Colors.grey.shade200,
-                  // Using a LinearProgressIndicator as a stand-in for rounded ends
-                  // The actual CircularProgressIndicator doesn't easily support rounded ends directly.
-                  // The surprise design element: We'll make the color transition nice.
-                  valueColor: AlwaysStoppedAnimation<Color>(progressColor),
-                ),
-              ),
-              // The score text inside the circle
-              Text(
-                "$percent%",
-                style: TextStyle(
-                  fontSize: 20, // Bolder score
-                  fontWeight: FontWeight.w900,
-                  color: progressColor, // Color matches the progress
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(width: 15), // Increased spacing
-          // Label Column
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              Text(
-                _getScoreGrade(
-                  percent,
-                ), // Surprise Element: A descriptive grade
-                style: TextStyle(
-                  fontSize: 14,
-                  color: progressColor, // Color matches the score/progress
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Helper function to provide a descriptive grade
-  String _getScoreGrade(int percent) {
-    if (percent >= 90) return "Excellent";
-    if (percent >= 70) return "Very Good";
-    if (percent >= 50) return "Good";
-    if (percent >= 30) return "Fair";
-    return "Poor";
-  }
-
-  // Example usage:
-  // fancyScoreWithLabel(8.5, label: "Customer Satisfaction")
-  //
-
-  Widget _buildTitleAndRuntime(String title) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            title,
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildGenres(List<String> genres) {
-    return Wrap(
-      spacing: 8.0,
-      runSpacing: 4.0,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        ...genres.map(
-          (genre) => Text(
-            genre,
-            style: const TextStyle(color: Colors.black54, fontSize: 16),
-          ),
-        ),
-        // Runtime
-        const Text('•', style: TextStyle(color: Colors.black54, fontSize: 16)),
-        Text(
-          _movie.runtime.toString(),
-          style: const TextStyle(color: Colors.black54, fontSize: 16),
-        ),
-        const Text(
-          'min',
-          style: TextStyle(color: Colors.black54, fontSize: 16),
-        ),
-      ],
-    );
-  }
 
   Widget _buildRecommendedSection() {
     final user = FirebaseAuth.instance.currentUser;
@@ -398,7 +464,10 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.arrow_forward, color: Colors.black),
+                  icon: Icon(
+                    Icons.arrow_forward,
+                    color: Theme.of(context).iconTheme.color,
+                  ),
                   onPressed: () {
                     Navigator.push(
                       context,

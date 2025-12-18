@@ -212,10 +212,11 @@ class YoutubeFeedProvider extends ChangeNotifier {
     if (_isDisposed || _videos.isEmpty) return;
 
     // Define the 3-controller window
+    // Strict Single-Controller Strategy
+    // We only keep the CURRENT controller to force a fresh session on ANY scroll.
+    // This fixes persistent "Watch on YouTube" errors by preventing reuse of stale sessions.
     final windowIndices = <int>{
-      centerIndex - 1, // Previous (for back scroll)
-      centerIndex, // Current (playing)
-      centerIndex + 1, // Next (pre-loaded)
+      centerIndex,
     }.where((i) => i >= 0 && i < _videos.length).toSet();
 
     // 1. DISPOSE controllers outside the window

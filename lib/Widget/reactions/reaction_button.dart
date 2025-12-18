@@ -48,7 +48,7 @@ class _ReactionButtonState extends State<ReactionButton>
   void initState() {
     super.initState();
     _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 100),
       vsync: this,
     );
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.3).animate(

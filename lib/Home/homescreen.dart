@@ -1,3 +1,5 @@
+import 'package:finishd/Home/widgets/contentNav.dart';
+import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:finishd/LoadingWidget/StreamingLoading.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -23,6 +25,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   late YoutubeFeedProvider _provider;
+  int currentindex = 0;
 
   @override
   void initState() {
@@ -173,7 +176,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    CircularProgressIndicator(color: Colors.white),
+                   LogoLoadingScreen(),
                     SizedBox(height: 16),
                     Text(
                       'Loading your feed...',
@@ -291,11 +294,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             const SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
+                              child: LogoLoadingScreen(),
                             ),
+
+                          ContentNav(),
                           IconButton(
                             icon: const Icon(
                               Icons.search,
@@ -339,7 +341,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     bottom: 100,
                     left: 0,
                     right: 0,
-                    child: Center(child: LoadingService()),
+                    child: Center(child: LogoLoadingScreen()),
                   ),
               ],
             );

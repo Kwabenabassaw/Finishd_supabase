@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:finishd/Model/Watchprovider.dart';
 import 'package:finishd/Model/movieprovider.dart';
 import 'package:finishd/tmbd/getproviders.dart';
@@ -392,12 +393,12 @@ class ServiceLogoTile extends StatelessWidget {
                 child: CachedNetworkImage(
                   imageUrl:
                       "https://image.tmdb.org/t/p/w500${service.logoPath}",
-                  fit: BoxFit.contain,
+                  fit: BoxFit.cover,
                   placeholder: (context, url) => const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: LogoLoadingScreen(),
                   ),
                   errorWidget: (context, url, error) =>
-                      Image.asset("assets/noimage.jpg", fit: BoxFit.contain),
+                      Image.asset("assets/noimage.jpg", fit: BoxFit.cover),
                 ),
               ),
             ),

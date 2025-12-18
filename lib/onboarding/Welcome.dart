@@ -1,10 +1,47 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 // Define the primary green color
 const Color primaryGreen = Color(0xFF1A8927);
 
-class CompletionScreen extends StatelessWidget {
+class CompletionScreen extends StatefulWidget {
   const CompletionScreen({super.key});
+
+  @override
+  State<CompletionScreen> createState() => _CompletionScreenState();
+}
+
+class _CompletionScreenState extends State<CompletionScreen> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Start the 2-second timer to navigate home
+    _timer = Timer(const Duration(seconds: 2), () {
+      if (mounted) {
+        _navigateToHome();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _navigateToHome() {
+    // Cancel the timer if we are navigating manually to avoid double navigation
+    _timer?.cancel();
+
+    print('Navigating to Home Screen');
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      'homepage', // The route name you want to go to
+      (Route<dynamic> route) =>
+          false, // This predicate ensures ALL previous routes are removed
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -108,15 +145,7 @@ class CompletionScreen extends StatelessWidget {
         width: double.infinity,
         height: 55,
         child: ElevatedButton(
-          onPressed: () {
-            // Navigate to the main application home screen
-            print('Navigating to Home Screen');
-            Navigator.of(context).pushNamedAndRemoveUntil(
-              'homepage', // The route name you want to go to
-              (Route<dynamic> route) =>
-                  false, // This predicate ensures ALL previous routes are removed
-            );
-          },
+          onPressed: _navigateToHome,
           style: ElevatedButton.styleFrom(
             backgroundColor: primaryGreen,
             shape: RoundedRectangleBorder(
@@ -169,7 +198,3 @@ class LogoPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-
-// void main() {
-//   runApp(const MaterialApp(home: CompletionScreen()));
-// }

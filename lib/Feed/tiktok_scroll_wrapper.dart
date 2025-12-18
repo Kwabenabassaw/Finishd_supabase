@@ -82,9 +82,9 @@ class _TikTokScrollWrapperState extends State<TikTokScrollWrapper> {
 
         return TikTokStyleFullPageScroller(
           contentSize: provider.videos.length,
-          swipePositionThreshold: 0.15,
-          // ^ 15% of screen height needed to trigger scroll (more sensitive)
-          swipeVelocityThreshold: 1000,
+          swipePositionThreshold: 0.05,
+          // ^ 5% of screen height needed to trigger scroll (MUCH more sensitive)
+          swipeVelocityThreshold: 200,
           // ^ velocity threshold for quick flicks (lower = easier to trigger)
           animationDuration: const Duration(milliseconds: 350),
           // ^ smooth animation duration (gives time for provider to update)

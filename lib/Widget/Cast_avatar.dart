@@ -1,6 +1,7 @@
 import 'package:finishd/Model/MovieCredit.dart' as movie;
 import 'package:finishd/Model/TvShowcredit.dart' as show;
 import 'package:finishd/tmbd/fetchCredit.dart';
+import 'package:finishd/screens/actor_profile_screen.dart';
 import 'package:flutter/material.dart';
 
 Fetchcredit credit = Fetchcredit();
@@ -33,30 +34,43 @@ class _CastAvatarState extends State<CastAvatar> {
             itemBuilder: (context, index) {
               return Padding(
                 padding: const EdgeInsets.only(right: 16),
-                child: Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundImage: NetworkImage(
-                        data
-                            .map(
-                              (image) =>
-                                  "https://image.tmdb.org/t/p/w500${image.profilePath}",
-                            )
-                            .toList()[index],
+                child: InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ActorProfileScreen(
+                          personId: data[index].id!,
+                          personName: data[index].name!,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      data[index].name!.length > 15
-                          ? '${data[index].name!.substring(0, 15)}...'
-                          : data[index].name!,
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ],
+                    );
+                  },
+                  child: Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundImage: NetworkImage(
+                          data
+                              .map(
+                                (image) =>
+                                    "https://image.tmdb.org/t/p/w500${image.profilePath}",
+                              )
+                              .toList()[index],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        data[index].name!.length > 15
+                            ? '${data[index].name!.substring(0, 15)}...'
+                            : data[index].name!,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
@@ -95,30 +109,43 @@ class _MovieCastAvatar extends State<MovieCastAvatar> {
             itemBuilder: (context, index) {
               return Padding(
                 padding: const EdgeInsets.only(right: 16),
-                child: Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundImage: NetworkImage(
-                        data
-                            .map(
-                              (image) =>
-                                  "https://image.tmdb.org/t/p/w500${image.profilePath}",
-                            )
-                            .toList()[index],
+                child: InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ActorProfileScreen(
+                          personId: data[index].id!,
+                          personName: data[index].name!,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      data[index].name!.length > 15
-                          ? '${data[index].name!.substring(0, 15)}...'
-                          : data[index].name!,
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ],
+                    );
+                  },
+                  child: Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundImage: NetworkImage(
+                          data
+                              .map(
+                                (image) =>
+                                    "https://image.tmdb.org/t/p/w500${image.profilePath}",
+                              )
+                              .toList()[index],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        data[index].name!.length > 15
+                            ? '${data[index].name!.substring(0, 15)}...'
+                            : data[index].name!,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },

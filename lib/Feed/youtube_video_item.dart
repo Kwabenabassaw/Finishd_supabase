@@ -1,16 +1,21 @@
 /// YouTube Video Item Widget (TikTok-style)
 ///
 /// Individual video page for the vertical feed.
+/// Refactored for performance: Uses scoped state access to prevent full rebuilds.
 ///
 /// Key features:
+/// - Scoped rebuilds (only mute button/player rebuild when needed)
 /// - Error listener for restricted videos (auto-skip)
 /// - Gesture priority fix (PageView scroll takes precedence)
 /// - Prominent mute button overlay
 /// - Thumbnail fallback while loading
 /// - TikTok-style metadata and action buttons
+/// - SafeArea compliance
 
+import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -40,84 +45,145 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
 
-    return Consumer<YoutubeFeedProvider>(
-      builder: (context, provider, _) {
-        // Safety check
-        if (widget.index >= provider.videos.length) {
-          return const Center(
-            child: CircularProgressIndicator(color: Colors.white),
-          );
-        }
+    // READ-ONLY access to provider for initial data to avoid full rebuilds
+    final provider = context.read<YoutubeFeedProvider>();
 
-        final video = provider.videos[widget.index];
-        final controller = provider.getController(widget.index);
-        final isCurrentVideo = widget.index == provider.currentIndex;
+    // Safety check - if index is out of bounds, return loading or empty
+    if (widget.index >= provider.videos.length) {
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      );
+    }
 
-        return Container(
-          color: Colors.black,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // 1. Video Player Layer (or loading thumbnail)
-              if (controller != null)
-                _buildVideoPlayer(controller, provider)
-              else
-                _buildLoadingState(video),
+    final video = provider.videos[widget.index];
 
-              // 2. Gradient overlays for text readability
-              _buildGradientOverlay(),
+    return Container(
+      color: Colors.black,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // 1. Video Player Layer (Scoped)
+          _VideoPlayerLayer(index: widget.index, video: video),
 
-              // 3. Play/Pause gesture area (handles taps, lets swipes through)
-              if (controller != null)
-                _buildPlayPauseGesture(provider, controller),
+          // 2. Gradient overlays for text readability
+          const _GradientOverlay(),
 
-              // 4. Metadata (Bottom Left)
-              Positioned(
-                bottom: 100,
-                left: 16,
-                right: 80,
-                child: _buildMetadata(video),
+          // 3. Play/Pause gesture area
+          _PlayPauseGesture(index: widget.index),
+
+          // 4. Metadata (Bottom Left) - Static
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 80, // Leave room for side buttons
+            child: SafeArea(
+              top: false,
+              right: false,
+              child: Padding(
+                padding: const EdgeInsets.only(
+                  left: 16.0,
+                  bottom: 20.0,
+                  right: 16.0,
+                ),
+                child: _VideoMetadata(video: video),
               ),
-
-              // 5. Action Buttons (Bottom Right)
-              Positioned(
-                bottom: 100,
-                right: 10,
-                child: _buildActionButtons(context, video),
-              ),
-
-              // 6. PROMINENT Mute Button (Top Right)
-              Positioned(top: 80, right: 16, child: _buildMuteButton(provider)),
-
-              // 7. Play icon overlay (when paused)
-              if (controller != null &&
-                  controller.value.playerState == PlayerState.paused &&
-                  isCurrentVideo)
-                _buildPlayIconOverlay(),
-
-              // 8. Error indicator (if controller has error)
-              if (controller != null && controller.value.errorCode != 0)
-                _buildErrorIndicator(controller.value.errorCode),
-            ],
+            ),
           ),
-        );
+
+          // 5. Action Buttons (Bottom Right) - Static
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: SafeArea(
+              top: false,
+              left: false,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 20.0, right: 10.0),
+                child: _ActionButtons(video: video),
+              ),
+            ),
+          ),
+
+          // 6. PROMINENT Mute Button (Top Right) - Scoped
+          Positioned(
+            top: 0,
+            right: 0,
+            child: SafeArea(
+              bottom: false,
+              left: false,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 16.0, right: 16.0),
+                child: const _MuteButton(),
+              ),
+            ),
+          ),
+
+          // 7. Play icon overlay (Scoped)
+          Center(child: _PlayIconOverlay(index: widget.index)),
+
+          // 8. Error indicator (Scoped)
+          Positioned(
+            top: 140,
+            left: 16,
+            child: SafeArea(child: _ErrorIndicator(index: widget.index)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// --------------------------------------------------------------------------
+/// 1. Scoped Video Player Layer
+/// --------------------------------------------------------------------------
+class _VideoPlayerLayer extends StatelessWidget {
+  final int index;
+  final FeedVideo video;
+
+  const _VideoPlayerLayer({required this.index, required this.video});
+
+  @override
+  Widget build(BuildContext context) {
+    // Select BOTH controller and isCurrent status
+    // This ensures we rebuild when this video becomes the active one
+    return Selector<
+      YoutubeFeedProvider,
+      ({YoutubePlayerController? controller, bool isCurrent})
+    >(
+      selector: (_, provider) => (
+        controller: provider.getController(index),
+        isCurrent: provider.currentIndex == index,
+      ),
+      builder: (context, data, child) {
+        if (data.controller != null) {
+          return _buildPlayer(
+            context,
+            data.controller!,
+            data.isCurrent,
+            video.videoId,
+          );
+        } else {
+          return _buildLoadingState();
+        }
       },
+      shouldRebuild: (prev, next) =>
+          prev.controller != next.controller ||
+          prev.isCurrent != next.isCurrent,
     );
   }
 
-  /// Build the YouTube player with gesture handling
-  /// CRITICAL: Uses AbsorbPointer to prevent player from intercepting PageView swipes
-  Widget _buildVideoPlayer(
+  Widget _buildPlayer(
+    BuildContext context,
     YoutubePlayerController controller,
-    YoutubeFeedProvider provider,
+    bool isCurrent,
+    String videoId,
   ) {
-    // Ensure playing via post-frame callback
-    _ensurePlaying(controller, provider);
+    // Note: We rely on the Provider to give us a fresh controller when isCurrent is true
+    // (due to the new windowing strategy), so we don't need to manually force load() here anymore.
+    // The controller should be fresh and ready to play.
 
     return AbsorbPointer(
-      // BLOCK all gestures from the YouTube player
-      // This prevents the bouncing/scroll conflict with PageView
-      absorbing: true,
+      absorbing: true, // Block YouTube player gestures to allow scrolling
       child: SizedBox.expand(
         child: FittedBox(
           fit: BoxFit.cover,
@@ -134,16 +200,8 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
                 bufferedColor: Colors.white24,
                 backgroundColor: Colors.white10,
               ),
-              onReady: () {
-                debugPrint('[YTItem] Player ready for index ${widget.index}');
-                // Force play if this is the current video
-                if (provider.currentIndex == widget.index) {
-                  controller.play();
-                }
-              },
-              onEnded: (metaData) {
-                debugPrint('[YTItem] Video ended at index ${widget.index}');
-                controller.play();
+              onEnded: (_) {
+                controller.play(); // Loop
               },
             ),
           ),
@@ -152,70 +210,10 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
     );
   }
 
-  void _ensurePlaying(
-    YoutubePlayerController controller,
-    YoutubeFeedProvider provider,
-  ) {
-    // Use delayed callback with retry for reliable autoplay
-    _tryAutoPlay(controller, provider, 0);
-  }
-
-  void _tryAutoPlay(
-    YoutubePlayerController controller,
-    YoutubeFeedProvider provider,
-    int attempt,
-  ) {
-    if (attempt >= 3) return; // Max 3 attempts
-
-    Future.delayed(Duration(milliseconds: 200 + (attempt * 150)), () {
-      if (!mounted) return;
-      if (provider.currentIndex != widget.index) return;
-
-      if (!controller.value.isPlaying) {
-        debugPrint(
-          '[YTItem] Auto-play attempt ${attempt + 1} for index ${widget.index}',
-        );
-        controller.play();
-
-        // Retry if still not playing
-        _tryAutoPlay(controller, provider, attempt + 1);
-      }
-    });
-  }
-
-  /// Play/Pause gesture detector
-  /// Uses HitTestBehavior.translucent to not block PageView swipes
-  Widget _buildPlayPauseGesture(
-    YoutubeFeedProvider provider,
-    YoutubePlayerController controller,
-  ) {
-    return Positioned.fill(
-      child: GestureDetector(
-        onTap: () => _togglePlayPause(provider, controller),
-        // Translucent allows swipes to pass through to PageView
-        behavior: HitTestBehavior.translucent,
-        child: Container(color: Colors.transparent),
-      ),
-    );
-  }
-
-  void _togglePlayPause(
-    YoutubeFeedProvider provider,
-    YoutubePlayerController controller,
-  ) {
-    if (controller.value.playerState == PlayerState.playing) {
-      provider.pause(widget.index);
-    } else {
-      provider.play(widget.index);
-    }
-  }
-
-  /// Loading state with thumbnail
-  Widget _buildLoadingState(FeedVideo video) {
+  Widget _buildLoadingState() {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Thumbnail background
         if (video.thumbnailUrl.isNotEmpty)
           CachedNetworkImage(
             imageUrl: video.thumbnailUrl,
@@ -225,16 +223,12 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
           )
         else
           Container(color: Colors.black),
-
-        // Dark overlay
-        Container(color: Colors.black54),
-
-        // Loading indicator
+        Container(color: Colors.black54), // Dim overlay
         const Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(color: Colors.white),
+              LogoLoadingScreen(),
               SizedBox(height: 16),
               Text(
                 'Loading video...',
@@ -246,9 +240,16 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
       ],
     );
   }
+}
 
-  /// Gradient overlays for text readability
-  Widget _buildGradientOverlay() {
+/// --------------------------------------------------------------------------
+/// 2. Gradient Overlay (Static)
+/// --------------------------------------------------------------------------
+class _GradientOverlay extends StatelessWidget {
+  const _GradientOverlay();
+
+  @override
+  Widget build(BuildContext context) {
     return const IgnorePointer(
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -268,71 +269,159 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
       ),
     );
   }
+}
 
-  /// PROMINENT Mute Button
-  Widget _buildMuteButton(YoutubeFeedProvider provider) {
-    return GestureDetector(
-      onTap: () => provider.toggleMute(),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.5),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white30, width: 1),
-        ),
-        child: Icon(
-          provider.isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
-          color: Colors.white,
-          size: 28,
-        ),
+/// --------------------------------------------------------------------------
+/// 3. Play/Pause Gesture (Scoped Action)
+/// --------------------------------------------------------------------------
+class _PlayPauseGesture extends StatelessWidget {
+  final int index;
+
+  const _PlayPauseGesture({required this.index});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: GestureDetector(
+        onTap: () {
+          final provider = context.read<YoutubeFeedProvider>();
+          final controller = provider.getController(index);
+          if (controller != null) {
+            if (controller.value.isPlaying) {
+              provider.pause(index);
+            } else {
+              provider.play(index);
+            }
+          }
+        },
+        behavior: HitTestBehavior.translucent,
+        child: Container(color: Colors.transparent),
       ),
     );
   }
+}
 
-  /// Play icon overlay (shown when paused)
-  Widget _buildPlayIconOverlay() {
-    return Center(
-      child: IgnorePointer(
-        child: Container(
-          padding: EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.black38,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 60),
-        ),
-      ),
-    );
-  }
+/// --------------------------------------------------------------------------
+/// 4. Mute Button (Scoped Rebuild)
+/// --------------------------------------------------------------------------
+class _MuteButton extends StatelessWidget {
+  const _MuteButton();
 
-  /// Error indicator (for debugging)
-  Widget _buildErrorIndicator(int errorCode) {
-    return Positioned(
-      top: 140,
-      left: 16,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.red.withOpacity(0.8),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error, color: Colors.white, size: 16),
-            const SizedBox(width: 6),
-            Text(
-              'Error $errorCode - Skipping...',
-              style: const TextStyle(color: Colors.white, fontSize: 12),
+  @override
+  Widget build(BuildContext context) {
+    return Selector<YoutubeFeedProvider, bool>(
+      selector: (_, provider) => provider.isMuted,
+      builder: (context, isMuted, _) {
+        return GestureDetector(
+          onTap: () => context.read<YoutubeFeedProvider>().toggleMute(),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.5),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white30, width: 1),
             ),
-          ],
-        ),
-      ),
+            child: Icon(
+              isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+              color: Colors.white,
+              size: 28,
+            ),
+          ),
+        );
+      },
     );
   }
+}
 
-  /// Video metadata (bottom left)
-  Widget _buildMetadata(FeedVideo video) {
+/// --------------------------------------------------------------------------
+/// 5. Play Icon Overlay (Scoped Rebuild)
+/// --------------------------------------------------------------------------
+class _PlayIconOverlay extends StatelessWidget {
+  final int index;
+
+  const _PlayIconOverlay({required this.index});
+
+  @override
+  Widget build(BuildContext context) {
+    return Selector<YoutubeFeedProvider, bool>(
+      selector: (_, provider) {
+        final controller = provider.getController(index);
+        final isCurrent = provider.currentIndex == index;
+        return isCurrent &&
+            controller != null &&
+            controller.value.playerState == PlayerState.paused;
+      },
+      builder: (context, showOverlay, _) {
+        if (!showOverlay) return const SizedBox.shrink();
+
+        return IgnorePointer(
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              color: Colors.black38,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.play_arrow_rounded,
+              color: Colors.white,
+              size: 60,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// --------------------------------------------------------------------------
+/// 6. Error Indicator (Scoped Rebuild)
+/// --------------------------------------------------------------------------
+class _ErrorIndicator extends StatelessWidget {
+  final int index;
+
+  const _ErrorIndicator({required this.index});
+
+  @override
+  Widget build(BuildContext context) {
+    return Selector<YoutubeFeedProvider, int>(
+      selector: (_, provider) =>
+          provider.getController(index)?.value.errorCode ?? 0,
+      builder: (context, errorCode, _) {
+        if (errorCode == 0) return const SizedBox.shrink();
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.red.withOpacity(0.8),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error, color: Colors.white, size: 16),
+              const SizedBox(width: 6),
+              Text(
+                'Error $errorCode - Skipping...',
+                style: const TextStyle(color: Colors.white, fontSize: 12),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// --------------------------------------------------------------------------
+/// 7. Metadata (Static Widget)
+/// --------------------------------------------------------------------------
+class _VideoMetadata extends StatelessWidget {
+  final FeedVideo video;
+
+  const _VideoMetadata({required this.video});
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -345,7 +434,7 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.amber.withOpacity(0.9),
+                color: const Color.fromARGB(255, 4, 152, 9).withOpacity(0.9),
                 borderRadius: BorderRadius.circular(6),
                 boxShadow: [
                   BoxShadow(
@@ -364,7 +453,7 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
                     child: Text(
                       video.recommendationReason!,
                       style: const TextStyle(
-                        color: Colors.black,
+                        color: Color.fromARGB(255, 206, 204, 204),
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
                       ),
@@ -376,7 +465,7 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
             ),
           ),
 
-        // Channel name / media type
+        // Channel Name
         Text(
           video.channelName.isNotEmpty ? video.channelName : 'MOVIE',
           style: const TextStyle(
@@ -388,7 +477,7 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
         ),
         const SizedBox(height: 8),
 
-        // Video title
+        // Title
         Text(
           video.title,
           maxLines: 2,
@@ -401,7 +490,7 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
           ),
         ),
 
-        // Description (if available)
+        // Description (Optional)
         if (video.description.isNotEmpty) ...[
           const SizedBox(height: 6),
           Text(
@@ -417,9 +506,18 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
       ],
     );
   }
+}
 
-  /// Action buttons (bottom right) - TikTok style
-  Widget _buildActionButtons(BuildContext context, FeedVideo video) {
+/// --------------------------------------------------------------------------
+/// 8. Action Buttons (Static Widget)
+/// --------------------------------------------------------------------------
+class _ActionButtons extends StatelessWidget {
+  final FeedVideo video;
+
+  const _ActionButtons({required this.video});
+
+  @override
+  Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     final userId = user?.uid ?? '';
     final userName =
@@ -429,7 +527,7 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Reaction button (Instagram-style)
+        // Reaction Button
         ReactionButton(
           videoId: video.videoId,
           userId: userId,
@@ -437,7 +535,8 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
           showCount: true,
         ),
         const SizedBox(height: 20),
-        // Comment button
+
+        // Comment Button
         CommentButton(
           videoId: video.videoId,
           userId: userId,
@@ -446,14 +545,18 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
           size: 26,
         ),
         const SizedBox(height: 20),
-        _buildActionButton(
-          icon: Icons.person_outline,
+
+        // Friends Button
+        _ActionButton(
+          icon: FontAwesomeIcons.users,
           label: 'Friends',
           onTap: () => Navigator.pushNamed(context, 'friends'),
         ),
         const SizedBox(height: 20),
-        _buildActionButton(
-          icon: Icons.share_outlined,
+
+        // Share Button
+        _ActionButton(
+          icon: FontAwesomeIcons.share,
           label: 'Share',
           onTap: () => showVideoShareSheet(
             context,
@@ -465,7 +568,7 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
         ),
         const SizedBox(height: 24),
 
-        // Avatar / Thumbnail
+        // Avatar
         Container(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
@@ -492,12 +595,21 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
       ],
     );
   }
+}
 
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -509,7 +621,7 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
               color: Colors.black.withOpacity(0.3),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: Colors.white, size: 26),
+            child: FaIcon(icon, color: Colors.white, size: 26),
           ),
           const SizedBox(height: 4),
           Text(

@@ -8,6 +8,8 @@ class MediaItem {
   final String mediaType;
   final String releaseDate;
   final List<int> genreIds;
+  final double popularity; // NEW
+  final int voteCount; // NEW
 
   MediaItem({
     required this.id,
@@ -20,6 +22,8 @@ class MediaItem {
     required this.releaseDate,
     required this.genreIds,
     required String imageUrl,
+    this.popularity = 0.0, // Default for backward compatibility
+    this.voteCount = 0, // Default
   });
 
   factory MediaItem.fromJson(Map<String, dynamic> json, {String? type}) {
@@ -36,6 +40,8 @@ class MediaItem {
           .map((id) => id as int)
           .toList(),
       imageUrl: '',
+      popularity: (json['popularity'] ?? 0).toDouble(),
+      voteCount: json['vote_count'] ?? 0,
     );
   }
 
@@ -49,6 +55,8 @@ class MediaItem {
     String? mediaType,
     String? releaseDate,
     List<int>? genreIds,
+    double? popularity,
+    int? voteCount,
   }) {
     return MediaItem(
       id: id ?? this.id,
@@ -61,6 +69,8 @@ class MediaItem {
       releaseDate: releaseDate ?? this.releaseDate,
       genreIds: genreIds ?? this.genreIds,
       imageUrl: '',
+      popularity: popularity ?? this.popularity,
+      voteCount: voteCount ?? this.voteCount,
     );
   }
 
@@ -76,6 +86,8 @@ class MediaItem {
       'media_type': mediaType,
       'release_date': releaseDate,
       'genre_ids': genreIds,
+      'popularity': popularity,
+      'vote_count': voteCount,
     };
   }
 }

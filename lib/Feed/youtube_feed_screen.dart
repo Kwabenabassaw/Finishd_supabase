@@ -89,7 +89,7 @@ class _YoutubeFeedScreenState extends State<YoutubeFeedScreen>
                 PageView.builder(
                   controller: _pageController,
                   scrollDirection: Axis.vertical,
-                  physics: const TikTokScrollPhysics(),
+                  physics: const ClampingScrollPhysics(),
                   itemCount: provider.videos.length,
                   onPageChanged: provider.onPageChanged,
                   itemBuilder: (context, index) {
@@ -373,19 +373,4 @@ class _YoutubeFeedScreenState extends State<YoutubeFeedScreen>
       ),
     );
   }
-}
-
-/// Custom scroll physics for TikTok-style snapping
-/// Provides quick, snappy page transitions with minimal friction
-class TikTokScrollPhysics extends ScrollPhysics {
-  const TikTokScrollPhysics({super.parent});
-
-  @override
-  TikTokScrollPhysics applyTo(ScrollPhysics? ancestor) {
-    return TikTokScrollPhysics(parent: buildParent(ancestor));
-  }
-
-  @override
-  SpringDescription get spring =>
-      const SpringDescription(mass: 50, stiffness: 100, damping: 1);
 }
