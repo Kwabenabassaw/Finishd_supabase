@@ -12,6 +12,7 @@ import 'package:finishd/MovieDetails/movie_recommenders_screen.dart';
 import 'package:finishd/MovieDetails/MovieScreen.dart';
 import 'package:finishd/MovieDetails/Tvshowscreen.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
+import 'dart:ui';
 
 class RecsTab extends StatefulWidget {
   const RecsTab({super.key});
@@ -46,21 +47,41 @@ class _RecsTabState extends State<RecsTab> {
         final recommendations = snapshot.data ?? [];
 
         if (recommendations.isEmpty) {
-          return const Center(
+          return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.recommend_outlined, size: 64, ),
-                SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.auto_awesome_rounded,
+                    size: 64,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 24),
                 Text(
                   'No recommendations yet',
-                  style: TextStyle(fontSize: 18, ),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                SizedBox(height: 8),
-                Text(
-                  'When friends recommend movies,\\nthey will appear here.',
-                  textAlign: TextAlign.center,
-                 
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 40),
+                  child: Text(
+                    'When friends recommend movies, they will appear here.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.color?.withOpacity(0.6),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -79,7 +100,8 @@ class _RecsTabState extends State<RecsTab> {
         final movieIds = groupedRecs.keys.toList();
 
         return ListView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          physics: const BouncingScrollPhysics(),
           itemCount: movieIds.length,
           itemBuilder: (context, index) {
             final movieId = movieIds[index];
@@ -110,137 +132,218 @@ class _RecsTabState extends State<RecsTab> {
             ? users.firstWhere((u) => u != null)!.username
             : 'a friend';
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 30),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color:
+                Theme.of(context).cardTheme.color ??
+                (Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF1E1E1E)
+                    : Colors.white),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: Theme.of(context).dividerColor.withOpacity(0.1),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(
+                  Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.05,
+                ),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
           ),
-          borderOnForeground: true,
-          elevation: 0,
-          color: Colors.transparent,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Large Poster (Clickable)
-              InkWell(
-                onTap: () async {
-                  // Mark all as seen
-                  for (final r in recs) {
-                    if (r.status == 'unread') {
-                      _recommendationService.markAsSeen(r.id);
-                    }
-                  }
-                  _navigateToDetails(rec);
-                },
-                borderRadius: BorderRadius.circular(16),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: CachedNetworkImage(
-                    imageUrl: rec.moviePosterPath != null
-                        ? 'https://image.tmdb.org/t/p/w780${rec.moviePosterPath}'
-                        : 'https://via.placeholder.com/400x600',
-                    width: double.infinity,
-                    height: 450,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      height: 450,
-                      color: Colors.transparent,
-                      child: const Center(child: CircularProgressIndicator()),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // 2. Info Row (Title + Binoculars)
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              // 1. Large Poster (stack with media type)
+              Stack(
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          rec.movieTitle,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          rec.mediaType == 'movie' ? 'Movie' : 'TV Show',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
+                  InkWell(
+                    onTap: () async {
+                      for (final r in recs) {
+                        if (r.status == 'unread') {
+                          _recommendationService.markAsSeen(r.id);
+                        }
+                      }
+                      _navigateToDetails(rec);
+                    },
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(24),
                     ),
-                  ),
-                 
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // 3. Recommender Row with Overlapping Avatars
-              InkWell(
-                onTap: () {
-                  // Navigate to recommenders screen
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => MovieRecommendersScreen(
-                        movieId: rec.movieId,
-                        movieTitle: rec.movieTitle,
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(24),
                       ),
-                    ),
-                  );
-                },
-                onLongPress: () {
-                  // Add to list action
-                  final movieItem = MovieListItem(
-                    id: rec.movieId,
-                    title: rec.movieTitle,
-                    posterPath: rec.moviePosterPath,
-                    mediaType: rec.mediaType,
-                    addedAt: DateTime.now(),
-                  );
-                  showMovieActionDrawer(context, movieItem);
-                },
-                borderRadius: BorderRadius.circular(8),
-                child: Row(
-                  children: [
-                    // Overlapping Avatars
-                    if (hasUsers)
-                      OverlappingAvatarsWidget(
-                        imageUrls: profileImages,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => MovieRecommendersScreen(
-                                movieId: rec.movieId,
-                                movieTitle: rec.movieTitle,
+                      child: Stack(
+                        children: [
+                          CachedNetworkImage(
+                            imageUrl: rec.moviePosterPath != null
+                                ? 'https://image.tmdb.org/t/p/w780${rec.moviePosterPath}'
+                                : 'https://via.placeholder.com/400x600',
+                            width: double.infinity,
+                            height: 480,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Container(
+                              height: 480,
+                              color: Theme.of(
+                                context,
+                              ).dividerColor.withOpacity(0.05),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  color: Theme.of(context).primaryColor,
+                                ),
                               ),
                             ),
-                          );
-                        },
+                          ),
+                          // Gradient overlay
+                          Positioned(
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            child: Container(
+                              height: 160,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.transparent,
+                                    Colors.black.withOpacity(0.8),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        recommenderCount == 1
-                            ? 'Recommended by $firstUsername'
-                            : 'Recommended by $recommenderCount friends',
-                        style: TextStyle(
-                       
-                          fontSize: 13,
+                    ),
+                  ),
+                  // Glassmorphic Media Type Badge
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.2),
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            rec.mediaType.toUpperCase(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
                         ),
-                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Info Row (Title)
+                    Text(
+                      rec.movieTitle,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Recommender Row
+                    InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => MovieRecommendersScreen(
+                              movieId: rec.movieId,
+                              movieTitle: rec.movieTitle,
+                            ),
+                          ),
+                        );
+                      },
+                      onLongPress: () {
+                        final movieItem = MovieListItem(
+                          id: rec.movieId,
+                          title: rec.movieTitle,
+                          posterPath: rec.moviePosterPath,
+                          mediaType: rec.mediaType,
+                          addedAt: DateTime.now(),
+                        );
+                        showMovieActionDrawer(context, movieItem);
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Row(
+                        children: [
+                          if (hasUsers)
+                            OverlappingAvatarsWidget(
+                              imageUrls: profileImages,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        MovieRecommendersScreen(
+                                          movieId: rec.movieId,
+                                          movieTitle: rec.movieTitle,
+                                        ),
+                                  ),
+                                );
+                              },
+                            ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              recommenderCount == 1
+                                  ? 'Recommended by $firstUsername'
+                                  : 'Recommended by $recommenderCount friends',
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.color
+                                        ?.withOpacity(0.7),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            size: 20,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white30
+                                : Colors.black26,
+                          ),
+                        ],
                       ),
                     ),
                   ],

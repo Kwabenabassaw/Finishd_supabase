@@ -34,6 +34,7 @@ class OverlappingAvatarsWidget extends StatelessWidget {
               Positioned(
                 left: i * overlapOffset,
                 child: _buildAvatar(
+                  context,
                   imageUrls[i],
                   showBadge: i == 2 && remainingCount > 0,
                   badgeCount: remainingCount,
@@ -46,6 +47,7 @@ class OverlappingAvatarsWidget extends StatelessWidget {
   }
 
   Widget _buildAvatar(
+    BuildContext context,
     String? imageUrl, {
     bool showBadge = false,
     int badgeCount = 0,
@@ -55,7 +57,10 @@ class OverlappingAvatarsWidget extends StatelessWidget {
       height: avatarSize,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 2),
+        border: Border.all(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          width: 2,
+        ),
       ),
       child: Stack(
         children: [
@@ -72,13 +77,17 @@ class OverlappingAvatarsWidget extends StatelessWidget {
               height: avatarSize,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.black.withOpacity(0.6),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black.withOpacity(0.6)
+                    : Colors.white.withOpacity(0.4),
               ),
               child: Center(
                 child: Text(
                   '+$badgeCount',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black87,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),

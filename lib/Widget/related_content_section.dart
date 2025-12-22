@@ -5,7 +5,7 @@ import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:finishd/MovieDetails/MovieScreen.dart';
 import 'package:finishd/MovieDetails/Tvshowscreen.dart';
 
-class RelatedContentSection extends StatelessWidget {
+class RelatedContentSection extends StatefulWidget {
   final int contentId;
   final String mediaType; // 'movie' or 'tv'
   final String title;
@@ -18,13 +18,25 @@ class RelatedContentSection extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final trending = Trending();
+  State<RelatedContentSection> createState() => _RelatedContentSectionState();
+}
 
+class _RelatedContentSectionState extends State<RelatedContentSection> {
+  late Future<List<MediaItem>> _relatedFuture;
+  final Trending _trending = Trending();
+
+  @override
+  void initState() {
+    super.initState();
+    _relatedFuture = widget.mediaType == 'movie'
+        ? _trending.fetchRelatedMovies(widget.contentId)
+        : _trending.fetchRelatedTVShows(widget.contentId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return FutureBuilder<List<MediaItem>>(
-      future: mediaType == 'movie'
-          ? trending.fetchRelatedMovies(contentId)
-          : trending.fetchRelatedTVShows(contentId),
+      future: _relatedFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return _buildLoadingState();
@@ -46,7 +58,7 @@ class RelatedContentSection extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4.0),
               child: Text(
-                'Related ${mediaType == 'movie' ? 'Movies' : 'TV Shows'}',
+                'Related ${widget.mediaType == 'movie' ? 'Movies' : 'TV Shows'}',
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,

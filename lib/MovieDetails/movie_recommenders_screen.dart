@@ -31,7 +31,6 @@ class _MovieRecommendersScreenState extends State<MovieRecommendersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-  
       appBar: AppBar(
         elevation: 0,
         title: Column(
@@ -43,11 +42,7 @@ class _MovieRecommendersScreenState extends State<MovieRecommendersScreen> {
             ),
             Text(
               widget.movieTitle,
-              style: TextStyle(
-                fontSize: 14,
-              
-                fontWeight: FontWeight.normal,
-              ),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.normal),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -69,15 +64,11 @@ class _MovieRecommendersScreenState extends State<MovieRecommendersScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 60,
-                 
-                  ),
+                  Icon(Icons.error_outline, size: 60),
                   const SizedBox(height: 16),
                   Text(
                     'Error loading recommendations',
-                    style: TextStyle(fontSize: 16,),
+                    style: TextStyle(fontSize: 16),
                   ),
                 ],
               ),
@@ -92,23 +83,25 @@ class _MovieRecommendersScreenState extends State<MovieRecommendersScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    Icons.people_outline,
+                    Icons.people_outline_rounded,
                     size: 80,
-                 
+                    color: Theme.of(context).dividerColor.withOpacity(0.2),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'No recommendations yet',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                   
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Nobody has recommended this to you',
-                    style: TextStyle(fontSize: 14,),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.color?.withOpacity(0.6),
+                    ),
                   ),
                 ],
               ),
@@ -150,13 +143,19 @@ class _MovieRecommendersScreenState extends State<MovieRecommendersScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-       
+        color: Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withOpacity(0.05),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(
+              Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.03,
+            ),
             blurRadius: 10,
-            offset: const Offset(0, 2),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -183,30 +182,36 @@ class _MovieRecommendersScreenState extends State<MovieRecommendersScreen> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: const Color(0xFF1A8927).withOpacity(0.3),
+                          color: Theme.of(
+                            context,
+                          ).primaryColor.withOpacity(0.2),
                           width: 2,
                         ),
                       ),
                       child: CircleAvatar(
                         radius: 32,
-                       
                         backgroundImage: user.profileImage.isNotEmpty
                             ? CachedNetworkImageProvider(user.profileImage)
                             : const AssetImage('assets/noimage.jpg')
                                   as ImageProvider,
                       ),
                     ),
-                    // Online indicator (optional)
+                    // Online indicator
                     Positioned(
-                      bottom: 0,
-                      right: 0,
+                      bottom: 2,
+                      right: 2,
                       child: Container(
-                        width: 16,
-                        height: 16,
+                        width: 14,
+                        height: 14,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1A8927),
+                          color: Theme.of(context).primaryColor,
                           shape: BoxShape.circle,
-                          border: Border.all( width: 2),
+                          border: Border.all(
+                            color:
+                                Theme.of(context).cardTheme.color ??
+                                Colors.white,
+                            width: 2,
+                          ),
                         ),
                       ),
                     ),
@@ -221,36 +226,32 @@ class _MovieRecommendersScreenState extends State<MovieRecommendersScreen> {
                     children: [
                       Text(
                         user.username.isNotEmpty ? user.username : 'User',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
                       if (user.firstName.isNotEmpty)
                         Text(
                           '${user.firstName} ${user.lastName}',
-                          style: TextStyle(
-                            fontSize: 14,
-                           
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).textTheme.bodyMedium?.color?.withOpacity(0.6),
+                              ),
                         ),
                       const SizedBox(height: 8),
                       Row(
                         children: [
                           Icon(
-                            Icons.access_time,
+                            Icons.access_time_rounded,
                             size: 14,
-                           
+                            color: Theme.of(context).textTheme.bodySmall?.color,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             'Recommended $timeAgo',
-                            style: TextStyle(
-                              fontSize: 12,
-                            
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ],
                       ),
@@ -260,9 +261,9 @@ class _MovieRecommendersScreenState extends State<MovieRecommendersScreen> {
 
                 // Arrow icon
                 Icon(
-                  Icons.chevron_right,
-               
-                  size: 28,
+                  Icons.chevron_right_rounded,
+                  color: Theme.of(context).dividerColor.withOpacity(0.3),
+                  size: 24,
                 ),
               ],
             ),

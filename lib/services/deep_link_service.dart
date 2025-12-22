@@ -50,7 +50,17 @@ class DeepLinkService {
     required int providerId,
     required String providerName,
     required String title,
+    String? directUrl,
   }) async {
+    // 0. If directUrl is provided, try to launch it immediately
+    if (directUrl != null && directUrl.isNotEmpty) {
+      final Uri directUri = Uri.parse(directUrl);
+      if (await canLaunchUrl(directUri)) {
+        await launchUrl(directUri, mode: LaunchMode.externalApplication);
+        return;
+      }
+    }
+
     // 1. Try to open the installed app (mobile only)
     if (Platform.isAndroid || Platform.isIOS) {
       final scheme = _providerSchemes[providerId];
@@ -98,6 +108,7 @@ class DeepLinkService {
       providerId: provider.providerId,
       providerName: provider.providerName,
       title: title,
+      directUrl: webUrl,
     );
   }
 }

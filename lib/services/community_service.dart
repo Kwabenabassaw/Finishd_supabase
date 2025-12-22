@@ -380,6 +380,96 @@ class CommunityService {
     return doc.data()?['vote'] as int? ?? 0;
   }
 
+  /// Vote on a comment using a Transaction to ensure atomic updates.
+  ///
+  /// [vote]: 1 for upvote, -1 for downvote.
+  /// Logic is identical to post voting - toggle off if same vote clicked again.
+  Future<void> voteOnComment({
+    required String commentId,
+    required String postId,
+    required int showId,
+    required int vote,
+  }) async {
+    if (_currentUid == null) return;
+
+    final voteRef = _firestore
+        .collection('community_votes')
+        .doc('comment_${commentId}_$_currentUid');
+    final commentRef = _comments.doc(commentId);
+
+    try {
+      await _firestore.runTransaction((transaction) async {
+        // 1. Get comment (to ensure existence)
+        final commentSnapshot = await transaction.get(commentRef);
+        if (!commentSnapshot.exists) {
+          throw Exception("Comment does not exist!");
+        }
+
+        // 2. Get user's current vote
+        final voteSnapshot = await transaction.get(voteRef);
+        final int currentVote = voteSnapshot.exists
+            ? (voteSnapshot.data()?['vote'] as int? ?? 0)
+            : 0;
+
+        // 3. Determine new vote state (toggle off if same vote)
+        int newVote = (vote == currentVote) ? 0 : vote;
+        if (vote == 0) newVote = 0;
+
+        // If no change needed, exit
+        if (newVote == currentVote) return;
+
+        // 4. Calculate Deltas
+        int upvoteDelta = 0;
+        int downvoteDelta = 0;
+
+        if (currentVote == 1) upvoteDelta -= 1;
+        if (currentVote == -1) downvoteDelta -= 1;
+        if (newVote == 1) upvoteDelta += 1;
+        if (newVote == -1) downvoteDelta += 1;
+
+        // 5. Write User Vote
+        if (newVote == 0) {
+          transaction.delete(voteRef);
+        } else {
+          transaction.set(voteRef, {
+            'type': 'comment',
+            'targetId': commentId,
+            'postId': postId,
+            'showId': showId,
+            'uid': _currentUid,
+            'vote': newVote,
+            'createdAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+        }
+
+        // 6. Update Comment Counters
+        if (upvoteDelta != 0 || downvoteDelta != 0) {
+          transaction.update(commentRef, {
+            'upvotes': FieldValue.increment(upvoteDelta),
+            'downvotes': FieldValue.increment(downvoteDelta),
+          });
+        }
+      });
+    } catch (e) {
+      print('❌ Error voting on comment: $e');
+      rethrow;
+    }
+  }
+
+  /// Get user's vote on a comment
+  Future<int> getUserCommentVote(String commentId) async {
+    if (_currentUid == null) return 0;
+
+    final voteId = 'comment_${commentId}_$_currentUid';
+    final doc = await _firestore
+        .collection('community_votes')
+        .doc(voteId)
+        .get();
+
+    if (!doc.exists) return 0;
+    return doc.data()?['vote'] as int? ?? 0;
+  }
+
   // ==========================================================================
   // DISCOVERY
   // ==========================================================================

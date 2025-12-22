@@ -3,6 +3,7 @@ import 'package:finishd/Model/Searchdiscover.dart';
 import 'package:finishd/Model/tvdetail.dart';
 import 'package:flutter/material.dart';
 import 'package:finishd/Model/trending.dart';
+import 'package:finishd/services/social_discovery_service.dart';
 
 class MovieProvider extends ChangeNotifier {
   // -------------------- Movies & Shows --------------------
@@ -12,8 +13,14 @@ class MovieProvider extends ChangeNotifier {
   List<MediaItem> _upcoming = [];
   List<MediaItem> _discover = [];
   List<MediaItem> _airingToday = [];
-  List <MediaItem> _nowPlaying = [];
-  List <MediaItem> _topRatedTv = [];
+  List<MediaItem> _nowPlaying = [];
+  List<MediaItem> _topRatedTv = [];
+  Map<int, List<MediaItem>> _genreSections = {};
+
+  // Social Signals
+  Map<String, SocialSignal> _socialSignals = {};
+  List<MediaItem> _friendsWatching = [];
+  List<MediaItem> _popularInNetwork = [];
 
   // Selected list for navigation (Movies/Shows)
   List<MediaItem> _selectedList = [];
@@ -27,13 +34,45 @@ class MovieProvider extends ChangeNotifier {
   List<Result> _selectedSearchResults = [];
   int _selectedSearchIndex = 0;
 
+  // -------------------- Genre Getters & Setters --------------------
+  Map<int, List<MediaItem>> get genreSections => _genreSections;
+  void setGenreSection(int genreId, List<MediaItem> items) {
+    _genreSections[genreId] = items;
+    notifyListeners();
+  }
+
+  void clearGenreSections() {
+    _genreSections.clear();
+    notifyListeners();
+  }
+
+  // -------------------- Social Getters & Setters --------------------
+  Map<String, SocialSignal> get socialSignals => _socialSignals;
+  List<MediaItem> get friendsWatching => _friendsWatching;
+  List<MediaItem> get popularInNetwork => _popularInNetwork;
+
+  void setSocialSignals(Map<String, SocialSignal> signals) {
+    _socialSignals = signals;
+    notifyListeners();
+  }
+
+  void setFriendsWatching(List<MediaItem> items) {
+    _friendsWatching = items;
+    notifyListeners();
+  }
+
+  void setPopularInNetwork(List<MediaItem> items) {
+    _popularInNetwork = items;
+    notifyListeners();
+  }
+
   // -------------------- Movies Getters & Setters --------------------
   List<MediaItem> get topRatedTv => _topRatedTv;
   void setTopRatedTv(List<MediaItem> topRatedTv) {
     _topRatedTv = topRatedTv;
     notifyListeners();
   }
-  
+
   List<MediaItem> get nowPlaying => _nowPlaying;
   void setNowPlaying(List<MediaItem> nowPlaying) {
     _nowPlaying = nowPlaying;
@@ -45,6 +84,7 @@ class MovieProvider extends ChangeNotifier {
     _airingToday = airingToday;
     notifyListeners();
   }
+
   List<MediaItem> get movies => _movies;
   void setMovies(List<MediaItem> movies) {
     _movies = movies;
@@ -69,11 +109,12 @@ class MovieProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  List <MediaItem> get discover => _discover;
+  List<MediaItem> get discover => _discover;
   void setDiscover(List<MediaItem> discover) {
     _discover = discover;
     notifyListeners();
   }
+
   // -------------------- Movie / Show Details --------------------
   MovieDetails? get movieDetail => _movieDetail;
   void setMovieDetail(MovieDetails details) {
@@ -110,22 +151,25 @@ class MovieProvider extends ChangeNotifier {
   }
 
   // -------------------- Search Result → MediaItem Converter --------------------
-MediaItem convertResultToMediaItem(Result r) {
-  return MediaItem(
-    id: r.id ?? 0,
-    title: r.title ?? r.name ?? "",
-    overview: r.overview ?? "",
-    imageUrl: r.posterPath != null
-        ? "https://image.tmdb.org/t/p/w500${r.posterPath}"
-        : "",
-    voteAverage: (r.voteAverage ?? 0).toDouble(),
-    mediaType: r.mediaType ?? "movie",
-    backdropPath: r.backdropPath ?? "",
-    posterPath: r.posterPath ?? "",
-    releaseDate: r.releaseDate?.toIso8601String() ?? r.firstAirDate?.toIso8601String() ?? "",
-    genreIds: r.genreIds ?? [],
-  );
-}
+  MediaItem convertResultToMediaItem(Result r) {
+    return MediaItem(
+      id: r.id ?? 0,
+      title: r.title ?? r.name ?? "",
+      overview: r.overview ?? "",
+      imageUrl: r.posterPath != null
+          ? "https://image.tmdb.org/t/p/w500${r.posterPath}"
+          : "",
+      voteAverage: (r.voteAverage ?? 0).toDouble(),
+      mediaType: r.mediaType ?? "movie",
+      backdropPath: r.backdropPath ?? "",
+      posterPath: r.posterPath ?? "",
+      releaseDate:
+          r.releaseDate?.toIso8601String() ??
+          r.firstAirDate?.toIso8601String() ??
+          "",
+      genreIds: r.genreIds ?? [],
+    );
+  }
 
   Result convertMediaItemToResult(MediaItem item) {
     return Result(
@@ -138,7 +182,16 @@ MediaItem convertResultToMediaItem(Result r) {
       voteAverage: item.voteAverage,
       mediaType: item.mediaType,
       releaseDate: DateTime.tryParse(item.releaseDate),
-      genreIds: item.genreIds, adult: null, originalLanguage: '', originalTitle: '', popularity: null, video: null, voteCount: null, originalName: '', firstAirDate: null, originCountry: [],
+      genreIds: item.genreIds,
+      adult: null,
+      originalLanguage: '',
+      originalTitle: '',
+      popularity: null,
+      video: null,
+      voteCount: null,
+      originalName: '',
+      firstAirDate: null,
+      originCountry: [],
     );
   }
 
@@ -146,7 +199,8 @@ MediaItem convertResultToMediaItem(Result r) {
   MediaItem? get selectedSearchAsMediaItem {
     if (_selectedSearchResults.isEmpty) return null;
     return convertResultToMediaItem(
-        _selectedSearchResults[_selectedSearchIndex]);
+      _selectedSearchResults[_selectedSearchIndex],
+    );
   }
 
   // -------------------- Search Result Selection --------------------
@@ -156,10 +210,9 @@ MediaItem convertResultToMediaItem(Result r) {
     notifyListeners();
   }
 
-  Result? get selectedSearchItem =>
-      _selectedSearchResults.isNotEmpty
-          ? _selectedSearchResults[_selectedSearchIndex]
-          : null;
+  Result? get selectedSearchItem => _selectedSearchResults.isNotEmpty
+      ? _selectedSearchResults[_selectedSearchIndex]
+      : null;
 
   void clearSearchSelection() {
     _selectedSearchResults = [];

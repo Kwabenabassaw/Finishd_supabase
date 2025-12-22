@@ -160,15 +160,15 @@ class _HomePageState extends State<HomePage> {
               label: 'Discover',
             ),
             BottomNavigationBarItem(
-              icon: FaIcon(FontAwesomeIcons.bookmark, size: 24.0),
+              icon: FaIcon(FontAwesomeIcons.solidBookmark, size: 24.0),
               label: 'Watchlist',
             ),
             BottomNavigationBarItem(
-              icon: FaIcon(FontAwesomeIcons.solidMessage),
+              icon: FaIcon(FontAwesomeIcons.signalMessenger),
               label: "Messages",
             ),
             BottomNavigationBarItem(
-              icon: FaIcon(FontAwesomeIcons.userNinja, size: 24.0),
+              icon: FaIcon(FontAwesomeIcons.user, size: 24.0),
               label: 'Profile',
             ),
           ],
@@ -190,7 +190,7 @@ class _HomePageState extends State<HomePage> {
               label: "Messages",
             ),
             BottomNavigationBarItem(
-              icon: FaIcon(FontAwesomeIcons.userNinja, size: 24.0),
+              icon: FaIcon(FontAwesomeIcons.user, size: 24.0),
               label: 'Profile',
             ),
           ],

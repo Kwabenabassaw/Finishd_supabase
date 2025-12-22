@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:finishd/models/feed_item.dart';
 
 class FeedVideo {
@@ -9,6 +10,10 @@ class FeedVideo {
   final String? recommendationReason; // e.g., "Kobby is watching"
   final String? relatedItemId; // e.g., Movie ID or Friend UID
   final String? relatedItemType; // e.g., "friend", "trending", "movie"
+  final String?
+  feedType; // 'trending', 'following', 'for_you' - indicates where content is from
+  final Map<String, dynamic>? availability;
+  final DateTime? lastEnriched;
 
   FeedVideo({
     required this.videoId,
@@ -19,6 +24,9 @@ class FeedVideo {
     this.recommendationReason,
     this.relatedItemId,
     this.relatedItemType,
+    this.feedType,
+    this.availability,
+    this.lastEnriched,
   });
 
   /// Factory to create from FeedItem
@@ -32,6 +40,7 @@ class FeedVideo {
       recommendationReason: item.reason,
       relatedItemId: item.tmdbId?.toString() ?? item.relatedTmdbId?.toString(),
       relatedItemType: item.relatedType ?? item.mediaType,
+      feedType: item.feedType,
     );
   }
 
@@ -56,6 +65,7 @@ class FeedVideo {
         recommendationReason: null,
         relatedItemId: null,
         relatedItemType: null,
+        feedType: null,
       );
     } else {
       // Firestore/Local structure
@@ -68,6 +78,13 @@ class FeedVideo {
         recommendationReason: json['recommendationReason'],
         relatedItemId: json['relatedItemId'],
         relatedItemType: json['relatedItemType'],
+        feedType: json['feedType'],
+        availability: json['availability'] as Map<String, dynamic>?,
+        lastEnriched: json['lastEnriched'] != null
+            ? (json['lastEnriched'] is Timestamp
+                  ? (json['lastEnriched'] as Timestamp).toDate()
+                  : DateTime.parse(json['lastEnriched']))
+            : null,
       );
     }
   }
@@ -83,6 +100,9 @@ class FeedVideo {
       'recommendationReason': recommendationReason,
       'relatedItemId': relatedItemId,
       'relatedItemType': relatedItemType,
+      'feedType': feedType,
+      'availability': availability,
+      'lastEnriched': lastEnriched?.toIso8601String(),
     };
   }
 
@@ -95,6 +115,7 @@ class FeedVideo {
     String? recommendationReason,
     String? relatedItemId,
     String? relatedItemType,
+    String? feedType,
   }) {
     return FeedVideo(
       videoId: videoId ?? this.videoId,
@@ -105,6 +126,9 @@ class FeedVideo {
       recommendationReason: recommendationReason ?? this.recommendationReason,
       relatedItemId: relatedItemId ?? this.relatedItemId,
       relatedItemType: relatedItemType ?? this.relatedItemType,
+      feedType: feedType ?? this.feedType,
+      availability: availability ?? this.availability,
+      lastEnriched: lastEnriched ?? this.lastEnriched,
     );
   }
 }

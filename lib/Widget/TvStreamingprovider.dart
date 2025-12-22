@@ -1,11 +1,8 @@
-import 'package:finishd/LoadingWidget/StreamingLoading.dart';
-import 'package:finishd/Methods/OpenProvider.dart';
-
-import 'package:finishd/services/deep_link_service.dart';
-import 'package:finishd/tmbd/fetchtrending.dart';
+import 'package:finishd/services/streaming_availability_service.dart';
+import 'package:finishd/Model/streaming_availability.dart';
 import 'package:flutter/material.dart';
-
-Trending trending = Trending();
+import 'package:finishd/Widget/streaming_badge.dart';
+import 'package:finishd/LoadingWidget/StreamingLoading.dart';
 
 class Streamingprovider extends StatefulWidget {
   final String showId;
@@ -22,64 +19,55 @@ class Streamingprovider extends StatefulWidget {
 }
 
 class _StreamingproviderState extends State<Streamingprovider> {
+  late Future<StreamingAvailability?> _availabilityFuture;
+  final StreamingAvailabilityService _availabilityService =
+      StreamingAvailabilityService();
+
+  @override
+  void initState() {
+    super.initState();
+    _availabilityFuture = _availabilityService.fetchAvailability(
+      widget.showId,
+      'tv',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      child: FutureBuilder(
-        future: trending.fetchStreamingDetails(widget.showId),
+      child: FutureBuilder<StreamingAvailability?>(
+        future: _availabilityFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return LoadingService();
           } else if (snapshot.hasError) {
             return Text('Error: ${snapshot.error}');
-          } else if (snapshot.hasData) {
-            final watchProvidersResponse = snapshot.data!;
-            if (watchProvidersResponse.results.containsKey('US')) {
-              final usInfo = watchProvidersResponse.results['US']!;
-              if (usInfo.flatrate.isEmpty) {
-                return const Text('No flatrate providers available.');
-              }
+          } else if (snapshot.hasData && snapshot.data != null) {
+            final availability = snapshot.data!;
+            final region = 'US';
+            final countryAvail = availability.countries[region];
 
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: usInfo.flatrate.map((provider) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                      child: GestureDetector(
-                        onTap: () {
-                          DeepLinkService.openStreamingProvider(
-                            provider,
-                            widget.title,
-                            usInfo.link,
-                          );
-                        },
-                        child: Column(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8.0),
-
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(25),
-                                child: Image.network(
-                                  "https://image.tmdb.org/t/p/w500${provider.logoPath}",
-                                  fit: BoxFit.cover,
-                                  height: 50,
-                                  width: 50,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 5),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              );
-            } else {
-              return const Text('No watch provider information for US.');
+            if (countryAvail == null || countryAvail.services.isEmpty) {
+              return const Text('No streaming providers available.');
             }
+
+            final displayServices = countryAvail.services.values.toList();
+
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: displayServices.map((service) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 12.0),
+                    child: StreamingBadge(
+                      service: service,
+                      title: widget.title,
+                      tmdbId: widget.showId,
+                    ),
+                  );
+                }).toList(),
+              ),
+            );
           } else {
             return const Text('No data available.');
           }

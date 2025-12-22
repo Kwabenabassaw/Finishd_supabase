@@ -15,10 +15,18 @@ class CastAvatar extends StatefulWidget {
 }
 
 class _CastAvatarState extends State<CastAvatar> {
+  late Future<show.TvShowCredit> _creditFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _creditFuture = credit.fetchTvShowCredit(widget.showId);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: credit.fetchTvShowCredit(widget.showId),
+    return FutureBuilder<show.TvShowCredit>(
+      future: _creditFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const CircularProgressIndicator();
@@ -90,10 +98,18 @@ class MovieCastAvatar extends StatefulWidget {
 }
 
 class _MovieCastAvatar extends State<MovieCastAvatar> {
+  late Future<movie.MovieCredit> _creditFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _creditFuture = credit.fetchMovieCredit(widget.movieId);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: credit.fetchMovieCredit(widget.movieId),
+    return FutureBuilder<movie.MovieCredit>(
+      future: _creditFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const CircularProgressIndicator();

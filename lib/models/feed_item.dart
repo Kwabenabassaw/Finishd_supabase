@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 /// Represents a single item in the personalized feed.
-/// 
+///
 /// Can be:
 /// - TMDB content (trailers, teasers, clips)
 /// - YouTube BTS/Interview content (cached globally)
@@ -9,7 +9,7 @@ class FeedItem {
   final String id;
   final String type; // trailer, bts, interview, teaser, clip, featurette
   final String source; // tmdb, youtube_cached
-  
+
   // Content info
   final int? tmdbId;
   final String? mediaType; // movie, tv
@@ -17,26 +17,29 @@ class FeedItem {
   final String? overview;
   final String? posterPath;
   final String? backdropPath;
-  
+
   // Video info
   final String? youtubeKey;
   final String? videoName;
   final String? videoType;
   final String? thumbnailUrl;
-  
+
   // Metadata
   final String? releaseDate;
   final double? voteAverage;
   final double? popularity;
   final double? score;
   final String? reason;
-  
+
   // BTS-specific fields
   final String? relatedTitle;
   final int? relatedTmdbId;
   final String? relatedType;
   final String? channelTitle;
   final String? description;
+
+  // Feed type annotation (NEW)
+  final String? feedType; // 'trending', 'following', 'for_you'
 
   FeedItem({
     required this.id,
@@ -62,12 +65,14 @@ class FeedItem {
     this.relatedType,
     this.channelTitle,
     this.description,
+    this.feedType, // NEW
   });
 
   factory FeedItem.fromJson(Map<String, dynamic> json) {
     return FeedItem(
       id: json['id'] ?? '',
-      type: json['type'] ?? 'trailer',
+      // Backend sends 'contentType', but also support 'type' for compatibility
+      type: json['contentType'] ?? json['type'] ?? 'trailer',
       source: json['source'] ?? 'tmdb',
       tmdbId: json['tmdbId'],
       mediaType: json['mediaType'],
@@ -89,6 +94,7 @@ class FeedItem {
       relatedType: json['relatedType'],
       channelTitle: json['channelTitle'],
       description: json['description'],
+      feedType: json['feedType'], // NEW
     );
   }
 
@@ -117,6 +123,7 @@ class FeedItem {
       'relatedType': relatedType,
       'channelTitle': channelTitle,
       'description': description,
+      'feedType': feedType, // NEW
     };
   }
 
@@ -140,23 +147,20 @@ class FeedItem {
   bool get hasYouTubeVideo => youtubeKey != null && youtubeKey!.isNotEmpty;
 
   /// Get the YouTube URL for this item
-  String? get youtubeUrl => hasYouTubeVideo 
-      ? 'https://www.youtube.com/watch?v=$youtubeKey' 
-      : null;
+  String? get youtubeUrl =>
+      hasYouTubeVideo ? 'https://www.youtube.com/watch?v=$youtubeKey' : null;
 
   /// Get the YouTube embed URL
-  String? get youtubeEmbedUrl => hasYouTubeVideo 
-      ? 'https://www.youtube.com/embed/$youtubeKey' 
-      : null;
+  String? get youtubeEmbedUrl =>
+      hasYouTubeVideo ? 'https://www.youtube.com/embed/$youtubeKey' : null;
 
   /// Get the poster URL (full TMDB URL)
-  String? get fullPosterUrl => posterPath != null 
-      ? 'https://image.tmdb.org/t/p/w500$posterPath' 
-      : null;
+  String? get fullPosterUrl =>
+      posterPath != null ? 'https://image.tmdb.org/t/p/w500$posterPath' : null;
 
   /// Get the backdrop URL (full TMDB URL)
-  String? get fullBackdropUrl => backdropPath != null 
-      ? 'https://image.tmdb.org/t/p/w780$backdropPath' 
+  String? get fullBackdropUrl => backdropPath != null
+      ? 'https://image.tmdb.org/t/p/w780$backdropPath'
       : null;
 
   /// Get the best thumbnail URL (prefers TMDB backdrop, falls back to YouTube)

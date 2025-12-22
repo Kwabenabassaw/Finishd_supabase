@@ -1,46 +1,37 @@
 import 'package:finishd/Model/Watchprovider.dart';
+import 'package:finishd/Model/streaming_availability.dart';
 import 'package:finishd/Widget/streaming_badge.dart';
 import 'package:flutter/material.dart';
 
 class StreamingSection extends StatelessWidget {
   final WatchProvidersResponse? watchProviders;
+  final StreamingAvailability? availability;
   final String title;
   final String tmdbId;
 
   const StreamingSection({
     super.key,
-    required this.watchProviders,
+    this.watchProviders,
+    this.availability,
     required this.title,
     required this.tmdbId,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (watchProviders == null) {
+    // If availability is null, we can't show anything based on the new API
+    if (availability == null) {
       return const SizedBox.shrink();
     }
 
-    // Default to US or try to find a region with data
-    // Ideally we should use the user's region
-    final region = 'US';
-    final info = watchProviders!.results[region];
+    final region = 'US'; // TODO: Support user region
+    final countryAvail = availability!.countries[region];
 
-    if (info == null || (info.flatrate.isEmpty && info.ads.isEmpty)) {
-      // Fallback: Check if there's *any* info (e.g. GH) or just return empty
-      // Simplification: just return empty if US missing.
+    if (countryAvail == null || countryAvail.services.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    // Combine flatrate and ads
-    final providers = [...info.flatrate, ...info.ads];
-    // unique by ID
-    final uniqueProviders = <int, WatchProvider>{};
-    for (var p in providers) {
-      uniqueProviders[p.providerId] = p;
-    }
-    final displayProviders = uniqueProviders.values.toList();
-
-    if (displayProviders.isEmpty) return const SizedBox.shrink();
+    final displayServices = countryAvail.services.values.toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -54,14 +45,14 @@ class StreamingSection extends StatelessWidget {
           height: 90,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: displayProviders.length,
+            itemCount: displayServices.length,
             separatorBuilder: (context, index) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
+              final service = displayServices[index];
               return StreamingBadge(
-                provider: displayProviders[index],
+                service: service,
                 title: title,
                 tmdbId: tmdbId,
-                webUrl: info.link,
               );
             },
           ),

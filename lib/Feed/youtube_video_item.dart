@@ -1,17 +1,3 @@
-/// YouTube Video Item Widget (TikTok-style)
-///
-/// Individual video page for the vertical feed.
-/// Refactored for performance: Uses scoped state access to prevent full rebuilds.
-///
-/// Key features:
-/// - Scoped rebuilds (only mute button/player rebuild when needed)
-/// - Error listener for restricted videos (auto-skip)
-/// - Gesture priority fix (PageView scroll takes precedence)
-/// - Prominent mute button overlay
-/// - Thumbnail fallback while loading
-/// - TikTok-style metadata and action buttons
-/// - SafeArea compliance
-
 import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -23,8 +9,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/feed_video.dart';
 import '../provider/youtube_feed_provider.dart';
 import '../Home/shareSceen.dart';
+import 'dart:ui';
 import '../Widget/reactions/reaction_button.dart';
 import '../Widget/comments/comment_button.dart';
+import 'package:flutter/services.dart';
 
 class YoutubeVideoItem extends StatefulWidget {
   final int index;
@@ -36,7 +24,24 @@ class YoutubeVideoItem extends StatefulWidget {
 }
 
 class _YoutubeVideoItemState extends State<YoutubeVideoItem>
-    with AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
+  bool _showHeart = false;
+  Offset _heartPos = Offset.zero;
+
+  void _onDoubleTap(TapDownDetails details) {
+    setState(() {
+      _showHeart = true;
+      _heartPos = details.localPosition;
+    });
+    HapticFeedback.mediumImpact();
+    // Trigger like logic here if not already liked
+    // ...
+
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted) setState(() => _showHeart = false);
+    });
+  }
+
   // Keep alive during minor scroll adjustments to prevent flickering
   @override
   bool get wantKeepAlive => true;
@@ -59,75 +64,89 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
 
     return Container(
       color: Colors.black,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // 1. Video Player Layer (Scoped)
-          _VideoPlayerLayer(index: widget.index, video: video),
+      child: GestureDetector(
+        onDoubleTapDown: _onDoubleTap,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // 1. Video Player Layer (Scoped)
+            _VideoPlayerLayer(index: widget.index, video: video),
 
-          // 2. Gradient overlays for text readability
-          const _GradientOverlay(),
+            // 2. Gradient overlays for text readability
+            const _GradientOverlay(),
 
-          // 3. Play/Pause gesture area
-          _PlayPauseGesture(index: widget.index),
+            // 3. Play/Pause gesture area
+            _PlayPauseGesture(index: widget.index),
 
-          // 4. Metadata (Bottom Left) - Static
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 80, // Leave room for side buttons
-            child: SafeArea(
-              top: false,
-              right: false,
-              child: Padding(
-                padding: const EdgeInsets.only(
-                  left: 16.0,
-                  bottom: 20.0,
-                  right: 16.0,
+            // 4. Metadata (Bottom Left) - Static
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 80, // Leave room for side buttons
+              child: SafeArea(
+                top: false,
+                right: false,
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                    left: 16.0,
+                    bottom: 20.0,
+                    right: 16.0,
+                  ),
+                  child: _VideoMetadata(video: video),
                 ),
-                child: _VideoMetadata(video: video),
               ),
             ),
-          ),
 
-          // 5. Action Buttons (Bottom Right) - Static
-          Positioned(
-            bottom: 0,
-            right: 0,
-            child: SafeArea(
-              top: false,
-              left: false,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 20.0, right: 10.0),
-                child: _ActionButtons(video: video),
+            // 5. Action Buttons (Bottom Right) - Static
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: SafeArea(
+                top: false,
+                left: false,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 20.0, right: 10.0),
+                  child: _ActionButtons(
+                    video: video,
+                    isActive: provider.currentIndex == widget.index,
+                  ),
+                ),
               ),
             ),
-          ),
 
-          // 6. PROMINENT Mute Button (Top Right) - Scoped
-          Positioned(
-            top: 0,
-            right: 0,
-            child: SafeArea(
-              bottom: false,
-              left: false,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 16.0, right: 16.0),
-                child: const _MuteButton(),
+            // 6. PROMINENT Mute Button (Top Right) - Scoped
+            Positioned(
+              top: 0,
+              right: 0,
+              child: SafeArea(
+                bottom: false,
+                left: false,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 16.0, right: 16.0),
+                  child: const _MuteButton(),
+                ),
               ),
             ),
-          ),
 
-          // 7. Play icon overlay (Scoped)
-          Center(child: _PlayIconOverlay(index: widget.index)),
+            // 7. Play icon overlay (Scoped)
+            Center(child: _PlayIconOverlay(index: widget.index)),
 
-          // 8. Error indicator (Scoped)
-          Positioned(
-            top: 140,
-            left: 16,
-            child: SafeArea(child: _ErrorIndicator(index: widget.index)),
-          ),
-        ],
+            // 8. Error indicator (Scoped)
+            Positioned(
+              top: 140,
+              left: 16,
+              child: SafeArea(child: _ErrorIndicator(index: widget.index)),
+            ),
+
+            // 9. Double Tap Heart Animation
+            if (_showHeart)
+              Positioned(
+                left: _heartPos.dx - 40,
+                top: _heartPos.dy - 40,
+                child: _HeartAnimation(),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -193,6 +212,7 @@ class _VideoPlayerLayer extends StatelessWidget {
             child: YoutubePlayer(
               controller: controller,
               showVideoProgressIndicator: true,
+              thumbnail: const SizedBox.shrink(),
               progressIndicatorColor: Colors.red,
               progressColors: const ProgressBarColors(
                 playedColor: Colors.red,
@@ -426,44 +446,8 @@ class _VideoMetadata extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Recommendation reason badge
-        if (video.recommendationReason != null &&
-            video.recommendationReason!.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 4, 152, 9).withOpacity(0.9),
-                borderRadius: BorderRadius.circular(6),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.trending_up, size: 14, color: Colors.black),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      video.recommendationReason!,
-                      style: const TextStyle(
-                        color: Color.fromARGB(255, 206, 204, 204),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+        // Feed type and recommendation badges row
+        _buildBadgesRow(),
 
         // Channel Name
         Text(
@@ -506,6 +490,129 @@ class _VideoMetadata extends StatelessWidget {
       ],
     );
   }
+
+  /// Build the badges row with feed type and recommendation reason
+  Widget _buildBadgesRow() {
+    final hasFeedType = video.feedType != null && video.feedType!.isNotEmpty;
+    final hasRecommendation =
+        video.recommendationReason != null &&
+        video.recommendationReason!.isNotEmpty;
+
+    if (!hasFeedType && !hasRecommendation) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          // Feed Type Badge (Trending, Following, For You)
+          if (hasFeedType) _buildFeedTypeBadge(video.feedType!),
+          // Recommendation Reason Badge
+          if (hasRecommendation)
+            _buildRecommendationBadge(video.recommendationReason!),
+        ],
+      ),
+    );
+  }
+
+  /// Build feed type badge with distinct styling per type
+  Widget _buildFeedTypeBadge(String feedType) {
+    // Get icon and color based on feed type
+    IconData icon;
+    Color iconColor;
+    String label;
+
+    switch (feedType.toLowerCase()) {
+      case 'trending':
+        icon = Icons.trending_up_rounded;
+        iconColor = Colors.orangeAccent;
+        label = 'Trending';
+        break;
+      case 'following':
+        icon = Icons.people_alt_rounded;
+        iconColor = Colors.lightBlueAccent;
+        label = 'Following';
+        break;
+      case 'for_you':
+        icon = Icons.auto_awesome;
+        iconColor = Colors.pinkAccent;
+        label = 'For You';
+        break;
+      default:
+        icon = Icons.play_circle_outline;
+        iconColor = Colors.white70;
+        label = feedType;
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: iconColor.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: iconColor.withOpacity(0.4)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 12, color: iconColor),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: iconColor,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Build recommendation reason badge
+  Widget _buildRecommendationBadge(String reason) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Colors.white24),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.auto_awesome, size: 14, color: Colors.amber),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  reason,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// --------------------------------------------------------------------------
@@ -513,8 +620,9 @@ class _VideoMetadata extends StatelessWidget {
 /// --------------------------------------------------------------------------
 class _ActionButtons extends StatelessWidget {
   final FeedVideo video;
+  final bool isActive;
 
-  const _ActionButtons({required this.video});
+  const _ActionButtons({required this.video, required this.isActive});
 
   @override
   Widget build(BuildContext context) {
@@ -527,6 +635,10 @@ class _ActionButtons extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Profile Avatar at the Top (TikTok style)
+        _buildProfileAvatar(context, video),
+        const SizedBox(height: 16),
+
         // Reaction Button
         ReactionButton(
           videoId: video.videoId,
@@ -534,7 +646,7 @@ class _ActionButtons extends StatelessWidget {
           size: 32,
           showCount: true,
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
 
         // Comment Button
         CommentButton(
@@ -544,15 +656,7 @@ class _ActionButtons extends StatelessWidget {
           userAvatar: userAvatar,
           size: 26,
         ),
-        const SizedBox(height: 20),
-
-        // Friends Button
-        _ActionButton(
-          icon: FontAwesomeIcons.users,
-          label: 'Friends',
-          onTap: () => Navigator.pushNamed(context, 'friends'),
-        ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
 
         // Share Button
         _ActionButton(
@@ -566,33 +670,30 @@ class _ActionButtons extends StatelessWidget {
             videoChannel: video.channelName,
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
 
-        // Avatar
-        Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: CircleAvatar(
-            radius: 24,
-            backgroundImage: video.thumbnailUrl.isNotEmpty
-                ? CachedNetworkImageProvider(video.thumbnailUrl)
-                : null,
-            backgroundColor: Colors.grey[800],
-            child: video.thumbnailUrl.isEmpty
-                ? const Icon(Icons.movie, color: Colors.white)
-                : null,
-          ),
-        ),
+        // Spinning Music Disk
+        _SpinningDisk(thumbnailUrl: video.thumbnailUrl, isActive: isActive),
       ],
+    );
+  }
+
+  Widget _buildProfileAvatar(BuildContext context, FeedVideo video) {
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 1.5),
+      ),
+      child: CircleAvatar(
+        radius: 24,
+        backgroundImage: video.thumbnailUrl.isNotEmpty
+            ? CachedNetworkImageProvider(video.thumbnailUrl)
+            : null,
+        backgroundColor: Colors.grey[800],
+        child: video.thumbnailUrl.isEmpty
+            ? const Icon(Icons.person, color: Colors.white)
+            : null,
+      ),
     );
   }
 }
@@ -617,11 +718,8 @@ class _ActionButton extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.3),
-              shape: BoxShape.circle,
-            ),
-            child: FaIcon(icon, color: Colors.white, size: 26),
+
+            child: FaIcon(icon, color: Colors.white, size: 20),
           ),
           const SizedBox(height: 4),
           Text(
@@ -635,6 +733,200 @@ class _ActionButton extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _MusicScrollingText extends StatefulWidget {
+  final FeedVideo video;
+  final bool isActive;
+
+  const _MusicScrollingText({required this.video, required this.isActive});
+
+  @override
+  State<_MusicScrollingText> createState() => _MusicScrollingTextState();
+}
+
+class _MusicScrollingTextState extends State<_MusicScrollingText>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(seconds: 8),
+      vsync: this,
+    );
+    _animation = Tween<Offset>(
+      begin: const Offset(1.0, 0.0),
+      end: const Offset(-1.5, 0.0),
+    ).animate(_controller);
+
+    if (widget.isActive) {
+      _controller.repeat();
+    }
+  }
+
+  @override
+  void didUpdateWidget(_MusicScrollingText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive != oldWidget.isActive) {
+      if (widget.isActive) {
+        _controller.repeat();
+      } else {
+        _controller.stop();
+        _controller.reset();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Icon(Icons.music_note, color: Colors.white, size: 14),
+        const SizedBox(width: 8),
+        Expanded(
+          child: ClipRect(
+            child: SlideTransition(
+              position: _animation,
+              child: Text(
+                '${widget.video.channelName} • Original Sound - ${widget.video.title}',
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+                maxLines: 1,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SpinningDisk extends StatefulWidget {
+  final String thumbnailUrl;
+  final bool isActive;
+
+  const _SpinningDisk({required this.thumbnailUrl, required this.isActive});
+
+  @override
+  State<_SpinningDisk> createState() => _SpinningDiskState();
+}
+
+class _SpinningDiskState extends State<_SpinningDisk>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(seconds: 5),
+      vsync: this,
+    );
+    if (widget.isActive) {
+      _controller.repeat();
+    }
+  }
+
+  @override
+  void didUpdateWidget(_SpinningDisk oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive != oldWidget.isActive) {
+      if (widget.isActive) {
+        _controller.repeat();
+      } else {
+        _controller.stop();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RotationTransition(
+      turns: _controller,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: SweepGradient(
+            colors: [Colors.grey[900]!, Colors.black, Colors.grey[900]!],
+          ),
+        ),
+        child: CircleAvatar(
+          radius: 12,
+          backgroundImage: widget.thumbnailUrl.isNotEmpty
+              ? CachedNetworkImageProvider(widget.thumbnailUrl)
+              : null,
+          backgroundColor: Colors.grey[800],
+        ),
+      ),
+    );
+  }
+}
+
+class _HeartAnimation extends StatefulWidget {
+  @override
+  State<_HeartAnimation> createState() => _HeartAnimationState();
+}
+
+class _HeartAnimationState extends State<_HeartAnimation>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scale;
+  late Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _scale = TweenSequence([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.2), weight: 50),
+      TweenSequenceItem(tween: Tween(begin: 1.2, end: 1.0), weight: 50),
+    ]).animate(_controller);
+    _opacity = TweenSequence([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.0), weight: 80),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 20),
+    ]).animate(_controller);
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _opacity.value,
+          child: Transform.scale(
+            scale: _scale.value,
+            child: const Icon(Icons.favorite, color: Colors.red, size: 80),
+          ),
+        );
+      },
     );
   }
 }

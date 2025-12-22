@@ -117,66 +117,72 @@ class _FriendSelectionScreenState extends State<FriendSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         elevation: 0,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        leading: IconButton(
+          icon: const Icon(Icons.close_rounded),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Recommend to...',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             if (_selectedUserIds.isNotEmpty)
               Text(
                 '${_selectedUserIds.length} selected',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
-                  fontWeight: FontWeight.normal,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).primaryColor,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
           ],
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: TextButton(
-              onPressed: _selectedUserIds.isNotEmpty && !_isSending
-                  ? _sendRecommendation
-                  : null,
-              style: TextButton.styleFrom(
-                backgroundColor: _selectedUserIds.isNotEmpty
-                    ? const Color(0xFF1A8927)
-                    : Colors.grey.shade300,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+            padding: const EdgeInsets.only(right: 16.0),
+            child: Center(
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 200),
+                opacity: _selectedUserIds.isNotEmpty ? 1.0 : 0.5,
+                child: FilledButton(
+                  onPressed: _selectedUserIds.isNotEmpty && !_isSending
+                      ? _sendRecommendation
+                      : null,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 8,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+                  ),
+                  child: _isSending
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Send',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                 ),
               ),
-              child: _isSending
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text(
-                      'Send',
-                      style: TextStyle(
-                        color: _selectedUserIds.isNotEmpty
-                            ? Colors.white
-                            : Colors.grey.shade600,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
             ),
           ),
         ],
@@ -189,287 +195,335 @@ class _FriendSelectionScreenState extends State<FriendSelectionScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    Icons.people_outline,
+                    Icons.people_outline_rounded,
                     size: 80,
-                    color: Colors.grey.shade400,
+                    color: Theme.of(context).dividerColor.withOpacity(0.1),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'No friends found',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade600,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Add friends to share recommendations',
-                    style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
               ),
             )
-          : Column(
-              children: [
-                // Movie preview card
-                Container(
-                  margin: const EdgeInsets.all(16),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
+          : CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                // Movie preview header
+                SliverToBoxAdapter(
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardTheme.color,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Theme.of(context).dividerColor.withOpacity(0.05),
                       ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: CachedNetworkImage(
-                          imageUrl: widget.movie.posterPath != null
-                              ? 'https://image.tmdb.org/t/p/w200${widget.movie.posterPath}'
-                              : 'https://via.placeholder.com/60x90',
-                          width: 50,
-                          height: 75,
-                          fit: BoxFit.cover,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.movie.title,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              widget.movie.mediaType == 'movie'
-                                  ? 'Movie'
-                                  : 'TV Show',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: CachedNetworkImage(
+                            imageUrl: widget.movie.posterPath != null
+                                ? 'https://image.tmdb.org/t/p/w200${widget.movie.posterPath}'
+                                : 'https://via.placeholder.com/200x300',
+                            width: 56,
+                            height: 84,
+                            fit: BoxFit.cover,
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.movie.title,
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(
+                                    context,
+                                  ).primaryColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  widget.movie.mediaType.toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: Theme.of(context).primaryColor,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
 
-                // Friends grid
-                Expanded(
-                  child: GridView.builder(
+                // Section Title
+                SliverToBoxAdapter(
+                  child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
+                      horizontal: 24,
                       vertical: 8,
                     ),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 0.85,
-                        ),
-                    itemCount: _friends.length,
-                    itemBuilder: (context, index) {
+                    child: Text(
+                      'YOUR FRIENDS',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.color?.withOpacity(0.5),
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Friends list
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate((context, index) {
                       final user = _friends[index];
                       final isSelected = _selectedUserIds.contains(user.uid);
                       final isAlreadyRecommended = _alreadyRecommendedUserIds
                           .contains(user.uid);
 
-                      return GestureDetector(
-                        onTap: isAlreadyRecommended
-                            ? null
-                            : () {
-                                setState(() {
-                                  if (isSelected) {
-                                    _selectedUserIds.remove(user.uid);
-                                  } else {
-                                    _selectedUserIds.add(user.uid);
-                                  }
-                                });
-                              },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          curve: Curves.easeInOut,
-                          decoration: BoxDecoration(
-                            color: isAlreadyRecommended
-                                ? Colors.grey.shade100
-                                : Colors.white,
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: isAlreadyRecommended
+                                ? null
+                                : () {
+                                    setState(() {
+                                      if (isSelected) {
+                                        _selectedUserIds.remove(user.uid);
+                                      } else {
+                                        _selectedUserIds.add(user.uid);
+                                      }
+                                    });
+                                  },
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isAlreadyRecommended
-                                  ? Colors.grey.shade300
-                                  : isSelected
-                                  ? const Color(0xFF1A8927)
-                                  : Colors.grey.shade200,
-                              width: isSelected ? 2.5 : 1,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: isSelected
-                                    ? const Color(0xFF1A8927).withOpacity(0.2)
-                                    : Colors.black.withOpacity(0.05),
-                                blurRadius: isSelected ? 12 : 8,
-                                offset: const Offset(0, 2),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: isSelected && !isAlreadyRecommended
+                                    ? Theme.of(
+                                        context,
+                                      ).primaryColor.withOpacity(0.05)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isSelected && !isAlreadyRecommended
+                                      ? Theme.of(
+                                          context,
+                                        ).primaryColor.withOpacity(0.3)
+                                      : Theme.of(
+                                          context,
+                                        ).dividerColor.withOpacity(0.05),
+                                  width: 1.5,
+                                ),
                               ),
-                            ],
-                          ),
-                          child: Stack(
-                            children: [
-                              Opacity(
-                                opacity: isAlreadyRecommended ? 0.5 : 1.0,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
+                              child: Row(
+                                children: [
+                                  // Profile Image
+                                  Stack(
                                     children: [
-                                      // Profile image with selection overlay
-                                      Stack(
-                                        alignment: Alignment.topCenter,
-                                        children: [
-                                          Center(
-                                            child: Container(
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                border: Border.all(
-                                                  color: isSelected
-                                                      ? const Color(0xFF1A8927)
-                                                      : Colors.grey.shade300,
-                                                  width: 3,
-                                                ),
-                                              ),
-                                              child: CircleAvatar(
-                                                radius: 40,
-                                                backgroundColor:
-                                                    Colors.grey.shade200,
-                                                backgroundImage:
-                                                    user.profileImage.isNotEmpty
-                                                    ? CachedNetworkImageProvider(
-                                                        user.profileImage,
-                                                      )
-                                                    : const AssetImage(
-                                                            'assets/noimage.jpg',
-                                                          )
-                                                          as ImageProvider,
-                                              ),
-                                            ),
+                                      Container(
+                                        padding: const EdgeInsets.all(2),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color:
+                                                isSelected &&
+                                                    !isAlreadyRecommended
+                                                ? Theme.of(context).primaryColor
+                                                : Colors.transparent,
+                                            width: 2,
                                           ),
-                                          if (isSelected)
-                                            Container(
-                                              width: 86,
-                                              height: 86,
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                color: const Color(
-                                                  0xFF1A8927,
-                                                ).withOpacity(0.3),
-                                              ),
-                                              child: const Icon(
-                                                Icons.check_circle,
-                                                color: Colors.white,
-                                                size: 40,
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 12),
-                                      // Username
-                                      Text(
-                                        user.username.isNotEmpty
-                                            ? user.username
-                                            : 'User',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: isSelected
-                                              ? const Color(0xFF1A8927)
-                                              : Colors.black87,
                                         ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        textAlign: TextAlign.center,
+                                        child: Opacity(
+                                          opacity: isAlreadyRecommended
+                                              ? 0.5
+                                              : 1.0,
+                                          child: CircleAvatar(
+                                            radius: 28,
+                                            backgroundColor: Theme.of(
+                                              context,
+                                            ).dividerColor.withOpacity(0.1),
+                                            backgroundImage:
+                                                user.profileImage.isNotEmpty
+                                                ? CachedNetworkImageProvider(
+                                                    user.profileImage,
+                                                  )
+                                                : const AssetImage(
+                                                        'assets/noimage.jpg',
+                                                      )
+                                                      as ImageProvider,
+                                          ),
+                                        ),
                                       ),
-                                      const SizedBox(height: 4),
-                                      // Full name or "Already sent" badge
-                                      if (isAlreadyRecommended)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.orange.shade100,
-                                            borderRadius: BorderRadius.circular(
-                                              4,
+                                      if (isSelected && !isAlreadyRecommended)
+                                        Positioned(
+                                          bottom: 0,
+                                          right: 0,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(4),
+                                            decoration: BoxDecoration(
+                                              color: Theme.of(
+                                                context,
+                                              ).primaryColor,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: Theme.of(
+                                                  context,
+                                                ).scaffoldBackgroundColor,
+                                                width: 2,
+                                              ),
+                                            ),
+                                            child: const Icon(
+                                              Icons.check,
+                                              color: Colors.white,
+                                              size: 12,
                                             ),
                                           ),
-                                          child: Text(
-                                            'Already sent',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              color: Colors.orange.shade800,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        )
-                                      else if (user.firstName.isNotEmpty)
-                                        Text(
-                                          '${user.firstName} ${user.lastName}',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade600,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          textAlign: TextAlign.center,
                                         ),
                                     ],
                                   ),
-                                ),
-                              ),
-                              // Selection checkmark badge
-                              if (isSelected)
-                                Positioned(
-                                  top: 8,
-                                  right: 8,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF1A8927),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.check,
-                                      color: Colors.white,
-                                      size: 16,
+                                  const SizedBox(width: 16),
+
+                                  // User Info
+                                  Expanded(
+                                    child: Opacity(
+                                      opacity: isAlreadyRecommended ? 0.5 : 1.0,
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            user.username.isNotEmpty
+                                                ? user.username
+                                                : 'User',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleMedium
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            user.firstName.isNotEmpty
+                                                ? '${user.firstName} ${user.lastName}'
+                                                : user.email,
+                                            style: Theme.of(
+                                              context,
+                                            ).textTheme.bodySmall,
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                ),
-                            ],
+
+                                  // Status or Checkbox
+                                  if (isAlreadyRecommended)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(
+                                          context,
+                                        ).dividerColor.withOpacity(0.05),
+                                        borderRadius: BorderRadius.circular(
+                                          100,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'Sent',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelSmall
+                                            ?.copyWith(
+                                              color: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.color
+                                                  ?.withOpacity(0.5),
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                      ),
+                                    )
+                                  else
+                                    _buildCustomCheckbox(context, isSelected),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       );
-                    },
+                    }, childCount: _friends.length),
                   ),
                 ),
               ],
             ),
+    );
+  }
+
+  Widget _buildCustomCheckbox(BuildContext context, bool isSelected) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      width: 24,
+      height: 24,
+      decoration: BoxDecoration(
+        color: isSelected ? Theme.of(context).primaryColor : Colors.transparent,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: isSelected
+              ? Theme.of(context).primaryColor
+              : Theme.of(context).dividerColor.withOpacity(0.3),
+          width: 2,
+        ),
+      ),
+      child: isSelected
+          ? const Icon(Icons.check, color: Colors.white, size: 16)
+          : null,
     );
   }
 }

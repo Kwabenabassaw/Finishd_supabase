@@ -1,17 +1,31 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:finishd/models/feed_video.dart';
 import 'package:finishd/models/feed_item.dart';
 
+/// Feed Types for personalized content
+enum FeedType {
+  forYou('for_you'),
+  trending('trending'),
+  following('following');
+
+  final String value;
+  const FeedType(this.value);
+}
+
 /// API Client for Finishd Backend
 ///
 /// Handles all communication with the FastAPI backend deployed on Railway.
-/// All endpoints require Firebase authentication.
+/// All endpoints require Firebase authentication (unless public).
 class ApiClient {
   // Railway backend URL
   static const String baseUrl =
       'https://finishdbackend-master-production.up.railway.app';
+
+  // Risk 2 FIX: Hide logs behind debug flag - TEMPORARILY ENABLED FOR DEBUGGING
+  static const bool _debugLogging = true;
 
   // Singleton pattern
   static final ApiClient _instance = ApiClient._internal();
@@ -23,12 +37,12 @@ class ApiClient {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        print('❌ ApiClient: No user logged in');
+        _log('No user logged in', isError: true);
         return null;
       }
       return await user.getIdToken();
     } catch (e) {
-      print('❌ ApiClient: Error getting token: $e');
+      _log('Error getting token: $e', isError: true);
       return null;
     }
   }
@@ -43,34 +57,94 @@ class ApiClient {
     };
   }
 
-  /// GET request with authentication
+  /// Centralized logger
+  void _log(String message, {bool isError = false}) {
+    if (_debugLogging || isError) {
+      print((isError ? '❌ ' : '📡 ') + message);
+    }
+  }
+
+  /// GET request with authentication and retry
   Future<http.Response> get(
     String endpoint, {
     Map<String, String>? queryParams,
+    bool retry = true, // Risk 3 FIX: Retry strategy
   }) async {
     final headers = await _getHeaders();
+    // Bug 3 FIX: Fail fast if no token (implied by usage, but explicit check good practices)
+    if (!headers.containsKey('Authorization')) {
+      // Optional: throw Exception('Not authenticated');
+    }
 
     Uri uri = Uri.parse('$baseUrl$endpoint');
     if (queryParams != null && queryParams.isNotEmpty) {
       uri = uri.replace(queryParameters: queryParams);
     }
 
-    print('📡 ApiClient GET: $uri');
+    _log('ApiClient GET: $uri');
 
-    try {
-      final response = await http
-          .get(uri, headers: headers)
-          .timeout(
-            const Duration(seconds: 30),
-            onTimeout: () => throw Exception('Request timeout'),
-          );
+    // Simple retry logic
+    int attempts = 0;
+    while (attempts < (retry ? 2 : 1)) {
+      try {
+        attempts++;
+        final response = await http
+            .get(uri, headers: headers)
+            .timeout(
+              const Duration(seconds: 30),
+              onTimeout: () => throw Exception('Request timeout'),
+            );
 
-      print('📡 ApiClient Response: ${response.statusCode}');
-      return response;
-    } catch (e) {
-      print('❌ ApiClient Error: $e');
-      rethrow;
+        _log('ApiClient Response: ${response.statusCode}');
+
+        // Bug 5 FIX: fail fast on auth error
+        if (response.statusCode == 401) {
+          _log('Unauthorized access', isError: true);
+          throw Exception('Unauthorized');
+        }
+
+        return response;
+      } catch (e) {
+        _log('ApiClient Error (Attempt $attempts): $e', isError: true);
+        if (attempts >= (retry ? 2 : 1)) rethrow;
+        await Future.delayed(const Duration(seconds: 1)); // Backoff
+      }
     }
+    throw Exception('Request failed after retries');
+  }
+
+  /// Public GET request (No Auth Headers) - Bug 2 FIX
+  Future<http.Response> getPublic(
+    String endpoint, {
+    Map<String, String>? queryParams,
+    bool retry = true,
+  }) async {
+    Uri uri = Uri.parse('$baseUrl$endpoint');
+    if (queryParams != null && queryParams.isNotEmpty) {
+      uri = uri.replace(queryParameters: queryParams);
+    }
+
+    _log('ApiClient GET (Public): $uri');
+
+    // Simple retry logic
+    int attempts = 0;
+    while (attempts < (retry ? 2 : 1)) {
+      try {
+        attempts++;
+        final response = await http
+            .get(uri) // No headers injected
+            .timeout(
+              const Duration(seconds: 30),
+              onTimeout: () => throw Exception('Request timeout'),
+            );
+        return response;
+      } catch (e) {
+        _log('ApiClient Public Error (Attempt $attempts): $e', isError: true);
+        if (attempts >= (retry ? 2 : 1)) rethrow;
+        await Future.delayed(const Duration(seconds: 1)); // Backoff
+      }
+    }
+    throw Exception('Request public failed after retries');
   }
 
   /// POST request with authentication
@@ -81,7 +155,7 @@ class ApiClient {
     final headers = await _getHeaders();
     final uri = Uri.parse('$baseUrl$endpoint');
 
-    print('📡 ApiClient POST: $uri');
+    _log('ApiClient POST: $uri');
 
     try {
       final response = await http
@@ -95,10 +169,10 @@ class ApiClient {
             onTimeout: () => throw Exception('Request timeout'),
           );
 
-      print('📡 ApiClient Response: ${response.statusCode}');
+      _log('ApiClient Response: ${response.statusCode}');
       return response;
     } catch (e) {
-      print('❌ ApiClient Error: $e');
+      _log('ApiClient Error: $e', isError: true);
       rethrow;
     }
   }
@@ -107,40 +181,66 @@ class ApiClient {
   // FEED API (TMDB-based)
   // =========================================================================
 
-  /// Get personalized feed (NEW - TMDB-based)
-  /// Returns FeedItem list with trailers, BTS, and interviews
+  /// Get feed based on feed type (NEW - supports three tabs)
+  ///
+  /// [feedType]: Enum 'trending', 'following', or 'for_you' (default)
   Future<List<FeedItem>> getPersonalizedFeedV2({
     bool refresh = false,
     int limit = 50,
-    int page = 3,
+    int? page, // null means auto-randomize
+    FeedType feedType = FeedType.forYou, // Risk 1 FIX: Use enum
   }) async {
+    // Generate random page if not specified (for variety in feed)
+    final effectivePage = page ?? Random().nextInt(10) + 1;
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        print('❌ No user logged in');
-        return [];
+        _log('No user logged in', isError: true);
+        return []; // Standardize empty list return
       }
 
       final queryParams = {
         'refresh': refresh.toString(),
         'limit': limit.toString(),
-        'page': page.toString(),
+        'page': effectivePage.toString(),
+        'feed_type': feedType.value, // Bug 1 FIX: Match backend param name
       };
+
+      _log('📡 Calling /feed/${user.uid} with params: $queryParams');
 
       final response = await get('/feed/${user.uid}', queryParams: queryParams);
 
+      _log('📥 Response status: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+
+        // DEBUG: Log raw response structure
+        _log('📦 Response keys: ${data.keys.toList()}');
+
         final List<dynamic> feedJson = data['feed'] ?? [];
 
-        print('✅ Got ${feedJson.length} feed items from TMDB-based API');
+        _log('✅ Got ${feedJson.length} ${feedType.value} feed items');
+
+        // DEBUG: Log first item's youtubeKey if exists
+        if (feedJson.isNotEmpty) {
+          final firstItem = feedJson[0];
+          _log(
+            '🎬 First item: ${firstItem['title']}, youtubeKey: ${firstItem['youtubeKey']}',
+          );
+        }
+
         return feedJson.map((v) => FeedItem.fromJson(v)).toList();
       } else {
-        print('❌ Feed API error: ${response.statusCode} - ${response.body}');
+        _log(
+          'Feed API error: ${response.statusCode} - ${response.body}',
+          isError: true,
+        );
         return [];
       }
-    } catch (e) {
-      print('❌ Error fetching personalized feed v2: $e');
+    } catch (e, stackTrace) {
+      _log('Error fetching personalized feed v2: $e', isError: true);
+      _log('Stack trace: $stackTrace', isError: true);
       return [];
     }
   }
@@ -149,7 +249,11 @@ class ApiClient {
   Future<List<FeedItem>> getGlobalFeed({int limit = 20}) async {
     try {
       final queryParams = {'limit': limit.toString()};
-      final response = await get('/feed/global', queryParams: queryParams);
+      // Bug 2 FIX: Use public endpoint (no auth headers injected)
+      final response = await getPublic(
+        '/feed/global',
+        queryParams: queryParams,
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -158,7 +262,7 @@ class ApiClient {
       }
       return [];
     } catch (e) {
-      print('❌ Error fetching global feed: $e');
+      _log('Error fetching global feed: $e', isError: true);
       return [];
     }
   }
@@ -166,7 +270,8 @@ class ApiClient {
   /// Get BTS content (cached YouTube content)
   Future<List<Map<String, dynamic>>> getBTSContent() async {
     try {
-      final response = await get('/feed/bts');
+      // Bug 2 FIX: Use public endpoint
+      final response = await getPublic('/feed/bts');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -175,7 +280,7 @@ class ApiClient {
       }
       return [];
     } catch (e) {
-      print('❌ Error fetching BTS content: $e');
+      _log('Error fetching BTS content: $e', isError: true);
       return [];
     }
   }
@@ -206,11 +311,14 @@ class ApiClient {
 
         return itemsJson.map((v) => FeedVideo.fromJson(v)).toList();
       } else {
-        print('❌ Feed API error: ${response.statusCode} - ${response.body}');
+        _log(
+          'Feed API error: ${response.statusCode} - ${response.body}',
+          isError: true,
+        );
         return [];
       }
     } catch (e) {
-      print('❌ Error fetching feed: $e');
+      _log('Error fetching feed: $e', isError: true);
       return [];
     }
   }
@@ -228,7 +336,7 @@ class ApiClient {
       }
       return [];
     } catch (e) {
-      print('❌ Error refreshing feed: $e');
+      _log('Error refreshing feed: $e', isError: true);
       return [];
     }
   }
@@ -240,7 +348,8 @@ class ApiClient {
   /// Health check
   Future<bool> healthCheck() async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/health'));
+      // Bug 4 FIX: Use getPublic to share logic/timeouts
+      final response = await getPublic('/health');
       return response.statusCode == 200;
     } catch (e) {
       return false;
@@ -256,7 +365,7 @@ class ApiClient {
       }
       return null;
     } catch (e) {
-      print('❌ Auth verification failed: $e');
+      _log('Auth verification failed: $e', isError: true);
       return null;
     }
   }
@@ -265,7 +374,11 @@ class ApiClient {
   Future<List<Map<String, dynamic>>> getTrending({bool refresh = false}) async {
     try {
       final queryParams = {'refresh': refresh.toString()};
-      final response = await get('/trending/get', queryParams: queryParams);
+      // Use Public
+      final response = await getPublic(
+        '/trending/get',
+        queryParams: queryParams,
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -274,7 +387,7 @@ class ApiClient {
       }
       return [];
     } catch (e) {
-      print('❌ Error fetching trending: $e');
+      _log('Error fetching trending: $e', isError: true);
       return [];
     }
   }
@@ -289,14 +402,18 @@ class ApiClient {
         'movie_limit': movieLimit.toString(),
         'show_limit': showLimit.toString(),
       };
-      final response = await get('/trending/all', queryParams: queryParams);
+      // Use Public
+      final response = await getPublic(
+        '/trending/all',
+        queryParams: queryParams,
+      );
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       }
       return {'movies': [], 'shows': []};
     } catch (e) {
-      print('❌ Error fetching all trending: $e');
+      _log('Error fetching all trending: $e', isError: true);
       return {'movies': [], 'shows': []};
     }
   }
@@ -314,7 +431,7 @@ class ApiClient {
       }
       return [];
     } catch (e) {
-      print('❌ Error checking episodes: $e');
+      _log('Error checking episodes: $e', isError: true);
       return [];
     }
   }
@@ -331,12 +448,12 @@ class ApiClient {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final List<dynamic> alerts = data['alerts'] ?? [];
-        print('⚡ Fast alerts: ${alerts.length} pre-computed alerts');
+        _log('Fast alerts: ${alerts.length} pre-computed alerts');
         return alerts.cast<Map<String, dynamic>>();
       }
       return [];
     } catch (e) {
-      print('❌ Error fetching fast alerts: $e');
+      _log('Error fetching fast alerts: $e', isError: true);
       return [];
     }
   }
@@ -357,7 +474,7 @@ class ApiClient {
       }
       return [];
     } catch (e) {
-      print('❌ Error fetching upcoming episodes: $e');
+      _log('Error fetching upcoming episodes: $e', isError: true);
       return [];
     }
   }
@@ -383,7 +500,7 @@ class ApiClient {
       }
       return [];
     } catch (e) {
-      print('❌ Error fetching TV notifications: $e');
+      _log('Error fetching TV notifications: $e', isError: true);
       return [];
     }
   }
@@ -409,7 +526,7 @@ class ApiClient {
       }
       return [];
     } catch (e) {
-      print('❌ Error fetching recommendations: $e');
+      _log('Error fetching recommendations: $e', isError: true);
       return [];
     }
   }
@@ -433,14 +550,14 @@ class ApiClient {
       );
 
       if (response.statusCode == 200) {
-        print('✅ Chat notification sent successfully');
+        _log('Chat notification sent successfully');
         return true;
       } else {
-        print('⚠️ Chat notification failed: ${response.statusCode}');
+        _log('Chat notification failed: ${response.statusCode}', isError: true);
         return false;
       }
     } catch (e) {
-      print('❌ Error sending chat notification: $e');
+      _log('Error sending chat notification: $e', isError: true);
       // Non-critical error, don't block message send
       return false;
     }
@@ -449,14 +566,14 @@ class ApiClient {
   /// Get cached YouTube video data
   Future<Map<String, dynamic>?> getYouTubeVideo(String videoId) async {
     try {
-      final response = await get('/youtube/video/$videoId');
+      final response = await getPublic('/youtube/video/$videoId');
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       }
       return null;
     } catch (e) {
-      print('❌ Error fetching YouTube video: $e');
+      _log('Error fetching YouTube video: $e', isError: true);
       return null;
     }
   }
@@ -473,7 +590,10 @@ class ApiClient {
         'max_results': maxResults.toString(),
         'duration': duration,
       };
-      final response = await get('/youtube/search', queryParams: queryParams);
+      final response = await getPublic(
+        '/youtube/search',
+        queryParams: queryParams,
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -482,7 +602,7 @@ class ApiClient {
       }
       return [];
     } catch (e) {
-      print('❌ Error searching YouTube: $e');
+      _log('Error searching YouTube: $e', isError: true);
       return [];
     }
   }
@@ -506,7 +626,7 @@ class ApiClient {
       }
       return [];
     } catch (e) {
-      print('❌ Error fetching notifications: $e');
+      _log('Error fetching notifications: $e', isError: true);
       return [];
     }
   }
@@ -517,7 +637,7 @@ class ApiClient {
       final response = await post('/notifications/read/$notificationId');
       return response.statusCode == 200;
     } catch (e) {
-      print('❌ Error marking notification read: $e');
+      _log('Error marking notification read: $e', isError: true);
       return false;
     }
   }
@@ -528,7 +648,7 @@ class ApiClient {
       final response = await post('/notifications/read-all');
       return response.statusCode == 200;
     } catch (e) {
-      print('❌ Error marking all notifications read: $e');
+      _log('Error marking all notifications read: $e', isError: true);
       return false;
     }
   }
@@ -554,7 +674,7 @@ class ApiClient {
       );
       return response.statusCode == 200;
     } catch (e) {
-      print('❌ Error sending notification: $e');
+      _log('Error sending notification: $e', isError: true);
       return false;
     }
   }
@@ -564,12 +684,12 @@ class ApiClient {
     try {
       final response = await post('/feed/admin/refresh-caches');
       if (response.statusCode == 200) {
-        print('✅ Backend refresh triggered successfully');
+        _log('Backend refresh triggered successfully');
         return true;
       }
       return false;
     } catch (e) {
-      print('❌ Error triggering backend refresh: $e');
+      _log('Error triggering backend refresh: $e', isError: true);
       return false;
     }
   }

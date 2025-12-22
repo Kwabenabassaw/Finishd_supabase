@@ -242,44 +242,60 @@ class _ReactionButtonState extends State<ReactionButton>
 
   @override
   Widget build(BuildContext context) {
-    final displayEmoji = _currentReaction?.emoji ?? '🤍';
-
     return GestureDetector(
       onTap: _onTap,
       onLongPress: _onLongPress,
-      child: AnimatedBuilder(
-        animation: _pulseAnimation,
-        builder: (context, child) {
-          return Transform.scale(scale: _pulseAnimation.value, child: child);
-        },
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedSwitcher(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedBuilder(
+            animation: _pulseAnimation,
+            builder: (context, child) {
+              return Transform.scale(
+                scale: _pulseAnimation.value,
+                child: child,
+              );
+            },
+            child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
               transitionBuilder: (child, animation) {
                 return ScaleTransition(scale: animation, child: child);
               },
-              child: Text(
-                displayEmoji,
-                key: ValueKey(displayEmoji),
-                style: TextStyle(fontSize: widget.size),
-              ),
+              child: _currentReaction != null
+                  ? Icon(
+                      Icons.favorite,
+                      key: ValueKey(_currentReaction!.emoji),
+                      color: Colors.red,
+                      size: widget.size + 4,
+                      shadows: const [
+                        Shadow(color: Colors.black54, blurRadius: 4),
+                      ],
+                    )
+                  : Icon(
+                      Icons.favorite,
+                      key: const ValueKey('empty_heart'),
+                      color: Colors.white,
+                      size: widget.size + 4,
+                      shadows: const [
+                        Shadow(color: Colors.black54, blurRadius: 4),
+                      ],
+                    ),
             ),
-            if (widget.showCount && _totalCount > 0)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  _formatCount(_totalCount),
-                  style: TextStyle(
-                    color: widget.color ?? Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
+          ),
+          if (widget.showCount && _totalCount > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                _formatCount(_totalCount),
+                style: TextStyle(
+                  color: widget.color ?? Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  shadows: const [Shadow(color: Colors.black54, blurRadius: 4)],
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }

@@ -169,184 +169,233 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       value: _provider,
       child: Scaffold(
         backgroundColor: Colors.black,
-        body: Consumer<YoutubeFeedProvider>(
-          builder: (context, provider, _) {
-            if (provider.videos.isEmpty && provider.isLoading) {
-              return const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                   LogoLoadingScreen(),
-                    SizedBox(height: 16),
-                    Text(
-                      'Loading your feed...',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                  ],
-                ),
-              );
-            }
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              // 1. Sleek Top Navigation Header (Always Visible)
+              _buildHeader(),
 
-            // Error state
-            if (provider.hasError && provider.videos.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      color: Colors.red,
-                      size: 64,
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Something went wrong',
-                      style: TextStyle(color: Colors.white, fontSize: 18),
-                    ),
-                    if (provider.errorMessage != null) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        provider.errorMessage!,
-                        style: const TextStyle(color: Colors.white54),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                    const SizedBox(height: 24),
-                    ElevatedButton.icon(
-                      onPressed: () => provider.refresh(),
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Try Again'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            // Empty state
-            if (provider.videos.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.video_library_outlined,
-                      color: Colors.white54,
-                      size: 64,
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'No videos available',
-                      style: TextStyle(color: Colors.white, fontSize: 18),
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton.icon(
-                      onPressed: () => provider.refresh(),
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Refresh'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            return Stack(
-              children: [
-                // Main TikTok-style scroller
-                RefreshIndicator(
-                  onRefresh: provider.refresh,
-                  child: const TikTokScrollWrapper(),
-                ),
-
-                // Top Bar Overlay
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16.0,
-                        vertical: 8.0,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          IconButton(
-                            icon: const Icon(
-                              Icons.notifications_none,
-                              color: Colors.white,
-                              size: 28,
+              // 2. Main Content Area (Scroller / Loading / Error)
+              Expanded(
+                child: Consumer<YoutubeFeedProvider>(
+                  builder: (context, provider, _) {
+                    // Loading state
+                    if (provider.videos.isEmpty && provider.isLoading) {
+                      return const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            LogoLoadingScreen(),
+                            SizedBox(height: 16),
+                            Text(
+                              'Loading your feed...',
+                              style: TextStyle(color: Colors.white70),
                             ),
-                            onPressed: () {
-                              Navigator.pushNamed(context, 'notification');
-                            },
+                          ],
+                        ),
+                      );
+                    }
+
+                    // Error state
+                    if (provider.hasError && provider.videos.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              color: Colors.red,
+                              size: 64,
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Something went wrong',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                              ),
+                            ),
+                            if (provider.errorMessage != null) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                provider.errorMessage!,
+                                style: const TextStyle(color: Colors.white54),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                            const SizedBox(height: 24),
+                            ElevatedButton.icon(
+                              onPressed: () => provider.refresh(),
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Try Again'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    // Empty state
+                    if (provider.videos.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.video_library_outlined,
+                              color: Colors.white54,
+                              size: 64,
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'No videos available',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            ElevatedButton.icon(
+                              onPressed: () => provider.refresh(),
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Refresh'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    return Stack(
+                      children: [
+                        // Main TikTok-style scroller
+                        RefreshIndicator(
+                          onRefresh: provider.refresh,
+                          child: const TikTokScrollWrapper(),
+                        ),
+
+                        // Debug Button (Floating on player)
+                        Positioned(
+                          top: 100, // Adjusted for new header
+                          right: 16,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black54,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white24),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(
+                                Icons.build,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              onPressed: () => _showDebugOptions(context),
+                            ),
                           ),
-                          // Loading indicator when refreshing
-                          if (provider.isLoading)
-                            const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: LogoLoadingScreen(),
-                            ),
+                        ),
 
-                          ContentNav(),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.search,
-                              color: Colors.white,
-                              size: 28,
-                            ),
-                            onPressed: () {
-                              Navigator.pushNamed(context, 'homesearch');
-                            },
+                        // Loading More Indicator
+                        if (provider.isLoadingMore)
+                          const Positioned(
+                            bottom: 100,
+                            left: 0,
+                            right: 0,
+                            child: Center(child: LogoLoadingScreen()),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
+                      ],
+                    );
+                  },
                 ),
-
-                // Debug Button
-                Positioned(
-                  top: 160,
-                  right: 16,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white24),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.build,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                      onPressed: () => _showDebugOptions(context),
-                    ),
-                  ),
-                ),
-
-                // Loading More Indicator
-                if (provider.isLoadingMore)
-                  const Positioned(
-                    bottom: 100,
-                    left: 0,
-                    right: 0,
-                    child: Center(child: LogoLoadingScreen()),
-                  ),
-              ],
-            );
-          },
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  /// --------------------------------------------------------------------------
+  /// New Dedicated Header (Off the Player)
+  /// --------------------------------------------------------------------------
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
+      decoration: BoxDecoration(
+        color: Colors.black, // Dedicated dark background
+        border: Border(
+          bottom: BorderSide(color: Colors.white.withOpacity(0.05), width: 1),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // 1. Notification Icon
+          SizedBox(
+            width: 44,
+            child: IconButton(
+              icon: const Icon(
+                Icons.notifications_none,
+                color: Colors.white,
+                size: 24,
+              ),
+              onPressed: () {
+                // Pause video before navigating
+                _provider.pauseAll();
+                Navigator.pushNamed(context, 'notification').then((_) {
+                  // Resume video when returning
+                  if (mounted) _provider.resumeCurrent();
+                });
+              },
+            ),
+          ),
+
+          // 2. Center Tabs (Trending, Following, For You)
+          const Expanded(child: ContentNav()),
+
+          // 3. Friends Icon
+          SizedBox(
+            width: 44,
+            child: IconButton(
+              icon: const Icon(
+                Icons.people_alt_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
+              onPressed: () {
+                // Pause video before navigating
+                _provider.pauseAll();
+                Navigator.pushNamed(context, 'friends').then((_) {
+                  // Resume video when returning
+                  if (mounted) _provider.resumeCurrent();
+                });
+              },
+            ),
+          ),
+
+          // 4. Search Icon
+          SizedBox(
+            width: 44,
+            child: IconButton(
+              icon: const Icon(Icons.search, color: Colors.white, size: 24),
+              onPressed: () {
+                // Pause video before navigating
+                _provider.pauseAll();
+                Navigator.pushNamed(context, 'homesearch').then((_) {
+                  // Resume video when returning
+                  if (mounted) _provider.resumeCurrent();
+                });
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

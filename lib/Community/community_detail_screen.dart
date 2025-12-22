@@ -68,7 +68,6 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final primaryGreen = const Color(0xFF1A8927);
 
     // Watch the provider
@@ -81,114 +80,186 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
 
     return Scaffold(
       body: CustomScrollView(
+        physics:
+            const BouncingScrollPhysics(), // Premium feel for both platforms
         slivers: [
-          // Header with poster
+          // Header with poster & Glassmorphism effect
           SliverAppBar(
-            expandedHeight: 200,
+            expandedHeight: 240,
             pinned: true,
-            backgroundColor: colorScheme.surface,
-            leading: IconButton(
-              icon: Icon(Icons.arrow_back, color: colorScheme.onSurface),
-              onPressed: () => Navigator.pop(context),
+            stretch: true,
+            backgroundColor: theme.scaffoldBackgroundColor,
+            elevation: 0,
+            leading: CircleAvatar(
+              backgroundColor: Colors.black26,
+              child: IconButton(
+                icon: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white,
+                  size: 18,
+                ),
+                onPressed: () => Navigator.pop(context),
+              ),
             ),
             actions: [
-              IconButton(
-                icon: Icon(Icons.search, color: colorScheme.onSurface),
-                onPressed: () {},
+              CircleAvatar(
+                backgroundColor: Colors.black26,
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.search_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  onPressed: () {},
+                ),
               ),
-              IconButton(
-                icon: Icon(Icons.more_vert, color: colorScheme.onSurface),
-                onPressed: () {},
+              const SizedBox(width: 8),
+              CircleAvatar(
+                backgroundColor: Colors.black26,
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.more_horiz_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  onPressed: () {},
+                ),
               ),
+              const SizedBox(width: 16),
             ],
             flexibleSpace: FlexibleSpaceBar(
+              stretchModes: const [
+                StretchMode.zoomBackground,
+                StretchMode.blurBackground,
+              ],
               background: Stack(
                 fit: StackFit.expand,
                 children: [
                   if (widget.posterPath != null)
                     Image.network(
-                      'https://image.tmdb.org/t/p/w500${widget.posterPath}',
+                      'https://image.tmdb.org/t/p/w780${widget.posterPath}',
                       fit: BoxFit.cover,
                     ),
-                  Container(
+                  // Rich Gradient Overlay
+                  DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, colorScheme.surface],
+                        colors: [
+                          Colors.black.withOpacity(0.4),
+                          Colors.transparent,
+                          theme.scaffoldBackgroundColor,
+                        ],
+                        stops: const [0.0, 0.4, 1.0],
                       ),
                     ),
                   ),
                   Positioned(
-                    left: 16,
-                    right: 16,
-                    bottom: 16,
-                    child: Row(
+                    left: 20,
+                    right: 20,
+                    bottom: 24,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                widget.showTitle,
-                                style: theme.textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.people,
-                                    size: 16,
-                                    color: theme.hintColor,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${community?.memberCount ?? 0} Watchers',
-                                    style: theme.textTheme.bodySmall,
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      color: primaryGreen,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: primaryGreen,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            widget.mediaType.toUpperCase(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.2,
+                            ),
                           ),
                         ),
-                        if (!isMember)
-                          ElevatedButton(
-                            onPressed: () => provider.joinCommunity(
-                              widget.showId,
-                              community,
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: primaryGreen,
-                              foregroundColor: Colors.white,
-                            ),
-                            child: const Text('Join'),
-                          )
-                        else
-                          OutlinedButton(
-                            onPressed: () {
-                              // Maybe show leave dialog? For now just button
-                              // provider.leaveCommunity(widget.showId);
-                            },
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(color: primaryGreen),
-                            ),
-                            child: Text(
-                              'Member',
-                              style: TextStyle(color: primaryGreen),
-                            ),
+                        const SizedBox(height: 12),
+                        Text(
+                          widget.showTitle,
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            color: theme.brightness == Brightness.dark
+                                ? Colors.white
+                                : Colors.black87,
+                            letterSpacing: -1,
                           ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Text(
+                              '${community?.memberCount ?? 0} members',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.hintColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            if (isMember)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: primaryGreen.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(30),
+                                  border: Border.all(
+                                    color: primaryGreen.withOpacity(0.3),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.check_circle_rounded,
+                                      color: primaryGreen,
+                                      size: 14,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Member',
+                                      style: TextStyle(
+                                        color: primaryGreen,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            else
+                              ElevatedButton(
+                                onPressed: () => provider.joinCommunity(
+                                  widget.showId,
+                                  community,
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: primaryGreen,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(30),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Join Community',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -197,22 +268,36 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
             ),
           ),
 
-          // Sort tabs
+          // Sort tabs - Modern Pill style
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
                 child: Row(
                   children: [
-                    _buildSortChip(context, provider, 'Trending', 'upvotes'),
                     _buildSortChip(
                       context,
                       provider,
-                      'Most Recent',
-                      'createdAt',
+                      'Trending',
+                      'upvotes',
+                      Icons.local_fire_department_rounded,
                     ),
-                    _buildSortChip(context, provider, 'Top', 'commentCount'),
+                    _buildSortChip(
+                      context,
+                      provider,
+                      'Latest',
+                      'createdAt',
+                      Icons.schedule_rounded,
+                    ),
+                    _buildSortChip(
+                      context,
+                      provider,
+                      'Top Rated',
+                      'commentCount',
+                      Icons.star_rounded,
+                    ),
                   ],
                 ),
               ),
@@ -254,14 +339,20 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     CommunityProvider provider,
     String label,
     String value,
+    IconData icon,
   ) {
     final theme = Theme.of(context);
     final isSelected = provider.currentSortBy == value;
     final primaryGreen = const Color(0xFF1A8927);
 
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.only(right: 10),
       child: FilterChip(
+        avatar: Icon(
+          icon,
+          size: 16,
+          color: isSelected ? Colors.white : theme.hintColor,
+        ),
         label: Text(label),
         selected: isSelected,
         onSelected: (selected) {
@@ -269,11 +360,23 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
         },
         backgroundColor: theme.cardColor,
         selectedColor: primaryGreen,
+        showCheckmark: false,
+        elevation: isSelected ? 4 : 0,
+        pressElevation: 0,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(30),
+          side: BorderSide(
+            color: isSelected
+                ? primaryGreen
+                : theme.dividerColor.withOpacity(0.05),
+          ),
+        ),
         labelStyle: TextStyle(
           color: isSelected ? Colors.white : theme.textTheme.bodyMedium?.color,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+          fontSize: 13,
         ),
-        side: BorderSide(color: theme.dividerColor),
       ),
     );
   }
@@ -325,174 +428,297 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     final theme = Theme.of(context);
     final primaryGreen = const Color(0xFF1A8927);
 
-    return InkWell(
-      onTap: () => _openPostDetail(post),
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: theme.cardColor,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: theme.dividerColor),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Author row
-            Row(
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(
+              theme.brightness == Brightness.dark ? 0.3 : 0.08,
+            ),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _openPostDetail(post),
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundImage: post.authorAvatar != null
-                      ? NetworkImage(post.authorAvatar!)
-                      : null,
-                  backgroundColor: theme.hintColor.withOpacity(0.3),
-                  child: post.authorAvatar == null
-                      ? Text(post.authorName[0].toUpperCase())
-                      : null,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                // Author row
+                Row(
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: primaryGreen.withOpacity(0.2),
+                          width: 2,
+                        ),
+                      ),
+                      child: CircleAvatar(
+                        radius: 22,
+                        backgroundImage: post.authorAvatar != null
+                            ? NetworkImage(post.authorAvatar!)
+                            : null,
+                        backgroundColor: primaryGreen.withOpacity(0.1),
+                        child: post.authorAvatar == null
+                            ? Text(
+                                post.authorName[0].toUpperCase(),
+                                style: TextStyle(
+                                  color: primaryGreen,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              )
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Row(
+                            children: [
+                              Text(
+                                post.authorName,
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              if (post.authorId == community?.createdBy)
+                                Container(
+                                  margin: const EdgeInsets.only(left: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: primaryGreen.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    'OP',
+                                    style: TextStyle(
+                                      color: primaryGreen,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                           Text(
-                            post.authorName,
-                            style: theme.textTheme.bodyMedium?.copyWith(
+                            post.timeAgo,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.hintColor.withOpacity(0.6),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (post.isSpoiler)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'SPOILER',
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    IconButton(
+                      icon: Icon(
+                        Icons.more_horiz_rounded,
+                        color: theme.hintColor.withOpacity(0.5),
+                      ),
+                      onPressed: () {},
+                    ),
+                  ],
+                ),
+
+                // Content
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: post.isSpoiler
+                      ? _buildSpoilerContent(context, post)
+                      : Text(
+                          post.content,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            height: 1.5,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                ),
+
+                // Media
+                if (post.mediaUrls.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Image.network(
+                          post.mediaUrls.first,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Hashtags
+                if (post.hashtags.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: post.hashtags
+                          .map(
+                            (tag) => Text(
+                              '#$tag',
+                              style: TextStyle(
+                                color: primaryGreen,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ),
+
+                // Divider
+                Divider(
+                  color: theme.dividerColor.withOpacity(0.05),
+                  height: 32,
+                ),
+
+                // Actions row
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.scaffoldBackgroundColor,
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              Icons.arrow_circle_up_rounded,
+                              size: 24,
+                              color: userVote == 1
+                                  ? primaryGreen
+                                  : theme.hintColor.withOpacity(0.4),
+                            ),
+                            onPressed: () =>
+                                provider.voteOnPost(post.id, widget.showId, 1),
+                            constraints: const BoxConstraints(),
+                            padding: const EdgeInsets.all(8),
+                          ),
+                          Text(
+                            '${post.score}',
+                            style: TextStyle(
+                              color: post.score > 0
+                                  ? primaryGreen
+                                  : post.score < 0
+                                  ? Colors.red
+                                  : theme.hintColor,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 14,
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              Icons.arrow_circle_down_rounded,
+                              size: 24,
+                              color: userVote == -1
+                                  ? Colors.red
+                                  : theme.hintColor.withOpacity(0.4),
+                            ),
+                            onPressed: () =>
+                                provider.voteOnPost(post.id, widget.showId, -1),
+                            constraints: const BoxConstraints(),
+                            padding: const EdgeInsets.all(8),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    InkWell(
+                      onTap: () => _openPostDetail(post),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.mode_comment_outlined,
+                            color: theme.hintColor.withOpacity(0.6),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${post.commentCount}',
+                            style: TextStyle(
+                              color: theme.hintColor.withOpacity(0.8),
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          if (post.authorId == community?.createdBy)
-                            Container(
-                              margin: const EdgeInsets.only(left: 8),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: primaryGreen,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Text(
-                                'OP',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
                         ],
                       ),
-                      Text(post.timeAgo, style: theme.textTheme.bodySmall),
-                    ],
-                  ),
-                ),
-                if (post.isSpoiler)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
                     ),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.red),
-                      borderRadius: BorderRadius.circular(4),
+                    const Spacer(),
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: theme.scaffoldBackgroundColor,
+                      ),
+                      child: IconButton(
+                        icon: Icon(
+                          Icons.share_rounded,
+                          color: theme.hintColor.withOpacity(0.6),
+                          size: 18,
+                        ),
+                        onPressed: () {},
+                        padding: const EdgeInsets.all(8),
+                        constraints: const BoxConstraints(),
+                      ),
                     ),
-                    child: const Text(
-                      'SPOILER',
-                      style: TextStyle(color: Colors.red, fontSize: 10),
-                    ),
-                  ),
-                IconButton(
-                  icon: Icon(Icons.more_horiz, color: theme.hintColor),
-                  onPressed: () {},
+                  ],
                 ),
               ],
             ),
-
-            // Content
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: post.isSpoiler
-                  ? _buildSpoilerContent(context, post)
-                  : Text(post.content, style: theme.textTheme.bodyLarge),
-            ),
-
-            // Media
-            if (post.mediaUrls.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.network(post.mediaUrls.first, fit: BoxFit.cover),
-                ),
-              ),
-
-            // Hashtags
-            if (post.hashtags.isNotEmpty)
-              Wrap(
-                spacing: 8,
-                children: post.hashtags
-                    .map(
-                      (tag) =>
-                          Text('#$tag', style: TextStyle(color: primaryGreen)),
-                    )
-                    .toList(),
-              ),
-
-            const SizedBox(height: 12),
-
-            // Actions row
-            Row(
-              children: [
-                IconButton(
-                  icon: Icon(
-                    Icons.arrow_upward,
-                    color: userVote == 1 ? primaryGreen : theme.hintColor,
-                  ),
-                  onPressed: () =>
-                      provider.voteOnPost(post.id, widget.showId, 1),
-                ),
-                Text(
-                  '${post.score}',
-                  style: TextStyle(
-                    color: post.score > 0
-                        ? primaryGreen
-                        : post.score < 0
-                        ? Colors.red
-                        : theme.hintColor,
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(
-                    Icons.arrow_downward,
-                    color: userVote == -1 ? Colors.red : theme.hintColor,
-                  ),
-                  onPressed: () =>
-                      provider.voteOnPost(post.id, widget.showId, -1),
-                ),
-                const SizedBox(width: 16),
-                Icon(
-                  Icons.chat_bubble_outline,
-                  color: theme.hintColor,
-                  size: 20,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${post.commentCount}',
-                  style: TextStyle(color: theme.hintColor),
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: Icon(Icons.share_outlined, color: theme.hintColor),
-                  onPressed: () {},
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );

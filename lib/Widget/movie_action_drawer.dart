@@ -31,6 +31,7 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
     'finished': false,
     'favorites': false,
   };
+  int? _rating;
 
   @override
   void initState() {
@@ -52,6 +53,7 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
       if (mounted) {
         setState(() {
           _movieStatus = status;
+          _rating = widget.movie.rating;
           _isLoading = false;
         });
       }
@@ -134,6 +136,22 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
     }
   }
 
+  Future<void> _updateRating(int rating) async {
+    HapticFeedback.lightImpact();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    setState(() {
+      _rating = rating;
+    });
+
+    try {
+      await _movieListService.updateRating(uid, widget.movie.id, rating);
+    } catch (e) {
+      print('Error updating rating: $e');
+    }
+  }
+
   String? _getCurrentList() {
     if (_movieStatus['watching']!) return 'watching';
     if (_movieStatus['watchlist']!) return 'watchlist';
@@ -164,7 +182,6 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
@@ -176,10 +193,7 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
             width: 40,
             height: 4,
             margin: const EdgeInsets.only(bottom: 20),
-            decoration: BoxDecoration(
-            
-              borderRadius: BorderRadius.circular(2),
-            ),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(2)),
           ),
 
           // Movie preview header
@@ -193,11 +207,8 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
                   width: 60,
                   height: 90,
                   fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(
-               
-                    width: 60,
-                    height: 90,
-                  ),
+                  placeholder: (context, url) =>
+                      Container(width: 60, height: 90),
                   errorWidget: (context, url, error) => Container(
                     width: 60,
                     height: 90,
@@ -224,10 +235,7 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
                     const SizedBox(height: 4),
                     Text(
                       widget.movie.mediaType == 'movie' ? 'Movie' : 'TV Show',
-                      style: TextStyle(
-                        fontSize: 14,
-                       
-                      ),
+                      style: TextStyle(fontSize: 14),
                     ),
                   ],
                 ),
@@ -305,6 +313,34 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
                     iconColor: Colors.red.shade400,
                   ),
                 ],
+
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 16),
+
+                // Rating Section
+                const Text(
+                  'Your Rating',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(5, (index) {
+                    return IconButton(
+                      icon: Icon(
+                        index < (_rating ?? 0)
+                            ? Icons.star_rounded
+                            : Icons.star_outline_rounded,
+                        color: index < (_rating ?? 0)
+                            ? const Color(0xFFF5C518)
+                            : Colors.grey,
+                        size: 36,
+                      ),
+                      onPressed: () => _updateRating(index + 1),
+                    );
+                  }),
+                ),
               ],
             ),
 
@@ -366,7 +402,7 @@ void showMovieActionDrawer(
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-   
+
     builder: (context) =>
         MovieActionDrawer(movie: movie, onActionComplete: onActionComplete),
   );

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:async';
+import 'package:finishd/Home/Friends/friend_selection_screen.dart';
 import 'package:finishd/Model/MovieDetails.dart';
 import 'package:finishd/Model/movie_list_item.dart';
 import 'package:finishd/Widget/Cast_avatar.dart';
@@ -7,6 +8,7 @@ import 'package:finishd/Widget/movie_action_drawer.dart';
 import 'package:finishd/tmbd/fetch_trialler.dart';
 import 'package:finishd/Model/recommendation_model.dart';
 import 'package:finishd/Model/user_model.dart';
+
 import 'package:finishd/services/recommendation_service.dart';
 import 'package:finishd/services/user_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -16,9 +18,10 @@ import 'package:finishd/MovieDetails/movie_recommenders_screen.dart';
 import 'package:finishd/Widget/related_content_section.dart';
 import 'package:finishd/Widget/ratings_display_widget.dart';
 import 'package:finishd/services/tmdb_sync_service.dart';
-import 'package:finishd/Widget/streaming_section.dart';
+import 'package:finishd/Widget/watchmode_streaming_section.dart';
 import 'package:finishd/Community/community_detail_screen.dart';
 import 'package:finishd/Widget/YouTubeTrailerPlayerDialog.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 // --- Placeholder/Mock Data Models ---
 // Replace these with your actual TMDB models (Movie, CastMember, Season)
@@ -41,6 +44,7 @@ class MovieDetailsScreen extends StatefulWidget {
 class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
   final TmdbSyncService _syncService = TmdbSyncService();
   late MovieDetails _movie;
+  Stream<List<Recommendation>>? _recommendationsStream;
   YoutubePlayerController? _previewController;
   bool _showPreview = false;
   Timer? _previewTimer;
@@ -49,6 +53,11 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
   void initState() {
     super.initState();
     _movie = widget.movie;
+    _recommendationsStream = RecommendationService()
+        .getMyRecommendationsForMovie(
+          FirebaseAuth.instance.currentUser?.uid ?? '',
+          _movie.id.toString(),
+        );
     _syncFullDetails();
   }
 
@@ -136,13 +145,10 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
             leading: IconButton(
               icon: Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-               
-                  shape: BoxShape.circle,
-                ),
+                decoration: BoxDecoration(shape: BoxShape.circle),
                 child: Icon(
                   Platform.isIOS ? Icons.arrow_back_ios_new : Icons.arrow_back,
-       
+
                   size: 20,
                 ),
               ),
@@ -152,15 +158,8 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
               IconButton(
                 icon: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-               
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.more_vert,
- 
-                    size: 20,
-                  ),
+                  decoration: BoxDecoration(shape: BoxShape.circle),
+                  child: Icon(Icons.more_vert, size: 20),
                 ),
                 onPressed: () {
                   final movieItem = MovieListItem(
@@ -248,7 +247,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                       const SizedBox(width: 8),
                       Text(
                         '${_movie.runtime} min',
-                        style: TextStyle( fontSize: 16),
+                        style: TextStyle(fontSize: 16),
                       ),
                       const SizedBox(width: 8),
                       Text('•', style: TextStyle()),
@@ -256,10 +255,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                       Expanded(
                         child: Text(
                           _movie.genres.take(2).map((g) => g.name).join(', '),
-                          style: TextStyle(
-                           
-                            fontSize: 16,
-                          ),
+                          style: TextStyle(fontSize: 16),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -327,6 +323,40 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                               : Colors.black.withOpacity(0.05),
                           borderRadius: BorderRadius.circular(12),
                         ),
+
+                        child: IconButton(
+                          icon: Icon(
+                            FontAwesomeIcons.share,
+                            color: Theme.of(context).iconTheme.color,
+                            size: 24,
+                          ),
+                          onPressed: () {
+                            final movieItem = MovieListItem(
+                              id: _movie.id.toString(),
+                              title: _movie.title,
+                              posterPath: _movie.posterPath,
+                              mediaType: 'movie',
+                              addedAt: DateTime.now(),
+                            );
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    FriendSelectionScreen(movie: movieItem),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.white.withOpacity(0.1)
+                              : Colors.black.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+
                         child: IconButton(
                           icon: Icon(
                             Icons.add_rounded,
@@ -349,11 +379,11 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
 
                   const SizedBox(height: 30),
 
-                  // Streaming & Ratings
-                  StreamingSection(
-                    watchProviders: _movie.watchProviders,
-                    title: _movie.title,
+                  // Streaming & Ratings (Watchmode API)
+                  WatchmodeStreamingSection(
                     tmdbId: _movie.id.toString(),
+                    mediaType: 'movie',
+                    title: _movie.title,
                   ),
                   const SizedBox(height: 25),
 
@@ -367,20 +397,12 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                   // overview
                   Text(
                     'Overview',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                     
-                    ),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 10),
                   Text(
                     _movie.overview ?? '',
-                    style: TextStyle(
-                      fontSize: 16,
-                      height: 1.6,
-             
-                    ),
+                    style: TextStyle(fontSize: 16, height: 1.6),
                   ),
 
                   const SizedBox(height: 30),
@@ -436,16 +458,13 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
 
   Widget _buildRecommendedSection() {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return const SizedBox.shrink();
+    if (user == null || _recommendationsStream == null)
+      return const SizedBox.shrink();
 
-    final RecommendationService recommendationService = RecommendationService();
     final UserService userService = UserService();
 
     return StreamBuilder<List<Recommendation>>(
-      stream: recommendationService.getMyRecommendationsForMovie(
-        user.uid,
-        _movie.id.toString(),
-      ),
+      stream: _recommendationsStream,
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return const SizedBox.shrink();

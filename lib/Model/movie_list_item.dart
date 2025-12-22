@@ -8,6 +8,7 @@ class MovieListItem {
   final String mediaType; // 'movie' or 'tv'
   final String genre; // Genre information
   final DateTime addedAt;
+  final int? rating; // User rating (1-5)
 
   MovieListItem({
     required this.id,
@@ -16,6 +17,7 @@ class MovieListItem {
     required this.mediaType,
     this.genre = '',
     required this.addedAt,
+    this.rating,
   });
 
   // Convert to JSON for Firestore
@@ -27,6 +29,7 @@ class MovieListItem {
       'mediaType': mediaType,
       'genre': genre,
       'addedAt': Timestamp.fromDate(addedAt),
+      'rating': rating,
     };
   }
 
@@ -40,6 +43,7 @@ class MovieListItem {
       mediaType: data['mediaType'] as String,
       genre: data['genre'] as String? ?? '',
       addedAt: (data['addedAt'] as Timestamp).toDate(),
+      rating: data['rating'] as int?,
     );
   }
 
@@ -52,6 +56,7 @@ class MovieListItem {
       mediaType: data['mediaType'] as String,
       genre: data['genre'] as String? ?? '',
       addedAt: (data['addedAt'] as Timestamp).toDate(),
+      rating: data['rating'] as int?,
     );
   }
 
@@ -65,6 +70,7 @@ class MovieListItem {
     String? mediaType,
     String? genre,
     DateTime? addedAt,
+    int? rating,
   }) {
     return MovieListItem(
       id: id ?? this.id,
@@ -73,6 +79,7 @@ class MovieListItem {
       mediaType: mediaType ?? this.mediaType,
       genre: genre ?? this.genre,
       addedAt: addedAt ?? this.addedAt,
+      rating: rating ?? this.rating,
     );
   }
 }

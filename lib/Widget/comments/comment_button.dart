@@ -23,7 +23,7 @@ class CommentButton extends StatefulWidget {
     required this.userId,
     required this.userName,
     this.userAvatar,
-    this.size = 26,
+    this.size = 18,
     this.color,
   });
 
@@ -70,26 +70,20 @@ class _CommentButtonState extends State<CommentButton> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.3),
-              shape: BoxShape.circle,
-            ),
-            child: FaIcon(
-              FontAwesomeIcons.comment,
-              color: widget.color ?? Colors.white,
-              size: widget.size,
-            ),
+          FaIcon(
+            FontAwesomeIcons.solidCommentDots,
+            color: widget.color ?? Colors.white,
+            size: widget.size + 4,
+            shadows: const [Shadow(color: Colors.black54, blurRadius: 4)],
           ),
           const SizedBox(height: 4),
           Text(
             _formatCount(_commentCount),
             style: TextStyle(
               color: widget.color ?? Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              shadows: const [Shadow(color: Colors.black54, blurRadius: 3)],
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              shadows: const [Shadow(color: Colors.black54, blurRadius: 4)],
             ),
           ),
         ],

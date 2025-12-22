@@ -28,47 +28,80 @@ class MovieSection extends StatelessWidget {
   Widget build(BuildContext context) {
     if (items.isEmpty) return const SizedBox.shrink();
 
+    final provider = Provider.of<MovieProvider>(context);
     final screenWidth = MediaQuery.of(context).size.width;
-    final cardWidth = screenWidth * 0.90 > 190 ? 160.0 : screenWidth * 0.35;
-    final imgHeight = cardWidth * 1.3;
-    final listHeight =
-        imgHeight + 80; // Image + spacing + 2 lines of text + padding
+    final cardWidth = screenWidth * 0.90 > 160
+        ? 135.0
+        : screenWidth * 0.35; // Reduced from 160
+    final imgHeight = cardWidth * 1.45; // Slightly taller ratio for modern look
+    final listHeight = imgHeight + 45; // Reduced height overhead
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-            ),
-            if (onSeeAllTap != null)
-              GestureDetector(
-                onTap: onSeeAllTap,
-                child: const Row(
-                  children: [
-                    Text(
-                      "See All",
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    SizedBox(width: 4),
-                    Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
-                  ],
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 4,
+          ), // Consistent horizontal padding
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12, // Reduced from 22
+                  letterSpacing: -0.4,
                 ),
               ),
-          ],
+              if (onSeeAllTap != null)
+                GestureDetector(
+                  onTap: onSeeAllTap,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.04),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Text(
+                          "See All",
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.green,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(width: 4),
+                        Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 10,
+                          color: Colors.green,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 8), // Reduced gap
+
         SizedBox(
           height: listHeight,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.only(
+              left: 16,
+            ), // Added horizontal padding at start
             itemCount: items.length,
             itemBuilder: (context, index) {
               final item = items[index];
@@ -77,12 +110,45 @@ class MovieSection extends StatelessWidget {
                   ? genres.take(2).toList()
                   : genres;
 
+              final socialSignals = provider.socialSignals[item.id.toString()];
+              Widget? socialBadge;
+              if (socialSignals != null &&
+                  socialSignals.friendsLiked.isNotEmpty) {
+                socialBadge = Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white10, width: 0.5),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.favorite, color: Colors.red, size: 10),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${socialSignals.friendsLiked.length}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
               return GenericMovieCard<MediaItem>(
                 item: item,
                 titleBuilder: (m) => m.title,
                 posterBuilder: (m) =>
                     "https://image.tmdb.org/t/p/w500${m.posterPath}",
                 typeBuilder: (m) => limited.join(", "),
+                socialBadge: socialBadge,
                 width: cardWidth,
                 imageHeight: imgHeight,
                 onActionMenuTap: () {

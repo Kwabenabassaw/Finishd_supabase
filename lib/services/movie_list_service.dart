@@ -113,6 +113,32 @@ class MovieListService {
     }
   }
 
+  /// Update rating for a movie in any list it exists in
+  Future<void> updateRating(String uid, String movieId, int rating) async {
+    try {
+      final status = await getMovieStatus(uid, movieId);
+      final lists = ['watching', 'watchlist', 'finished', 'favorites'];
+
+      final batch = _firestore.batch();
+      for (final list in lists) {
+        if (status[list] == true) {
+          batch.update(
+            _firestore
+                .collection('users')
+                .doc(uid)
+                .collection(list)
+                .doc(movieId),
+            {'rating': rating},
+          );
+        }
+      }
+      await batch.commit();
+    } catch (e) {
+      print('Error updating rating: $e');
+      throw e;
+    }
+  }
+
   /// Get movie status - returns which lists contain the movie
   Future<Map<String, bool>> getMovieStatus(String uid, String movieId) async {
     try {

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:finishd/Home/Friends/friend_selection_screen.dart';
 import 'package:finishd/MovieDetails/MovieScreen.dart';
 import 'package:finishd/MovieDetails/SeasonDetailsScreen.dart';
 import 'package:finishd/MovieDetails/movie_recommenders_screen.dart';
@@ -17,9 +18,10 @@ import 'package:finishd/services/recommendation_service.dart';
 import 'package:finishd/services/user_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:finishd/services/tmdb_sync_service.dart';
-import 'package:finishd/Widget/streaming_section.dart';
+import 'package:finishd/Widget/watchmode_streaming_section.dart';
 import 'package:finishd/Community/community_detail_screen.dart';
 import 'package:finishd/Widget/YouTubeTrailerPlayerDialog.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 // ... other imports ...
@@ -35,6 +37,7 @@ class ShowDetailsScreen extends StatefulWidget {
 class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
   final TmdbSyncService _syncService = TmdbSyncService();
   late TvShowDetails _show;
+  Stream<List<Recommendation>>? _recommendationsStream;
   YoutubePlayerController? _previewController;
   bool _showPreview = false;
   Timer? _previewTimer;
@@ -43,6 +46,11 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
   void initState() {
     super.initState();
     _show = widget.movie;
+    _recommendationsStream = RecommendationService()
+        .getMyRecommendationsForMovie(
+          FirebaseAuth.instance.currentUser?.uid ?? '',
+          _show.id.toString(),
+        );
     _syncFullDetails();
   }
 
@@ -240,19 +248,14 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                       const SizedBox(width: 8),
                       Text('•', style: TextStyle()),
                       const SizedBox(width: 8),
-                      Text(
-                        _show.status,
-                        style: TextStyle(fontSize: 16),
-                      ),
+                      Text(_show.status, style: TextStyle(fontSize: 16)),
                       const SizedBox(width: 8),
                       Text('•', style: TextStyle()),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           _show.genres.take(2).map((g) => g.name).join(', '),
-                          style: TextStyle(
-                            fontSize: 16,
-                          ),
+                          style: TextStyle(fontSize: 16),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -299,7 +302,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                           icon: const Icon(Icons.play_arrow_rounded),
                           label: const Text('Play Trailer'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color.fromARGB(255, 7, 124, 50),
+                            backgroundColor: const Color(0xFF4ADE80),
                             foregroundColor: Colors.black,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(
@@ -313,6 +316,39 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                         ),
                       ),
                       const SizedBox(width: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.white.withOpacity(0.1)
+                              : Colors.black.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+
+                        child: IconButton(
+                          icon: Icon(
+                            FontAwesomeIcons.share,
+                            color: Theme.of(context).iconTheme.color,
+                            size: 24,
+                          ),
+                          onPressed: () {
+                            final movieItem = MovieListItem(
+                              id: _show.id.toString(),
+                              title: _show.name,
+                              posterPath: _show.posterPath,
+                              mediaType: 'tv',
+                              addedAt: DateTime.now(),
+                            );
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    FriendSelectionScreen(movie: movieItem),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
                       Container(
                         decoration: BoxDecoration(
                           color: isDark
@@ -342,11 +378,11 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
 
                   const SizedBox(height: 30),
 
-                  // Streaming & Ratings
-                  StreamingSection(
-                    watchProviders: _show.watchProviders,
-                    title: _show.name,
+                  // Streaming & Ratings (Watchmode API)
+                  WatchmodeStreamingSection(
                     tmdbId: _show.id.toString(),
+                    mediaType: 'tv',
+                    title: _show.name,
                   ),
                   const SizedBox(height: 25),
 
@@ -430,19 +466,15 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
 
   // -------------------------------------------------------------------
 
-  // Widget _buildCastSection(List<CastMember> cast) {
   Widget _buildRecommendedSection(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return const SizedBox.shrink();
+    if (user == null || _recommendationsStream == null)
+      return const SizedBox.shrink();
 
-    final RecommendationService recommendationService = RecommendationService();
     final UserService userService = UserService();
 
     return StreamBuilder<List<Recommendation>>(
-      stream: recommendationService.getMyRecommendationsForMovie(
-        user.uid,
-        widget.movie.id.toString(),
-      ),
+      stream: _recommendationsStream,
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return const SizedBox.shrink();

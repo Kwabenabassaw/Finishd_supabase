@@ -7,6 +7,7 @@ import 'package:finishd/MovieDetails/MovieScreen.dart';
 import 'package:finishd/MovieDetails/Tvshowscreen.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:finishd/services/genre_discover_service.dart';
 
 /// Enum to identify which category to fetch
 enum ContentCategory {
@@ -18,18 +19,21 @@ enum ContentCategory {
   airingToday,
   topRatedTv,
   discover,
+  genre,
 }
 
 class SeeAllScreen extends StatefulWidget {
   final String title;
   final ContentCategory category;
   final List<MediaItem> initialItems;
+  final int? genreId;
 
   const SeeAllScreen({
     super.key,
     required this.title,
     required this.category,
     required this.initialItems,
+    this.genreId,
   });
 
   @override
@@ -39,6 +43,7 @@ class SeeAllScreen extends StatefulWidget {
 class _SeeAllScreenState extends State<SeeAllScreen> {
   final Trending _movieApi = Trending();
   final ScrollController _scrollController = ScrollController();
+  final GenreDiscoverService _genreService = GenreDiscoverService();
 
   List<MediaItem> _items = [];
   int _currentPage = 1;
@@ -110,6 +115,14 @@ class _SeeAllScreenState extends State<SeeAllScreen> {
         return await _movieApi.fetchTopRatedTvPaginated(page);
       case ContentCategory.discover:
         return await _movieApi.fetchDiscoverPaginated(page);
+      case ContentCategory.genre:
+        if (widget.genreId != null) {
+          return await _genreService.fetchGenreContentPaginated(
+            widget.genreId!,
+            page,
+          );
+        }
+        return [];
     }
   }
 

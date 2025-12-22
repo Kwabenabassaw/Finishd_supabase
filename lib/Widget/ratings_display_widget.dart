@@ -5,7 +5,7 @@ import 'package:finishd/services/ratings_service.dart';
 /// Widget to display movie ratings from multiple sources
 /// Shows TMDB, IMDb, Rotten Tomatoes, and Metacritic ratings
 /// in a horizontally scrollable layout
-class RatingsDisplayWidget extends StatelessWidget {
+class RatingsDisplayWidget extends StatefulWidget {
   final int tmdbId;
   final double? tmdbRating; // Original TMDB rating (0-10 scale)
 
@@ -16,11 +16,23 @@ class RatingsDisplayWidget extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final ratingsService = RatingsService();
+  State<RatingsDisplayWidget> createState() => _RatingsDisplayWidgetState();
+}
 
+class _RatingsDisplayWidgetState extends State<RatingsDisplayWidget> {
+  late Future<MovieRatings> _ratingsFuture;
+  final RatingsService _ratingsService = RatingsService();
+
+  @override
+  void initState() {
+    super.initState();
+    _ratingsFuture = _ratingsService.getRatings(widget.tmdbId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return FutureBuilder<MovieRatings>(
-      future: ratingsService.getRatings(tmdbId),
+      future: _ratingsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return _buildLoadingState(context);
@@ -33,7 +45,8 @@ class RatingsDisplayWidget extends StatelessWidget {
         final ratings = snapshot.data!;
 
         // Don't show if no data available
-        if (!ratings.hasData && (tmdbRating == null || tmdbRating == 0)) {
+        if (!ratings.hasData &&
+            (widget.tmdbRating == null || widget.tmdbRating == 0)) {
           return const SizedBox.shrink();
         }
 
@@ -66,8 +79,8 @@ class RatingsDisplayWidget extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 5),
             children: [
               // TMDB Rating with circular progress
-              if (tmdbRating != null && tmdbRating! > 0)
-                _buildTmdbScoreCard(context, tmdbRating!),
+              if (widget.tmdbRating != null && widget.tmdbRating! > 0)
+                _buildTmdbScoreCard(context, widget.tmdbRating!),
 
               // IMDb Rating
               if (ratings.imdbRating != 'N/A')

@@ -1,8 +1,10 @@
+import 'dart:io' show Platform;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:finishd/Model/user_model.dart';
 import 'package:finishd/profile/profileScreen.dart';
 import 'package:finishd/services/user_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class FriendsScreen extends StatefulWidget {
@@ -33,6 +35,9 @@ class _FriendsScreenState extends State<FriendsScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (mounted) setState(() {});
+    });
     _fetchMyFriends();
     _fetchAllUsers();
     _searchController.addListener(_onSearchChanged);
@@ -45,8 +50,6 @@ class _FriendsScreenState extends State<FriendsScreen>
   Future<void> _fetchMyFriends() async {
     if (_currentUserId.isEmpty) return;
     try {
-      // Assuming "My Friends" means people who follow me, based on user request "users that follows you"
-      // Or it could be "Following". Let's stick to "Followers" as per request description.
       List<String> followerIds = await _userService.getFollowers(
         _currentUserId,
       );
@@ -59,7 +62,6 @@ class _FriendsScreenState extends State<FriendsScreen>
         });
       }
     } catch (e) {
-      print('Error fetching friends: $e');
       if (mounted) {
         setState(() {
           _isLoadingFriends = false;
@@ -70,13 +72,8 @@ class _FriendsScreenState extends State<FriendsScreen>
 
   Future<void> _fetchAllUsers() async {
     try {
-      // Get current user's friends first to filter them out
       List<String> friendIds = await _userService.getFollowers(_currentUserId);
-
-      // Fetch all users
       List<UserModel> users = await _userService.getAllUsers();
-
-      // Filter out current user AND existing friends
       users.removeWhere(
         (user) => user.uid == _currentUserId || friendIds.contains(user.uid),
       );
@@ -89,7 +86,6 @@ class _FriendsScreenState extends State<FriendsScreen>
         });
       }
     } catch (e) {
-      print('Error fetching all users: $e');
       if (mounted) {
         setState(() {
           _isLoadingAll = false;
@@ -113,14 +109,12 @@ class _FriendsScreenState extends State<FriendsScreen>
       _filteredMyFriends = _myFriends.where((user) {
         final username = user.username.toLowerCase();
         final fullName = '${user.firstName} ${user.lastName}'.toLowerCase();
-
         return username.contains(searchLower) || fullName.contains(searchLower);
       }).toList();
 
       _filteredAllUsers = _allUsers.where((user) {
         final username = user.username.toLowerCase();
         final fullName = '${user.firstName} ${user.lastName}'.toLowerCase();
-
         return username.contains(searchLower) || fullName.contains(searchLower);
       }).toList();
     });
@@ -144,16 +138,59 @@ class _FriendsScreenState extends State<FriendsScreen>
     super.dispose();
   }
 
-  // --- Helper Widget for the Friend List Item ---
-  Widget _buildFriendListItem(UserModel user, IconData icon) {
-    const Color primaryGreen = Color(0xFF10B981);
+  Widget _buildFriendListItem(UserModel user) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 16.0,
-        vertical: 8.0,
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withOpacity(0.05)
+            : Colors.grey.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
       ),
-      leading: GestureDetector(
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(12),
+        leading: Hero(
+          tag: 'avatar_${user.uid}',
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: theme.primaryColor.withOpacity(0.2),
+                width: 2,
+              ),
+            ),
+            child: CircleAvatar(
+              radius: 28,
+              backgroundImage: user.profileImage.isNotEmpty
+                  ? CachedNetworkImageProvider(user.profileImage)
+                  : const AssetImage('assets/noimage.jpg') as ImageProvider,
+              backgroundColor: theme.disabledColor.withOpacity(0.1),
+            ),
+          ),
+        ),
+        title: Text(
+          user.username.isNotEmpty ? user.username : 'No Name',
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            letterSpacing: 0.1,
+          ),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(
+            user.firstName.isNotEmpty || user.lastName.isNotEmpty
+                ? '${user.firstName} ${user.lastName}'
+                : '@${user.username}',
+            style: TextStyle(
+              color: theme.textTheme.bodySmall?.color?.withOpacity(0.6),
+              fontSize: 14,
+            ),
+          ),
+        ),
         onTap: () {
           Navigator.push(
             context,
@@ -162,169 +199,226 @@ class _FriendsScreenState extends State<FriendsScreen>
             ),
           );
         },
-        child: CircleAvatar(
-          radius: 28,
-          backgroundImage: user.profileImage.isNotEmpty
-              ? CachedNetworkImageProvider(user.profileImage)
-              : const AssetImage('assets/noimage.jpg') as ImageProvider,
-          backgroundColor: Colors.grey.shade200,
-        ),
       ),
-      title: Text(
-        user.username.isNotEmpty ? user.username : 'No Name',
-        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-      ),
-      subtitle: Text(
-        user.firstName.isNotEmpty || user.lastName.isNotEmpty
-            ? '${user.firstName} ${user.lastName}'
-            : '@${user.username}',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ProfileScreen(uid: user.uid),
-            ),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Icon(icon, color: primaryGreen, size: 28),
-        ),
-      ),
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => ProfileScreen(uid: user.uid)),
-        );
-      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final primaryGreen = Color(0xFF10B981);
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
         leading: _isSearching
             ? null
             : IconButton(
                 icon: Icon(
-                  Icons.arrow_back_ios,
-                  color: isDark ? Colors.white : Colors.black,
+                  Icons.arrow_back_ios_new_rounded,
+                  color: theme.iconTheme.color,
+                  size: 20,
                 ),
                 onPressed: () => Navigator.pop(context),
               ),
         title: _isSearching
-            ? TextField(
-                controller: _searchController,
-                autofocus: true,
-                decoration: InputDecoration(
-                  hintText: 'Search friends...',
-                  border: InputBorder.none,
-                  hintStyle: TextStyle(
-                    color: isDark ? Colors.white54 : Colors.grey,
-                  ),
+            ? Container(
+                height: 40,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.1)
+                      : Colors.black.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                child: TextField(
+                  controller: _searchController,
+                  autofocus: true,
+                  textAlignVertical: TextAlignVertical.center,
+                  decoration: InputDecoration(
+                    hintText: 'Search people...',
+                    prefixIcon: Icon(
+                      Icons.search,
+                      size: 20,
+                      color: theme.disabledColor,
+                    ),
+                    border: InputBorder.none,
+                    isDense: true,
+                    hintStyle: TextStyle(
+                      color: theme.disabledColor,
+                      fontSize: 14,
+                    ),
+                  ),
+                  style: const TextStyle(fontSize: 15),
+                ),
               )
             : Text(
                 'Friends',
                 style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
+                  color: theme.textTheme.titleLarge?.color,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 20,
                 ),
               ),
         centerTitle: true,
         actions: [
           IconButton(
             icon: Icon(
-              _isSearching ? Icons.close : Icons.search,
-              color: isDark ? Colors.white : Colors.black,
+              _isSearching ? Icons.close_rounded : Icons.search_rounded,
+              color: theme.iconTheme.color,
             ),
             onPressed: _toggleSearch,
           ),
           const SizedBox(width: 8),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(50.0),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: Colors.grey.shade300, width: 1.0),
-              ),
-            ),
-            child: TabBar(
+      ),
+      body: Column(
+        children: [
+          // Platform Adaptive Tab Switcher
+          Platform.isIOS
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: CupertinoSegmentedControl<int>(
+                      groupValue: _tabController.index,
+                      selectedColor: primaryGreen,
+                      unselectedColor: isDark
+                          ? Colors.grey[900]
+                          : Colors.grey[100],
+                      borderColor: primaryGreen.withOpacity(0.3),
+                      children: const {
+                        0: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            'My Friends',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        1: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            'Find Friends',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      },
+                      onValueChanged: (int value) {
+                        setState(() {
+                          _tabController.animateTo(value);
+                        });
+                      },
+                    ),
+                  ),
+                )
+              : Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: theme.dividerColor.withOpacity(0.1),
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    indicatorColor: primaryGreen,
+                    indicatorWeight: 3,
+                    labelColor: primaryGreen,
+                    unselectedLabelColor: theme.disabledColor,
+                    labelStyle: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                    tabs: const [
+                      Tab(text: 'My Friends'),
+                      Tab(text: 'Find Friends'),
+                    ],
+                  ),
+                ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: TabBarView(
               controller: _tabController,
-              unselectedLabelColor: Colors.grey.shade600,
-              labelStyle: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-              indicatorSize: TabBarIndicatorSize.label,
-              indicatorWeight: 3.0,
-              tabs: const [
-                Tab(text: 'My Friends'),
-                Tab(text: 'Find Friends'),
+              children: [
+                _buildTabContent(
+                  _isLoadingFriends,
+                  _filteredMyFriends,
+                  _isSearching && _searchController.text.isNotEmpty
+                      ? "No friends found"
+                      : "No friends yet",
+                ),
+                _buildTabContent(
+                  _isLoadingAll,
+                  _filteredAllUsers,
+                  _isSearching && _searchController.text.isNotEmpty
+                      ? "No users found"
+                      : "No users to add",
+                ),
               ],
             ),
           ),
-        ),
-      ),
-
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          // Content for 'My Friends' tab
-          _isLoadingFriends
-              ? const Center(child: CircularProgressIndicator())
-              : _filteredMyFriends.isEmpty
-              ? Center(
-                  child: Text(
-                    _isSearching && _searchController.text.isNotEmpty
-                        ? "No friends found"
-                        : "No friends yet",
-                  ),
-                )
-              : ListView.builder(
-                  itemCount: _filteredMyFriends.length,
-                  itemBuilder: (context, index) {
-                    return _buildFriendListItem(
-                      _filteredMyFriends[index],
-                      Icons.person,
-                    );
-                  },
-                ),
-
-          // Content for 'Find Friends' tab
-          _isLoadingAll
-              ? const Center(child: CircularProgressIndicator())
-              : _filteredAllUsers.isEmpty
-              ? Center(
-                  child: Text(
-                    _isSearching && _searchController.text.isNotEmpty
-                        ? "No users found"
-                        : "No users to add",
-                  ),
-                )
-              : ListView.builder(
-                  itemCount: _filteredAllUsers.length,
-                  itemBuilder: (context, index) {
-                    return _buildFriendListItem(
-                      _filteredAllUsers[index],
-                      Icons.person_add,
-                    );
-                  },
-                ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTabContent(
+    bool isLoading,
+    List<UserModel> users,
+    String emptyMessage,
+  ) {
+    if (isLoading) {
+      return Center(
+        child: Platform.isIOS
+            ? const CupertinoActivityIndicator()
+            : const CircularProgressIndicator(),
+      );
+    }
+
+    if (users.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.people_outline_rounded,
+              size: 64,
+              color: Theme.of(context).disabledColor.withOpacity(0.3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              emptyMessage,
+              style: TextStyle(
+                color: Theme.of(context).disabledColor,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.only(bottom: 20, top: 10),
+      physics: const BouncingScrollPhysics(),
+      itemCount: users.length,
+      itemBuilder: (context, index) {
+        return _buildFriendListItem(users[index]);
+      },
     );
   }
 }

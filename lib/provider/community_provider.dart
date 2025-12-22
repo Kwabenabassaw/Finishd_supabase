@@ -18,6 +18,12 @@ class CommunityProvider extends ChangeNotifier {
   bool _isLoadingDiscover = false;
   String _discoverFilter = 'trending'; // 'trending', 'tv', 'movie'
 
+  // Trending & Recommended Communities
+  List<Community> _trendingCommunities = [];
+  List<Community> _recommendedCommunities = [];
+  bool _isLoadingTrending = false;
+  bool _isLoadingRecommended = false;
+
   // Current Open Community (for detail screen)
   Community? _currentCommunity;
   List<CommunityPost> _currentPosts = [];
@@ -25,6 +31,7 @@ class CommunityProvider extends ChangeNotifier {
   bool _isMemberOfCurrent = false;
   String _currentSortBy = 'createdAt';
   Map<String, int> _currentUserVotes = {}; // postId -> vote
+  Map<String, int> _commentVotes = {}; // commentId -> vote
 
   // Getters
   List<Community> get myCommunities => _myCommunities;
@@ -34,12 +41,18 @@ class CommunityProvider extends ChangeNotifier {
   bool get isLoadingDiscover => _isLoadingDiscover;
   String get discoverFilter => _discoverFilter;
 
+  List<Community> get trendingCommunities => _trendingCommunities;
+  List<Community> get recommendedCommunities => _recommendedCommunities;
+  bool get isLoadingTrending => _isLoadingTrending;
+  bool get isLoadingRecommended => _isLoadingRecommended;
+
   Community? get currentCommunity => _currentCommunity;
   List<CommunityPost> get currentPosts => _currentPosts;
   bool get isLoadingCommunityDetails => _isLoadingCommunityDetails;
   bool get isMemberOfCurrent => _isMemberOfCurrent;
   String get currentSortBy => _currentSortBy;
   Map<String, int> get currentUserVotes => _currentUserVotes;
+  Map<String, int> get commentVotes => _commentVotes;
 
   // --- Global Lists ---
 
@@ -96,6 +109,57 @@ class CommunityProvider extends ChangeNotifier {
       print('Error fetching discover content: $e');
     } finally {
       _isLoadingDiscover = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchTrendingCommunities() async {
+    _isLoadingTrending = true;
+    notifyListeners();
+
+    try {
+      final results = await _communityService.discoverCommunities(limit: 10);
+      _trendingCommunities = results.map((c) => Community.fromJson(c)).toList();
+    } catch (e) {
+      print('Error fetching trending communities: $e');
+    } finally {
+      _isLoadingTrending = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchRecommendedCommunities() async {
+    _isLoadingRecommended = true;
+    notifyListeners();
+
+    try {
+      // For now, recommendation is just more active communities but potentially different order/filter
+      // In a real app, this would be based on user interests
+      final results = await _communityService.discoverCommunities(limit: 15);
+      final all = results.map((c) => Community.fromJson(c)).toList();
+
+      // Filter out joined ones and trending ones to make it feel "recommended"
+      final trendingIds = _trendingCommunities.map((c) => c.showId).toSet();
+      final myIds = _myCommunities.map((c) => c.showId).toSet();
+
+      _recommendedCommunities = all
+          .where(
+            (c) => !myIds.contains(c.showId) && !trendingIds.contains(c.showId),
+          )
+          .take(10)
+          .toList();
+
+      // If empty, just show some diverse ones
+      if (_recommendedCommunities.isEmpty) {
+        _recommendedCommunities = all
+            .where((c) => !myIds.contains(c.showId))
+            .take(10)
+            .toList();
+      }
+    } catch (e) {
+      print('Error fetching recommended communities: $e');
+    } finally {
+      _isLoadingRecommended = false;
       notifyListeners();
     }
   }
@@ -293,6 +357,51 @@ class CommunityProvider extends ChangeNotifier {
     );
     // Update comment count locally for immediate feedback if needed
     // reloadCommunityDetails(showId);
+  }
+
+  /// Vote on a comment with optimistic update
+  Future<void> voteOnComment({
+    required String commentId,
+    required String postId,
+    required int showId,
+    required int vote,
+  }) async {
+    final currentVote = _commentVotes[commentId] ?? 0;
+    final newVote = currentVote == vote ? 0 : vote;
+
+    // Optimistic update
+    _commentVotes[commentId] = newVote;
+    notifyListeners();
+
+    try {
+      await _communityService.voteOnComment(
+        commentId: commentId,
+        postId: postId,
+        showId: showId,
+        vote: newVote,
+      );
+    } catch (e) {
+      // Revert if failed
+      _commentVotes[commentId] = currentVote;
+      notifyListeners();
+      print("Comment vote failed: $e");
+    }
+  }
+
+  /// Get current user's vote on a comment (for initial load)
+  int getCommentVote(String commentId) {
+    return _commentVotes[commentId] ?? 0;
+  }
+
+  /// Load user's votes for a list of comments
+  Future<void> loadCommentVotes(List<String> commentIds) async {
+    for (final commentId in commentIds) {
+      if (!_commentVotes.containsKey(commentId)) {
+        final vote = await _communityService.getUserCommentVote(commentId);
+        _commentVotes[commentId] = vote;
+      }
+    }
+    notifyListeners();
   }
 
   Future<String?> createPost({

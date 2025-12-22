@@ -19,7 +19,7 @@ class AppDatabase {
 
     return await openDatabase(
       path,
-      version: 3, // Upgraded from 2 to 3 for TMDB cache
+      version: 4, // Upgraded to 4 for Streaming Availability cache
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -76,6 +76,15 @@ class AppDatabase {
         timestamp INTEGER NOT NULL
       )
     ''');
+
+    // 6. Streaming Availability Cache (v4)
+    await db.execute('''
+      CREATE TABLE streaming_cache (
+        id TEXT PRIMARY KEY,
+        json TEXT NOT NULL,
+        timestamp INTEGER NOT NULL
+      )
+    ''');
   }
 
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -97,6 +106,17 @@ class AppDatabase {
         CREATE TABLE IF NOT EXISTS tmdb_cache (
           id TEXT PRIMARY KEY,
           type TEXT NOT NULL,
+          json TEXT NOT NULL,
+          timestamp INTEGER NOT NULL
+        )
+      ''');
+    }
+
+    if (oldVersion < 4) {
+      // Add streaming_cache table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS streaming_cache (
+          id TEXT PRIMARY KEY,
           json TEXT NOT NULL,
           timestamp INTEGER NOT NULL
         )
