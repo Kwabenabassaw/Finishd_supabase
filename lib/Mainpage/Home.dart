@@ -1,4 +1,4 @@
-import 'package:finishd/Home/homescreen.dart  ';
+import 'package:finishd/Home/homescreen.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'dart:io' show Platform;

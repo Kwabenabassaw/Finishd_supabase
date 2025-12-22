@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:finishd/services/auth_service.dart';
 import 'package:finishd/services/connectivity_service.dart';
 import 'package:finishd/SplashScreen/no_internet_screen.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -35,6 +36,9 @@ class _SplashScreenState extends State<SplashScreen>
     _animation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
 
     _controller.forward();
+
+    // Remove the native splash screen as soon as the Flutter app starts
+    FlutterNativeSplash.remove();
 
     // Start connectivity check and animation in parallel
     _checkConnectivityAndNavigate();
@@ -105,7 +109,7 @@ class _SplashScreenState extends State<SplashScreen>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Image.asset('assets/Finishdlogo.png', width: 200, height: 200),
-              if (_isCheckingConnectivity && _animationComplete) ...[
+              if (_isCheckingConnectivity) ...[
                 const SizedBox(height: 30),
                 const SizedBox(
                   width: 24,

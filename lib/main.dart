@@ -37,26 +37,48 @@ import 'package:finishd/services/push_notification_service.dart';
 import 'package:finishd/theme/app_theme.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
 
-  await PushNotificationService().initialize(navigatorKey);
+    final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => MovieProvider()),
-        ChangeNotifierProvider(create: (_) => OnboardingProvider()),
-        ChangeNotifierProvider(create: (_) => UserProvider()),
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        ChangeNotifierProvider(create: (_) => CommunityProvider()),
-        ChangeNotifierProvider(create: (_) => ActorProvider()),
-        Provider<AuthService>(create: (_) => AuthService()),
-      ],
-      child: MyApp(navigatorKey: navigatorKey),
-    ),
-  );
+    // Start push notifications in the background so they don't block the UI
+    PushNotificationService().initialize(navigatorKey).catchError((e) {
+      debugPrint('Push Notification initialization error: $e');
+    });
+
+    runApp(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => MovieProvider()),
+          ChangeNotifierProvider(create: (_) => OnboardingProvider()),
+          ChangeNotifierProvider(create: (_) => UserProvider()),
+          ChangeNotifierProvider(create: (_) => ThemeProvider()),
+          ChangeNotifierProvider(create: (_) => CommunityProvider()),
+          ChangeNotifierProvider(create: (_) => ActorProvider()),
+          Provider<AuthService>(create: (_) => AuthService()),
+        ],
+        child: MyApp(navigatorKey: navigatorKey),
+      ),
+    );
+  } catch (e) {
+    debugPrint('App initialization error: $e');
+    // Still run the app even if initialization fails, allowing the UI to handle errors
+    runApp(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Text(
+              'An initialization error occurred. Please restart the app.',
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {
