@@ -22,7 +22,7 @@ enum FeedType {
 class ApiClient {
   // Railway backend URL
   static const String baseUrl =
-      'https://finishdbackend-master-production.up.railway.app';
+      'https://finishdbackend-master.onrender.com';
 
   // Risk 2 FIX: Hide logs behind debug flag - TEMPORARILY ENABLED FOR DEBUGGING
   static const bool _debugLogging = true;

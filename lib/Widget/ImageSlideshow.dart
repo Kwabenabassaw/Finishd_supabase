@@ -89,7 +89,7 @@ class MovieBannerWidget extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(
-                            Icons.star_rounded,
+                            Icons.trending_up_rounded,
                             color: Colors.amber,
                             size: 16,
                           ),

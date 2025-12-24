@@ -296,7 +296,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                       provider,
                       'Top Rated',
                       'commentCount',
-                      Icons.star_rounded,
+                      Icons.insights_rounded,
                     ),
                   ],
                 ),

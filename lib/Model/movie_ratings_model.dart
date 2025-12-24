@@ -8,6 +8,7 @@ class MovieRatings {
   final String rotten;
   final String metacritic;
   final String imdbVotes;
+  final String awards;
   final DateTime lastUpdated;
 
   MovieRatings({
@@ -16,6 +17,7 @@ class MovieRatings {
     required this.rotten,
     required this.metacritic,
     required this.imdbVotes,
+    required this.awards,
     required this.lastUpdated,
   });
 
@@ -28,6 +30,7 @@ class MovieRatings {
       rotten: data['rotten'] ?? 'N/A',
       metacritic: data['metacritic'] ?? 'N/A',
       imdbVotes: data['imdbVotes'] ?? '0',
+      awards: data['awards'] ?? '',
       lastUpdated:
           (data['lastUpdated'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
@@ -55,6 +58,7 @@ class MovieRatings {
       rotten: rottenTomatoes,
       metacritic: metacritic,
       imdbVotes: json['imdbVotes'] ?? '0',
+      awards: json['Awards'] ?? '',
       lastUpdated: DateTime.now(),
     );
   }
@@ -67,6 +71,7 @@ class MovieRatings {
       rotten: 'N/A',
       metacritic: 'N/A',
       imdbVotes: '0',
+      awards: '',
       lastUpdated: DateTime.now(),
     );
   }
@@ -79,6 +84,7 @@ class MovieRatings {
       'rotten': rotten,
       'metacritic': metacritic,
       'imdbVotes': imdbVotes,
+      'awards': awards,
       'lastUpdated': Timestamp.fromDate(lastUpdated),
     };
   }

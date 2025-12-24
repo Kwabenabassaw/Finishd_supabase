@@ -41,6 +41,9 @@ class FeedItem {
   // Feed type annotation (NEW)
   final String? feedType; // 'trending', 'following', 'for_you'
 
+  // Genres for frontend personalization scoring
+  final List<String>? genres;
+
   FeedItem({
     required this.id,
     required this.type,
@@ -66,6 +69,7 @@ class FeedItem {
     this.channelTitle,
     this.description,
     this.feedType, // NEW
+    this.genres, // NEW: For local personalization scoring
   });
 
   factory FeedItem.fromJson(Map<String, dynamic> json) {
@@ -95,6 +99,9 @@ class FeedItem {
       channelTitle: json['channelTitle'],
       description: json['description'],
       feedType: json['feedType'], // NEW
+      genres: json['genres'] != null
+          ? List<String>.from(json['genres'])
+          : null, // NEW
     );
   }
 
@@ -124,6 +131,7 @@ class FeedItem {
       'channelTitle': channelTitle,
       'description': description,
       'feedType': feedType, // NEW
+      'genres': genres, // NEW
     };
   }
 

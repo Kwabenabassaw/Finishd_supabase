@@ -23,6 +23,9 @@ import 'package:finishd/Community/community_detail_screen.dart';
 import 'package:finishd/Widget/YouTubeTrailerPlayerDialog.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import 'package:finishd/services/user_titles_service.dart';
+import 'package:finishd/Widget/rating_action_button.dart';
+import 'package:finishd/Widget/emotion_rating_slider.dart';
 // --- Placeholder/Mock Data Models ---
 // Replace these with your actual TMDB models (Movie, CastMember, Season)
 
@@ -43,10 +46,13 @@ class MovieDetailsScreen extends StatefulWidget {
 
 class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
   final TmdbSyncService _syncService = TmdbSyncService();
+  final UserTitlesService _userTitlesService = UserTitlesService();
   late MovieDetails _movie;
+  int _userRating = 0;
   Stream<List<Recommendation>>? _recommendationsStream;
   YoutubePlayerController? _previewController;
   bool _showPreview = false;
+  bool _showEmojiPicker = false;
   Timer? _previewTimer;
 
   @override
@@ -59,6 +65,21 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
           _movie.id.toString(),
         );
     _syncFullDetails();
+    _loadUserRating();
+  }
+
+  Future<void> _loadUserRating() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final record = await _userTitlesService.getUserTitle(
+      uid,
+      _movie.id.toString(),
+    );
+    if (record != null && mounted) {
+      setState(() {
+        _userRating = record.rating ?? 0;
+      });
+    }
   }
 
   Future<void> _syncFullDetails() async {
@@ -316,6 +337,19 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                         ),
                       ),
                       const SizedBox(width: 12),
+                      RatingActionButton(
+                        initialRating: _userRating,
+                        onTap: () {
+                          setState(() {
+                            _showEmojiPicker = !_showEmojiPicker;
+                          });
+                        },
+                        onRatingChanged: (rating) {
+                          // This is still needed for internal state update if RatingActionButton
+                          // was used in dialog mode, but here we'll handle it via the inline slider.
+                        },
+                      ),
+                      const SizedBox(width: 12),
                       Container(
                         decoration: BoxDecoration(
                           color: isDark
@@ -375,6 +409,38 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                         ),
                       ),
                     ],
+                  ),
+
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    child: _showEmojiPicker
+                        ? Padding(
+                            padding: const EdgeInsets.only(top: 16.0),
+                            child: EmotionRatingSlider(
+                              initialRating: _userRating,
+                              onRatingChanged: (rating) {
+                                final uid =
+                                    FirebaseAuth.instance.currentUser?.uid;
+                                if (uid != null) {
+                                  _userTitlesService.updateRating(
+                                    uid: uid,
+                                    titleId: _movie.id.toString(),
+                                    mediaType: 'movie',
+                                    title: _movie.title,
+                                    posterPath: _movie.posterPath,
+                                    rating: rating,
+                                  );
+                                  setState(() {
+                                    _userRating = rating;
+                                    _showEmojiPicker =
+                                        false; // Close after rating
+                                  });
+                                }
+                              },
+                            ),
+                          )
+                        : const SizedBox.shrink(),
                   ),
 
                   const SizedBox(height: 30),

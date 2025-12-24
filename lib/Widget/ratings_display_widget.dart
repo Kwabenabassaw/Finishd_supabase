@@ -86,7 +86,7 @@ class _RatingsDisplayWidgetState extends State<RatingsDisplayWidget> {
               if (ratings.imdbRating != 'N/A')
                 _buildRatingCard(
                   context: context,
-                  icon: Icons.star_rounded,
+                  icon: Icons.trending_up_rounded,
                   iconColor: const Color(0xFFF5C518),
                   label: 'IMDb',
                   rating: ratings.imdbRating,

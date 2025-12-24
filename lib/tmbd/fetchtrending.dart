@@ -268,6 +268,29 @@ class Trending {
   }
 
   // ---------------------------------------------------------------------------
+  // ✅ FETCH EPISODE DETAILS
+  // ---------------------------------------------------------------------------
+  Future<Episode?> fetchEpisodeDetails(
+    int tvId,
+    int seasonNumber,
+    int episodeNumber,
+  ) async {
+    try {
+      final result = await tmdb.v3.tvEpisodes.getDetails(
+        tvId,
+        seasonNumber,
+        episodeNumber,
+        appendToResponse: 'credits,videos,images',
+      );
+      final data = Map<String, dynamic>.from(result);
+      return Episode.fromJson(data);
+    } catch (e) {
+      print("Error fetching episode details: $e");
+      return null;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // ✅ PAGINATED FETCH METHODS FOR SEE ALL SCREEN
   // ---------------------------------------------------------------------------
 

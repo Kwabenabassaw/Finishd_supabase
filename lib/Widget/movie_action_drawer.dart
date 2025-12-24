@@ -1,10 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:finishd/Model/movie_list_item.dart';
 import 'package:finishd/services/movie_list_service.dart';
+import 'package:finishd/services/user_titles_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:finishd/Home/Friends/friend_selection_screen.dart';
+import 'package:finishd/Widget/emotion_rating_slider.dart';
 
 /// Interactive bottom sheet drawer for movie list actions
 /// Allows users to add movies to watching, watchlist, finished, or favorites
@@ -24,6 +26,7 @@ class MovieActionDrawer extends StatefulWidget {
 
 class _MovieActionDrawerState extends State<MovieActionDrawer> {
   final MovieListService _movieListService = MovieListService();
+  final UserTitlesService _userTitlesService = UserTitlesService();
   bool _isLoading = false;
   Map<String, bool> _movieStatus = {
     'watching': false,
@@ -137,7 +140,6 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
   }
 
   Future<void> _updateRating(int rating) async {
-    HapticFeedback.lightImpact();
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
@@ -146,7 +148,14 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
     });
 
     try {
-      await _movieListService.updateRating(uid, widget.movie.id, rating);
+      await _userTitlesService.updateRating(
+        uid: uid,
+        titleId: widget.movie.id,
+        mediaType: widget.movie.mediaType,
+        title: widget.movie.title,
+        posterPath: widget.movie.posterPath,
+        rating: rating,
+      );
     } catch (e) {
       print('Error updating rating: $e');
     }
@@ -319,27 +328,9 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
                 const SizedBox(height: 16),
 
                 // Rating Section
-                const Text(
-                  'Your Rating',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(5, (index) {
-                    return IconButton(
-                      icon: Icon(
-                        index < (_rating ?? 0)
-                            ? Icons.star_rounded
-                            : Icons.star_outline_rounded,
-                        color: index < (_rating ?? 0)
-                            ? const Color(0xFFF5C518)
-                            : Colors.grey,
-                        size: 36,
-                      ),
-                      onPressed: () => _updateRating(index + 1),
-                    );
-                  }),
+                EmotionRatingSlider(
+                  initialRating: _rating ?? 0,
+                  onRatingChanged: _updateRating,
                 ),
               ],
             ),

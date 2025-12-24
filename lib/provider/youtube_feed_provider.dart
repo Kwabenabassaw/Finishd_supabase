@@ -3,6 +3,8 @@ import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../models/feed_video.dart';
 import '../models/feed_item.dart';
 import '../services/api_client.dart';
+import '../services/feed_scoring_service.dart';
+import '../services/user_preferences_cache.dart';
 
 import '../services/cache/feed_cache_service.dart';
 
@@ -52,6 +54,10 @@ class YoutubeFeedProvider extends ChangeNotifier {
   // API Client
   final ApiClient _apiClient = ApiClient();
 
+  // Scoring Service (for For You personalization)
+  final FeedScoringService _scoringService = FeedScoringService.instance;
+  final UserPreferencesCache _prefsCache = UserPreferencesCache.instance;
+
   // --- Getters ---
   List<FeedVideo> get videos => _feedsByType[_activeFeedType] ?? [];
   int get currentIndex => _currentIndex;
@@ -86,6 +92,8 @@ class YoutubeFeedProvider extends ChangeNotifier {
       // TODO: Remove this after confirming the fix works
       debugPrint('[YTFeed] 🗑️ Clearing stale cache to force fresh data');
       await FeedCacheService.clearFeed();
+      await _prefsCache
+          .clear(); // Also clear prefs to force fresh personalization
 
       // Try cache first for instant display (only for ForYou feed)
       final cached = await FeedCacheService.getFeed();
@@ -192,8 +200,15 @@ class YoutubeFeedProvider extends ChangeNotifier {
       );
 
       final feedVideos = _convertFeedItemsToVideos(items);
+
+      // Apply local scoring for For You feed
+      List<FeedVideo> finalVideos = feedVideos;
+      if (feedType == FeedType.forYou) {
+        finalVideos = await _applyLocalScoring(items);
+      }
+
       _feedsByType[feedType]!.clear();
-      _feedsByType[feedType]!.addAll(feedVideos);
+      _feedsByType[feedType]!.addAll(finalVideos);
 
       // Cache for later (only ForYou feed)
       if (feedType == FeedType.forYou) {
@@ -229,6 +244,61 @@ class YoutubeFeedProvider extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('[YTFeed] ⚠️ Background refresh failed: $e');
+    }
+  }
+
+  /// Apply local personalization scoring for For You feed
+  Future<List<FeedVideo>> _applyLocalScoring(List<FeedItem> items) async {
+    try {
+      // Get or sync user preferences
+      var prefs = await _prefsCache.getCached();
+
+      if (prefs == null || _prefsCache.needsRefresh) {
+        // Sync from Firestore in background
+        debugPrint('[YTFeed] 📥 Syncing user preferences from Firestore');
+        prefs = await _prefsCache.syncFromFirestore(
+          // Use current user ID - you may need to inject this
+          '', // Will use Firebase Auth internally
+        );
+      }
+
+      if (!prefs.hasPreferences) {
+        // No preferences = no scoring, return as-is
+        debugPrint('[YTFeed] ⚠️ No user preferences, skipping scoring');
+        return _convertFeedItemsToVideos(items);
+      }
+
+      // Debug: Log preference stats
+      debugPrint(
+        '[YTFeed] 📊 Prefs: ${prefs.preferredGenres.length} genres, '
+        '${prefs.watchedTmdbIds.length} watched, '
+        '${prefs.watchlistTmdbIds.length} watchlist',
+      );
+      if (prefs.preferredGenres.isNotEmpty) {
+        debugPrint('[YTFeed] 🎭 Genres: ${prefs.preferredGenres.join(", ")}');
+      }
+
+      // Debug: Check if items have genres
+      final itemsWithGenres = items
+          .where((i) => i.genres != null && i.genres!.isNotEmpty)
+          .length;
+      debugPrint(
+        '[YTFeed] 📦 Items with genres: $itemsWithGenres / ${items.length}',
+      );
+      if (items.isNotEmpty && items.first.genres != null) {
+        debugPrint('[YTFeed] 🎬 First item genres: ${items.first.genres}');
+      }
+
+      // Apply scoring and ranking
+      debugPrint('[YTFeed] 🎯 Applying personalization scoring');
+      final scoredItems = _scoringService.rankFeed(items, prefs);
+
+      debugPrint('[YTFeed] ✅ Scored and ranked ${scoredItems.length} items');
+      return _convertFeedItemsToVideos(scoredItems);
+    } catch (e) {
+      debugPrint('[YTFeed] ❌ Error applying scoring: $e');
+      // Fallback to unscored
+      return _convertFeedItemsToVideos(items);
     }
   }
 

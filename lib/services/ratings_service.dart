@@ -10,8 +10,7 @@ import 'package:http/http.dart' as http;
 class RatingsService {
   // API Keys - Replace with your actual keys
   static const String TMDB_API_KEY = "829afd9e186fc15a71a6dfe50f3d00ad";
-  static const String OMDB_API_KEY =
-      "3ab8a1fe"; // TODO: Add your OMDb API key
+  static const String OMDB_API_KEY = "3ab8a1fe"; // TODO: Add your OMDb API key
 
   /// Main entry point: Get ratings with intelligent SQLite caching
   Future<MovieRatings> getRatings(int tmdbId) async {
@@ -22,16 +21,20 @@ class RatingsService {
       if (cachedMap != null) {
         print('✅ [SQLite] Using cached ratings for TMDB: $tmdbId');
         return MovieRatings(
-            imdbId: cachedMap['imdbId'] ?? '',
-            imdbRating: cachedMap['imdbRating'] ?? 'N/A',
-            rotten: cachedMap['rotten'] ?? 'N/A',
-            metacritic: cachedMap['metacritic'] ?? 'N/A',
-            imdbVotes: cachedMap['imdbVotes'] ?? '0',
-            lastUpdated: cachedMap['lastUpdated'] != null
-                ? (cachedMap['lastUpdated'] is int
-                    ? DateTime.fromMillisecondsSinceEpoch(cachedMap['lastUpdated'])
-                    : DateTime.tryParse(cachedMap['lastUpdated'].toString()) ?? DateTime.now())
-                : DateTime.now(),
+          imdbId: cachedMap['imdbId'] ?? '',
+          imdbRating: cachedMap['imdbRating'] ?? 'N/A',
+          rotten: cachedMap['rotten'] ?? 'N/A',
+          metacritic: cachedMap['metacritic'] ?? 'N/A',
+          imdbVotes: cachedMap['imdbVotes'] ?? '0',
+          awards: cachedMap['awards'] ?? '',
+          lastUpdated: cachedMap['lastUpdated'] != null
+              ? (cachedMap['lastUpdated'] is int
+                    ? DateTime.fromMillisecondsSinceEpoch(
+                        cachedMap['lastUpdated'],
+                      )
+                    : DateTime.tryParse(cachedMap['lastUpdated'].toString()) ??
+                          DateTime.now())
+              : DateTime.now(),
         );
       }
 
@@ -43,11 +46,13 @@ class RatingsService {
       // Convert Timestamp to int for JSON compatibility
       final mapToSave = freshRatings.toFirestore();
       if (mapToSave['lastUpdated'] is Timestamp) {
-         mapToSave['lastUpdated'] = (mapToSave['lastUpdated'] as Timestamp).millisecondsSinceEpoch;
+        mapToSave['lastUpdated'] =
+            (mapToSave['lastUpdated'] as Timestamp).millisecondsSinceEpoch;
       } else if (mapToSave['lastUpdated'] is DateTime) {
-         mapToSave['lastUpdated'] = (mapToSave['lastUpdated'] as DateTime).millisecondsSinceEpoch;
+        mapToSave['lastUpdated'] =
+            (mapToSave['lastUpdated'] as DateTime).millisecondsSinceEpoch;
       }
-      
+
       await RatingsCacheService.saveRatings(tmdbId.toString(), mapToSave);
 
       return freshRatings;

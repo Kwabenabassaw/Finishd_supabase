@@ -69,6 +69,12 @@ class SocialDiscoveryService {
               if (!signal.friendsLiked.contains(friendUid)) {
                 signal.friendsLiked.add(friendUid);
               }
+            } else if (listType == 'user_titles') {
+              if (item.rating != null && item.rating! >= 4) {
+                if (!signal.friendsLiked.contains(friendUid)) {
+                  signal.friendsLiked.add(friendUid);
+                }
+              }
             }
           }
         });
@@ -82,7 +88,7 @@ class SocialDiscoveryService {
   }
 
   Future<Map<String, dynamic>> _getFriendActivity(String friendUid) async {
-    final lists = ['watching', 'finished', 'favorites'];
+    final lists = ['watching', 'finished', 'favorites', 'user_titles'];
     final Map<String, List<MovieListItem>> activities = {};
 
     final results = await Future.wait(
@@ -96,9 +102,21 @@ class SocialDiscoveryService {
     );
 
     for (int i = 0; i < lists.length; i++) {
-      activities[lists[i]] = results[i].docs
-          .map((doc) => MovieListItem.fromDocument(doc))
-          .toList();
+      final listName = lists[i];
+      activities[listName] = results[i].docs.map((doc) {
+        if (listName == 'user_titles') {
+          final data = doc.data();
+          return MovieListItem(
+            id: data['titleId'] ?? doc.id,
+            title: data['title'] ?? '',
+            posterPath: data['posterPath'],
+            mediaType: data['mediaType'] ?? 'movie',
+            rating: data['rating'] as int?,
+            addedAt: DateTime.now(),
+          );
+        }
+        return MovieListItem.fromDocument(doc);
+      }).toList();
     }
 
     return {'uid': friendUid, 'activities': activities};

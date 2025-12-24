@@ -220,7 +220,7 @@ class _AllCommunitiesScreenState extends State<AllCommunitiesScreen> {
             if (isStar) ...[
               const SizedBox(width: 4),
               Icon(
-                Icons.star_rounded,
+                Icons.favorite_rounded,
                 size: 16,
                 color: isSelected ? Colors.white : Colors.amber,
               ),

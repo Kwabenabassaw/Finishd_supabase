@@ -185,7 +185,11 @@ class _RelatedContentSectionState extends State<RelatedContentSection> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.star, color: Colors.amber, size: 14),
+                          const Icon(
+                            Icons.trending_up_rounded,
+                            color: Color(0xFF4ADE80),
+                            size: 14,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             item.voteAverage.toStringAsFixed(1),

@@ -597,7 +597,7 @@ class _CommsTabState extends State<CommsTab> {
                           ),
                           const Spacer(),
                           Icon(
-                            Icons.star_rounded,
+                            Icons.trending_up_rounded,
                             size: 14,
                             color: Colors.amber[700],
                           ),

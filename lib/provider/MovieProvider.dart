@@ -191,7 +191,7 @@ class MovieProvider extends ChangeNotifier {
       voteCount: null,
       originalName: '',
       firstAirDate: null,
-      originCountry: [],
+      originCountry: [], profilePath: '',
     );
   }
 

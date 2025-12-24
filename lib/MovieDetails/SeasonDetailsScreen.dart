@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:finishd/MovieDetails/EpisodeDetailsScreen.dart';
 import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:finishd/Model/season_detail_model.dart';
 import 'package:finishd/Widget/TrailerPlayer.dart';
@@ -307,122 +308,138 @@ class _SeasonDetailsScreenState extends State<SeasonDetailsScreen> {
       itemCount: episodes.length,
       itemBuilder: (context, index) {
         final episode = episodes[index];
-        return Container(
-          margin: const EdgeInsets.only(bottom: 20.0),
-          decoration: BoxDecoration(
-            color: isDark
-                ? Colors.white.withOpacity(0.05)
-                : Colors.black.withOpacity(0.03),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
+        return InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => EpisodeDetailsScreen(
+                  tvId: widget.tvId,
+                  seasonNumber: widget.seasonNumber,
+                  episodeNumber: episode.episodeNumber,
+                  showName: widget.showName,
+                ),
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 20.0),
+            decoration: BoxDecoration(
               color: isDark
                   ? Colors.white.withOpacity(0.05)
-                  : Colors.black.withOpacity(0.05),
+                  : Colors.black.withOpacity(0.03),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withOpacity(0.05)
+                    : Colors.black.withOpacity(0.05),
+              ),
             ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Episode Image with gradient overlay
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
-                ),
-                child: AspectRatio(
-                  aspectRatio: 16 / 9,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      CachedNetworkImage(
-                        imageUrl: episode.stillPath.isNotEmpty
-                            ? 'https://image.tmdb.org/t/p/w500${episode.stillPath}'
-                            : 'https://via.placeholder.com/500x281',
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          color: isDark ? Colors.white10 : Colors.black12,
-                          child: const Center(
-                            child: CircularProgressIndicator(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Episode Image with gradient overlay
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
+                  child: AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        CachedNetworkImage(
+                          imageUrl: episode.stillPath.isNotEmpty
+                              ? 'https://image.tmdb.org/t/p/w500${episode.stillPath}'
+                              : 'https://via.placeholder.com/500x281',
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            color: isDark ? Colors.white10 : Colors.black12,
+                            child: const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            color: isDark ? Colors.white10 : Colors.black12,
+                            child: const Icon(Icons.movie, color: Colors.grey),
                           ),
                         ),
-                        errorWidget: (context, url, error) => Container(
-                          color: isDark ? Colors.white10 : Colors.black12,
-                          child: const Icon(Icons.movie, color: Colors.grey),
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.bottomCenter,
-                              end: Alignment.topCenter,
-                              colors: [
-                                Colors.black.withOpacity(0.8),
-                                Colors.transparent,
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.bottomCenter,
+                                end: Alignment.topCenter,
+                                colors: [
+                                  Colors.black.withOpacity(0.8),
+                                  Colors.transparent,
+                                ],
+                              ),
+                            ),
+                            padding: const EdgeInsets.all(12),
+                            child: Row(
+                              children: [
+                                Text(
+                                  'Episode ${episode.episodeNumber}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const Spacer(),
+                                if (episode.airDate.isNotEmpty)
+                                  Text(
+                                    episode.airDate,
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                               ],
                             ),
                           ),
-                          padding: const EdgeInsets.all(12),
-                          child: Row(
-                            children: [
-                              Text(
-                                'Episode ${episode.episodeNumber}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              const Spacer(),
-                              if (episode.airDate.isNotEmpty)
-                                Text(
-                                  episode.airDate,
-                                  style: const TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                            ],
-                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        episode.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
                         ),
                       ),
+                      if (episode.overview.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          episode.overview,
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.color?.withOpacity(0.8),
+                            fontSize: 14,
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      episode.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                    if (episode.overview.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        episode.overview,
-                        maxLines: 4,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Theme.of(
-                            context,
-                          ).textTheme.bodyMedium?.color?.withOpacity(0.8),
-                          fontSize: 14,
-                          height: 1.5,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },

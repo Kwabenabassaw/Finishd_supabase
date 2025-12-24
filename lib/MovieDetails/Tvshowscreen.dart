@@ -23,6 +23,9 @@ import 'package:finishd/Community/community_detail_screen.dart';
 import 'package:finishd/Widget/YouTubeTrailerPlayerDialog.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import 'package:finishd/services/user_titles_service.dart';
+import 'package:finishd/Widget/rating_action_button.dart';
+import 'package:finishd/Widget/emotion_rating_slider.dart';
 
 // ... other imports ...
 
@@ -36,10 +39,13 @@ class ShowDetailsScreen extends StatefulWidget {
 
 class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
   final TmdbSyncService _syncService = TmdbSyncService();
+  final UserTitlesService _userTitlesService = UserTitlesService();
   late TvShowDetails _show;
+  int _userRating = 0;
   Stream<List<Recommendation>>? _recommendationsStream;
   YoutubePlayerController? _previewController;
   bool _showPreview = false;
+  bool _showEmojiPicker = false;
   Timer? _previewTimer;
 
   @override
@@ -52,6 +58,21 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
           _show.id.toString(),
         );
     _syncFullDetails();
+    _loadUserRating();
+  }
+
+  Future<void> _loadUserRating() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final record = await _userTitlesService.getUserTitle(
+      uid,
+      _show.id.toString(),
+    );
+    if (record != null && mounted) {
+      setState(() {
+        _userRating = record.rating ?? 0;
+      });
+    }
   }
 
   Future<void> _syncFullDetails() async {
@@ -316,6 +337,18 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                         ),
                       ),
                       const SizedBox(width: 12),
+                      RatingActionButton(
+                        initialRating: _userRating,
+                        onTap: () {
+                          setState(() {
+                            _showEmojiPicker = !_showEmojiPicker;
+                          });
+                        },
+                        onRatingChanged: (rating) {
+                          // Handled inline via EmotionRatingSlider
+                        },
+                      ),
+                      const SizedBox(width: 12),
                       Container(
                         decoration: BoxDecoration(
                           color: isDark
@@ -374,6 +407,38 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                         ),
                       ),
                     ],
+                  ),
+
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    child: _showEmojiPicker
+                        ? Padding(
+                            padding: const EdgeInsets.only(top: 16.0),
+                            child: EmotionRatingSlider(
+                              initialRating: _userRating,
+                              onRatingChanged: (rating) {
+                                final uid =
+                                    FirebaseAuth.instance.currentUser?.uid;
+                                if (uid != null) {
+                                  _userTitlesService.updateRating(
+                                    uid: uid,
+                                    titleId: _show.id.toString(),
+                                    mediaType: 'tv',
+                                    title: _show.name,
+                                    posterPath: _show.posterPath,
+                                    rating: rating,
+                                  );
+                                  setState(() {
+                                    _userRating = rating;
+                                    _showEmojiPicker =
+                                        false; // Close after rating
+                                  });
+                                }
+                              },
+                            ),
+                          )
+                        : const SizedBox.shrink(),
                   ),
 
                   const SizedBox(height: 30),

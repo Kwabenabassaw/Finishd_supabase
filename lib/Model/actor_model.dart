@@ -13,6 +13,7 @@ class ActorModel {
   final Map<String, String?> externalIds;
   final List<MediaItem> cast;
   final List<MediaItem> crew;
+  final ActorAwards awards;
 
   ActorModel({
     required this.id,
@@ -27,6 +28,7 @@ class ActorModel {
     required this.externalIds,
     required this.cast,
     required this.crew,
+    required this.awards,
   });
 
   factory ActorModel.fromJson(Map<String, dynamic> json) {
@@ -90,6 +92,9 @@ class ActorModel {
       externalIds: externalIdsMap,
       cast: castList,
       crew: crewList,
+      awards: json['awards_data'] != null
+          ? ActorAwards.fromAggregatedJson(json['awards_data'])
+          : ActorAwards.empty(),
     );
   }
 
@@ -134,5 +139,53 @@ class ActorModel {
   // TV Shows only
   List<MediaItem> get tvShows {
     return allCredits.where((m) => m.mediaType == 'tv').toList();
+  }
+}
+
+class ActorAwards {
+  final int oscarWins;
+  final int oscarNominations;
+  final int baftaWins;
+  final int baftaNominations;
+  final int goldenGlobeWins;
+  final int goldenGlobeNominations;
+  final int totalWins;
+  final int totalNominations;
+
+  ActorAwards({
+    required this.oscarWins,
+    required this.oscarNominations,
+    required this.baftaWins,
+    required this.baftaNominations,
+    required this.goldenGlobeWins,
+    required this.goldenGlobeNominations,
+    required this.totalWins,
+    required this.totalNominations,
+  });
+
+  factory ActorAwards.empty() {
+    return ActorAwards(
+      oscarWins: 0,
+      oscarNominations: 0,
+      baftaWins: 0,
+      baftaNominations: 0,
+      goldenGlobeWins: 0,
+      goldenGlobeNominations: 0,
+      totalWins: 0,
+      totalNominations: 0,
+    );
+  }
+
+  factory ActorAwards.fromAggregatedJson(Map<String, dynamic> json) {
+    return ActorAwards(
+      oscarWins: json['oscarWins'] ?? 0,
+      oscarNominations: json['oscarNominations'] ?? 0,
+      baftaWins: json['baftaWins'] ?? 0,
+      baftaNominations: json['baftaNominations'] ?? 0,
+      goldenGlobeWins: json['goldenGlobeWins'] ?? 0,
+      goldenGlobeNominations: json['goldenGlobeNominations'] ?? 0,
+      totalWins: json['totalWins'] ?? 0,
+      totalNominations: json['totalNominations'] ?? 0,
+    );
   }
 }

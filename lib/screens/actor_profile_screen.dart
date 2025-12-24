@@ -7,6 +7,10 @@ import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:finishd/Model/trending.dart';
+import 'package:finishd/MovieDetails/MovieScreen.dart';
+import 'package:finishd/MovieDetails/Tvshowscreen.dart';
+import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:io' show Platform;
 
@@ -297,32 +301,36 @@ class _ActorProfileScreenState extends State<ActorProfileScreen> {
                       separatorBuilder: (_, __) => const SizedBox(width: 20),
                       itemBuilder: (context, index) {
                         final credit = actor.knownFor[index];
-                        return SizedBox(
-                          width: 80,
-                          child: Column(
-                            children: [
-                              CircleAvatar(
-                                radius: 40,
-                                backgroundImage: credit.posterPath.isNotEmpty
-                                    ? CachedNetworkImageProvider(
-                                        'https://image.tmdb.org/t/p/w500${credit.posterPath}',
-                                      )
-                                    : null,
-                                backgroundColor: theme.cardColor,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                credit.title,
-                                maxLines: 2,
-                                textAlign: TextAlign.center,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: theme.textTheme.bodyMedium?.color,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
+                        return InkWell(
+                          onTap: () => _navigateToDetail(context, credit),
+                          borderRadius: BorderRadius.circular(12),
+                          child: SizedBox(
+                            width: 80,
+                            child: Column(
+                              children: [
+                                CircleAvatar(
+                                  radius: 40,
+                                  backgroundImage: credit.posterPath.isNotEmpty
+                                      ? CachedNetworkImageProvider(
+                                          'https://image.tmdb.org/t/p/w500${credit.posterPath}',
+                                        )
+                                      : null,
+                                  backgroundColor: theme.cardColor,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 8),
+                                Text(
+                                  credit.title,
+                                  maxLines: 2,
+                                  textAlign: TextAlign.center,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: theme.textTheme.bodyMedium?.color,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         );
                       },
@@ -361,110 +369,117 @@ class _ActorProfileScreenState extends State<ActorProfileScreen> {
                       separatorBuilder: (_, __) => const SizedBox(width: 16),
                       itemBuilder: (context, index) {
                         final item = filmographyList[index];
-                        return Container(
-                          width: 140,
-                          decoration: BoxDecoration(
-                            color: theme.cardColor,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: theme.dividerColor.withOpacity(0.05),
+                        return InkWell(
+                          onTap: () => _navigateToDetail(context, item),
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            width: 140,
+                            decoration: BoxDecoration(
+                              color: theme.cardColor,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: theme.dividerColor.withOpacity(0.05),
+                              ),
                             ),
-                          ),
-                          clipBehavior: Clip.antiAlias,
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              if (item.posterPath.isNotEmpty)
-                                CachedNetworkImage(
-                                  imageUrl:
-                                      'https://image.tmdb.org/t/p/w500${item.posterPath}',
-                                  fit: BoxFit.cover,
-                                ),
-                              Align(
-                                alignment: Alignment.bottomCenter,
-                                child: Container(
-                                  height: 80,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.bottomCenter,
-                                      end: Alignment.topCenter,
-                                      colors: [
-                                        Colors.black.withOpacity(0.8),
-                                        Colors.transparent,
-                                      ],
+                            clipBehavior: Clip.antiAlias,
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                if (item.posterPath.isNotEmpty)
+                                  CachedNetworkImage(
+                                    imageUrl:
+                                        'https://image.tmdb.org/t/p/w500${item.posterPath}',
+                                    fit: BoxFit.cover,
+                                  ),
+                                Align(
+                                  alignment: Alignment.bottomCenter,
+                                  child: Container(
+                                    height: 80,
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.bottomCenter,
+                                        end: Alignment.topCenter,
+                                        colors: [
+                                          Colors.black.withOpacity(0.8),
+                                          Colors.transparent,
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              Positioned(
-                                bottom: 12,
-                                left: 8,
-                                right: 8,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item.title,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    if (item.releaseDate.isNotEmpty)
-                                      Text(
-                                        item.releaseDate.split('-').first,
-                                        style: TextStyle(
-                                          color: Colors.white.withOpacity(0.7),
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                              if (item.voteAverage > 0)
                                 Positioned(
-                                  top: 8,
+                                  bottom: 12,
+                                  left: 8,
                                   right: 8,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(
-                                        0xFF064E3B,
-                                      ).withOpacity(0.8),
-                                      borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(
-                                        color: const Color(0xFF10B981),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(
-                                          Icons.star,
-                                          size: 10,
-                                          color: Color(0xFF10B981),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item.title,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
                                         ),
-                                        const SizedBox(width: 4),
+                                      ),
+                                      if (item.releaseDate.isNotEmpty)
                                         Text(
-                                          item.voteAverage.toStringAsFixed(1),
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
+                                          item.releaseDate.split('-').first,
+                                          style: TextStyle(
+                                            color: Colors.white.withOpacity(
+                                              0.7,
+                                            ),
+                                            fontSize: 11,
                                           ),
                                         ),
-                                      ],
-                                    ),
+                                    ],
                                   ),
                                 ),
-                            ],
+                                if (item.voteAverage > 0)
+                                  Positioned(
+                                    top: 8,
+                                    right: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFF064E3B,
+                                        ).withOpacity(0.8),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: const Color(0xFF10B981),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.trending_up_rounded,
+                                            size: 10,
+                                            color: Color(0xFF10B981),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            item.voteAverage.toStringAsFixed(1),
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                         );
                       },
@@ -514,18 +529,56 @@ class _ActorProfileScreenState extends State<ActorProfileScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _buildAwardStat(context, '1', 'OSCAR NOMINATIONS'),
-                          _buildAwardStat(context, '3', 'BAFTA NOMINATIONS'),
+                          _buildAwardStat(
+                            context,
+                            actor.awards.totalWins.toString(),
+                            'TOTAL WINS',
+                          ),
+                          _buildAwardStat(
+                            context,
+                            actor.awards.totalNominations.toString(),
+                            'NOMINATIONS',
+                          ),
                         ],
                       ),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _buildAwardStat(context, '2', 'GOLDEN GLOBES'),
-                          _buildAwardStat(context, '35', 'WINS TOTAL'),
-                        ],
-                      ),
+                      if (actor.awards.oscarWins > 0 ||
+                          actor.awards.oscarNominations > 0) ...[
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildAwardStat(
+                              context,
+                              actor.awards.oscarWins.toString(),
+                              'OSCAR WINS',
+                            ),
+                            _buildAwardStat(
+                              context,
+                              actor.awards.oscarNominations.toString(),
+                              'OSCAR NOMINATIONS',
+                            ),
+                          ],
+                        ),
+                      ],
+                      if (actor.awards.baftaWins > 0 ||
+                          actor.awards.goldenGlobeWins > 0) ...[
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildAwardStat(
+                              context,
+                              actor.awards.baftaWins.toString(),
+                              'BAFTAS',
+                            ),
+                            _buildAwardStat(
+                              context,
+                              actor.awards.goldenGlobeWins.toString(),
+                              'GOLDEN GLOBES',
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -633,6 +686,46 @@ class _ActorProfileScreenState extends State<ActorProfileScreen> {
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
+    }
+  }
+
+  Future<void> _navigateToDetail(BuildContext context, MediaItem item) async {
+    final trending = Trending();
+
+    // Show a loading dialog or small indicator if needed,
+    // but for now we'll just fetch and push.
+
+    try {
+      if (item.mediaType == 'movie') {
+        final movieDetails = await trending.fetchMovieDetails(item.id);
+        if (context.mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => MovieDetailsScreen(movie: movieDetails),
+            ),
+          );
+        }
+      } else if (item.mediaType == 'tv') {
+        final showDetails = await trending.fetchDetailsTvShow(item.id);
+        if (showDetails != null && context.mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ShowDetailsScreen(movie: showDetails),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error navigating to detail: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to load details. Please try again.'),
+          ),
+        );
+      }
     }
   }
 }

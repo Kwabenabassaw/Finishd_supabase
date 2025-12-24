@@ -8,6 +8,7 @@ import 'package:finishd/services/youtube_service.dart';
 import 'package:finishd/services/user_service.dart';
 import 'package:finishd/services/api_client.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
+import 'package:finishd/services/user_titles_service.dart';
 import 'dart:math';
 
 class PersonalizedFeedService {
@@ -18,6 +19,7 @@ class PersonalizedFeedService {
   final UserService _userService = UserService();
   final Trending _trendingService = Trending();
   final ApiClient _apiClient = ApiClient();
+  final UserTitlesService _userTitlesService = UserTitlesService();
 
   // Weights for interest calculation
   static const int _weightGenre = 5;
@@ -164,6 +166,7 @@ class PersonalizedFeedService {
       _movieListService.getMoviesFromList(uid, 'finished'),
       _getFriendsInterests(uid), // New: Friends' activity
       _getTrendingInterests(), // New: Trending data
+      _userTitlesService.getTopRatedTitles(uid), // Emotion-based
     ]);
 
     final prefs = results[0] as UserPreferences?;
@@ -173,6 +176,7 @@ class PersonalizedFeedService {
     final finished = results[4] as List<dynamic>;
     final friendsInterests = results[5] as List<_Interest>;
     final trendingInterests = results[6] as List<_Interest>;
+    final topRated = results[7] as List<UserTitleRecord>;
 
     // Helper to merge interests
     void mergeInterest(_Interest interest) {
@@ -235,6 +239,18 @@ class PersonalizedFeedService {
     // Process Trending Interests
     for (final interest in trendingInterests) {
       mergeInterest(interest);
+    }
+
+    // Process Top Rated (Emotion-based)
+    for (final record in topRated) {
+      mergeInterest(
+        _Interest(
+          record.title,
+          _weightLiked + 4, // Boost for explicit high rating
+          _InterestType.movie,
+          reason: "Because you loved ${record.title}",
+        ),
+      );
     }
 
     // Convert to list and sort by score
@@ -419,11 +435,11 @@ class PersonalizedFeedService {
       case _InterestType.movie:
         // Randomize query type for movies to avoid repetition
         final random = Random().nextInt(3);
+        final displayReason =
+            interest.reason ?? "Because you watched ${interest.name}";
+
         if (random == 0) {
-          return _QueryContext(
-            '${interest.name} trailer',
-            "Because you watched ${interest.name}",
-          );
+          return _QueryContext('${interest.name} trailer', displayReason);
         } else if (random == 1) {
           return _QueryContext(
             '${interest.name} cast interview',

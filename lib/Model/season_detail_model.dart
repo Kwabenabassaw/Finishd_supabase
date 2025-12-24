@@ -1,3 +1,5 @@
+import 'package:finishd/Model/tmdb_extras.dart';
+
 class SeasonDetail {
   final String id;
   final String airDate;
@@ -51,6 +53,8 @@ class Episode {
   final String stillPath;
   final double voteAverage;
   final int voteCount;
+  final List<Cast> guestStars;
+  final List<Crew> crew;
 
   Episode({
     required this.airDate,
@@ -65,6 +69,8 @@ class Episode {
     required this.stillPath,
     required this.voteAverage,
     required this.voteCount,
+    this.guestStars = const [],
+    this.crew = const [],
   });
 
   factory Episode.fromJson(Map<String, dynamic> json) {
@@ -81,6 +87,41 @@ class Episode {
       stillPath: json['still_path'] ?? '',
       voteAverage: (json['vote_average'] ?? 0).toDouble(),
       voteCount: json['vote_count'] ?? 0,
+      guestStars: (json['guest_stars'] as List<dynamic>? ?? [])
+          .map((x) => Cast.fromJson(x))
+          .toList(),
+      crew: (json['crew'] as List<dynamic>? ?? [])
+          .map((x) => Crew.fromJson(x))
+          .toList(),
     );
   }
+}
+
+class Crew {
+  final int id;
+  final String name;
+  final String job;
+  final String department;
+  final String? profilePath;
+
+  Crew({
+    required this.id,
+    required this.name,
+    required this.job,
+    required this.department,
+    this.profilePath,
+  });
+
+  factory Crew.fromJson(Map<String, dynamic> json) {
+    return Crew(
+      id: json['id'] ?? 0,
+      name: json['name'] ?? 'Unknown',
+      job: json['job'] ?? '',
+      department: json['department'] ?? '',
+      profilePath: json['profile_path'],
+    );
+  }
+
+  String get profileUrl =>
+      profilePath != null ? 'https://image.tmdb.org/t/p/w185$profilePath' : '';
 }

@@ -41,7 +41,7 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
   @override
   void didUpdateWidget(FeedVideoPlayerV2 oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     // Handle active state changes
     if (widget.isActive != oldWidget.isActive) {
       if (widget.isActive) {
@@ -83,7 +83,7 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
 
   void _toggleMute() {
     if (_youtubeController == null) return;
-    
+
     setState(() {
       _isMuted = !_isMuted;
       if (_isMuted) {
@@ -96,7 +96,7 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
 
   void _togglePlayPause() {
     if (_youtubeController == null) return;
-    
+
     if (_youtubeController!.value.isPlaying) {
       _youtubeController!.pause();
     } else {
@@ -158,11 +158,7 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
             ),
 
             // 4. Content Type Badge (Top Left)
-            Positioned(
-              top: 100,
-              left: 16,
-              child: _buildTypeBadge(),
-            ),
+            Positioned(top: 100, left: 16, child: _buildTypeBadge()),
 
             // 5. Metadata (Bottom Left)
             Positioned(
@@ -173,11 +169,7 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
             ),
 
             // 6. Action Buttons (Bottom Right)
-            Positioned(
-              bottom: 100,
-              right: 10,
-              child: _buildActionButtons(),
-            ),
+            Positioned(bottom: 100, right: 10, child: _buildActionButtons()),
 
             // 7. Mute Button (Top Right)
             Positioned(
@@ -201,7 +193,10 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
               child: SafeArea(
                 child: Center(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: widget.item.isBTS || widget.item.isInterview
                           ? Colors.red.withOpacity(0.8)
@@ -373,7 +368,7 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
               ),
             ),
           ),
-        
+
         // Title
         Text(
           widget.item.title,
@@ -385,9 +380,9 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
             fontSize: 16,
           ),
         ),
-        
+
         const SizedBox(height: 6),
-        
+
         // Overview or description
         if (widget.item.overview != null && widget.item.overview!.isNotEmpty)
           Text(
@@ -399,9 +394,9 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
               fontSize: 13,
             ),
           ),
-        
+
         const SizedBox(height: 8),
-        
+
         // Additional info row
         Row(
           children: [
@@ -416,25 +411,23 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
                 ),
                 child: Text(
                   widget.item.mediaType!.toUpperCase(),
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 10,
-                  ),
+                  style: const TextStyle(color: Colors.white70, fontSize: 10),
                 ),
               ),
-            
+
             // Rating
             if (widget.item.voteAverage != null && widget.item.voteAverage! > 0)
               Row(
                 children: [
-                  const Icon(Icons.star, color: Colors.amber, size: 14),
+                  const Icon(
+                    Icons.trending_up_rounded,
+                    color: Colors.amber,
+                    size: 14,
+                  ),
                   const SizedBox(width: 2),
                   Text(
                     widget.item.voteAverage!.toStringAsFixed(1),
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                    ),
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ],
               ),
@@ -464,11 +457,8 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
             width: 48,
             height: 64,
             fit: BoxFit.cover,
-            placeholder: (_, __) => Container(
-              width: 48,
-              height: 64,
-              color: Colors.grey[800],
-            ),
+            placeholder: (_, __) =>
+                Container(width: 48, height: 64, color: Colors.grey[800]),
             errorWidget: (_, __, ___) => Container(
               width: 48,
               height: 64,
