@@ -179,43 +179,61 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         final user = _activeUsers[index];
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 10),
-                          child: Column(
-                            children: [
-                              Stack(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 32,
-                                    backgroundColor: Colors.grey[200],
-                                    backgroundImage:
-                                        user.profileImage.isNotEmpty
-                                        ? NetworkImage(user.profileImage)
-                                        : null,
-                                    child: user.profileImage.isEmpty
-                                        ? Text(
-                                            user.username.isNotEmpty
-                                                ? user.username[0].toUpperCase()
-                                                : '?',
-                                            style: const TextStyle(
-                                              fontSize: 20,
-                                              color: Colors.black54,
-                                            ),
-                                          )
-                                        : null,
+                          child: GestureDetector(
+                            onTap: () async {
+                              final chatId = _chatService.getChatId(
+                                _currentUserId,
+                                user.uid,
+                              );
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ChatScreen(
+                                    chatId: chatId,
+                                    otherUser: user,
                                   ),
-                                  // Removed Green Dot
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                user.firstName.isNotEmpty
-                                    ? user.firstName
-                                    : user.username,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: textColor,
                                 ),
-                              ),
-                            ],
+                              );
+                            },
+                            child: Column(
+                              children: [
+                                Stack(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 32,
+                                      backgroundColor: Colors.grey[200],
+                                      backgroundImage:
+                                          user.profileImage.isNotEmpty
+                                          ? NetworkImage(user.profileImage)
+                                          : null,
+                                      child: user.profileImage.isEmpty
+                                          ? Text(
+                                              user.username.isNotEmpty
+                                                  ? user.username[0]
+                                                        .toUpperCase()
+                                                  : '?',
+                                              style: const TextStyle(
+                                                fontSize: 20,
+                                                color: Colors.black54,
+                                              ),
+                                            )
+                                          : null,
+                                    ),
+                                    // Removed Green Dot
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  user.firstName.isNotEmpty
+                                      ? user.firstName
+                                      : user.username,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: textColor,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         );
                       },
@@ -328,12 +346,15 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                         mainAxisAlignment:
                                             MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Text(
-                                            otherUser.username,
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                              color: textColor,
+                                          Expanded(
+                                            child: Text(
+                                              otherUser.username,
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                                color: textColor,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
                                           Text(

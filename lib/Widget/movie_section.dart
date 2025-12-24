@@ -34,7 +34,8 @@ class MovieSection extends StatelessWidget {
         ? 135.0
         : screenWidth * 0.35; // Reduced from 160
     final imgHeight = cardWidth * 1.45; // Slightly taller ratio for modern look
-    final listHeight = imgHeight + 45; // Reduced height overhead
+    final listHeight =
+        imgHeight + 65; // Increased height overhead to prevent overflow
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
