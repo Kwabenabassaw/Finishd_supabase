@@ -40,13 +40,8 @@ class _UserListScreenState extends State<UserListScreen> {
         userIds = await _userService.getFollowing(widget.uid);
       }
 
-      List<UserModel> loadedUsers = [];
-      for (String id in userIds) {
-        UserModel? user = await _userService.getUser(id);
-        if (user != null) {
-          loadedUsers.add(user);
-        }
-      }
+      // Use optimized parallel fetching instead of sequential loop
+      final loadedUsers = await _userService.getUsers(userIds);
 
       if (mounted) {
         setState(() {

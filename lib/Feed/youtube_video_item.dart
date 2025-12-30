@@ -78,11 +78,11 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
             // 3. Play/Pause gesture area
             _PlayPauseGesture(index: widget.index),
 
-            // 4. Metadata (Bottom Left) - Static
+            // 4. Metadata (Restored)
             Positioned(
               bottom: 0,
               left: 0,
-              right: 80, // Leave room for side buttons
+              right: 100, // Leave room for action buttons
               child: SafeArea(
                 top: false,
                 right: false,
@@ -197,36 +197,64 @@ class _VideoPlayerLayer extends StatelessWidget {
     bool isCurrent,
     String videoId,
   ) {
-    // Note: We rely on the Provider to give us a fresh controller when isCurrent is true
-    // (due to the new windowing strategy), so we don't need to manually force load() here anymore.
-    // The controller should be fresh and ready to play.
-
-    return AbsorbPointer(
-      absorbing: true, // Block YouTube player gestures to allow scrolling
-      child: SizedBox.expand(
-        child: FittedBox(
-          fit: BoxFit.cover,
-          child: SizedBox(
-            width: MediaQuery.of(context).size.width,
-            height: MediaQuery.of(context).size.height,
-            child: YoutubePlayer(
-              controller: controller,
-              showVideoProgressIndicator: true,
-              thumbnail: const SizedBox.shrink(),
-              progressIndicatorColor: Colors.red,
-              progressColors: const ProgressBarColors(
-                playedColor: Colors.red,
-                handleColor: Colors.redAccent,
-                bufferedColor: Colors.white24,
-                backgroundColor: Colors.white10,
+    return Stack(
+      children: [
+        // 1. Cropped Video Player
+        Positioned.fill(
+          child: ClipRect(
+            child: OverflowBox(
+              // Scale the player 15% larger than the screen to hide branding edges
+              maxWidth: MediaQuery.of(context).size.width * 1.15,
+              maxHeight: MediaQuery.of(context).size.height * 1.15,
+              child: AbsorbPointer(
+                absorbing: true,
+                child: YoutubePlayer(
+                  controller: controller,
+                  showVideoProgressIndicator: false,
+                  thumbnail: const SizedBox.shrink(),
+                  onEnded: (_) => controller.play(),
+                ),
               ),
-              onEnded: (_) {
-                controller.play(); // Loop
-              },
             ),
           ),
         ),
-      ),
+
+        // 2. Top Shield (Covers titles/pre-roll UI)
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 60,
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.black,
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.black, Colors.transparent],
+              ),
+            ),
+          ),
+        ),
+
+        // 3. Bottom Shield (Covers logo/controls)
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: 40,
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.black,
+              gradient: LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+                colors: [Colors.black, Colors.transparent],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -449,9 +477,11 @@ class _VideoMetadata extends StatelessWidget {
         // Feed type and recommendation badges row
         _buildBadgesRow(),
 
-        // Channel Name
+        // Channel Name / Media Type
         Text(
-          video.channelName.isNotEmpty ? video.channelName : 'MOVIE',
+          video.channelName.isNotEmpty
+              ? video.channelName
+              : (video.type == 'VIDEO_ONLY' ? 'Video' : 'MOVIE'),
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -510,10 +540,51 @@ class _VideoMetadata extends StatelessWidget {
         children: [
           // Feed Type Badge (Trending, Following, For You)
           if (hasFeedType) _buildFeedTypeBadge(video.feedType!),
+
+          // Video Type Badge (Extra, BTS) - NEW
+          if (video.type == 'VIDEO_ONLY') _buildVideoTypeBadge(),
+
           // Recommendation Reason Badge
           if (hasRecommendation)
             _buildRecommendationBadge(video.recommendationReason!),
         ],
+      ),
+    );
+  }
+
+  /// Build badge for video-only content (Extras, BTS)
+  Widget _buildVideoTypeBadge() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Colors.white30),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.video_library_rounded,
+                size: 12,
+                color: Colors.white70,
+              ),
+              SizedBox(width: 4),
+              Text(
+                'EXTRA',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

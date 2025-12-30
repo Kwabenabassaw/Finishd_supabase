@@ -1,12 +1,11 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../models/feed_video.dart';
-import '../models/feed_item.dart';
 import '../services/api_client.dart';
-import '../services/feed_scoring_service.dart';
-import '../services/user_preferences_cache.dart';
 
-import '../services/cache/feed_cache_service.dart';
+import '../services/content_lake_repository.dart';
+import '../db/objectbox/feed_entities.dart';
 
 /// YouTube Feed Provider (TikTok-style with Three Tabs)
 ///
@@ -31,6 +30,13 @@ class YoutubeFeedProvider extends ChangeNotifier {
   bool _hasError = false;
   String? _errorMessage;
 
+  DateTime? _videoStartTime;
+  String? _lastFirstVideoId; // To prevent repeat first videos
+
+  // --- Navigation/Jumping ---
+  final _jumpToPageController = StreamController<int>.broadcast();
+  Stream<int> get jumpToPageStream => _jumpToPageController.stream;
+
   // --- NEW: Multi-tab state ---
   FeedType _activeFeedType = FeedType.forYou;
 
@@ -54,9 +60,9 @@ class YoutubeFeedProvider extends ChangeNotifier {
   // API Client
   final ApiClient _apiClient = ApiClient();
 
-  // Scoring Service (for For You personalization)
-  final FeedScoringService _scoringService = FeedScoringService.instance;
-  final UserPreferencesCache _prefsCache = UserPreferencesCache.instance;
+  // Offline-First Repository
+  final ContentLakeRepository _feedRepository = ContentLakeRepository();
+  StreamSubscription<List<CachedFeedItem>>? _feedSubscription;
 
   // --- Getters ---
   List<FeedVideo> get videos => _feedsByType[_activeFeedType] ?? [];
@@ -79,7 +85,7 @@ class YoutubeFeedProvider extends ChangeNotifier {
   // INITIALIZATION
   // ==========================================================================
 
-  /// Initialize provider - load from cache first, then network
+  /// Initialize provider - binds to ObjectBox stream
   Future<void> initialize() async {
     if (_isLoading) return;
 
@@ -88,50 +94,28 @@ class YoutubeFeedProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // TEMP FIX: Clear stale cache that may not have youtubeKeys
-      // TODO: Remove this after confirming the fix works
-      debugPrint('[YTFeed] 🗑️ Clearing stale cache to force fresh data');
-      await FeedCacheService.clearFeed();
-      await _prefsCache
-          .clear(); // Also clear prefs to force fresh personalization
+      _feedRepository.initialize();
 
-      // Try cache first for instant display (only for ForYou feed)
-      final cached = await FeedCacheService.getFeed();
-      if (cached != null && cached.isNotEmpty) {
-        debugPrint('[YTFeed] 📦 Found ${cached.length} cached items');
+      // Bind callbacks
+      _feedRepository.onSyncing = (syncing) {
+        _isLoadingMore = syncing;
+        notifyListeners();
+      };
 
-        // DEBUG: Check first item's youtubeKey
-        if (cached.isNotEmpty) {
-          final firstCached = cached[0];
-          debugPrint(
-            '[YTFeed] 🔍 First cached item: ${firstCached['title']}, youtubeKey: ${firstCached['youtubeKey']}',
-          );
-        }
-
-        final feedVideos = _convertToFeedVideos(cached);
-
-        if (feedVideos.isEmpty) {
-          debugPrint(
-            '[YTFeed] ⚠️ All cached items filtered out (no valid youtubeKey), loading from network',
-          );
-          await _loadFromNetwork();
-        } else {
-          _feedsByType[FeedType.forYou]!.addAll(feedVideos);
-          _isLoading = false;
+      _feedRepository.onError = (err) {
+        _errorMessage = err;
+        // Don't show full screen error if we have data
+        if (videos.isEmpty) {
+          _hasError = true;
           notifyListeners();
-
-          // Initialize first window
-          _updateControllerWindow(0);
-
-          // Background refresh
-          _refreshInBackground();
-          return;
         }
-      } else {
-        debugPrint('[YTFeed] 📭 No cached feed, loading from network');
-        // Load from network
-        await _loadFromNetwork();
-      }
+      };
+
+      // Start syncing the active feed type (background)
+      await _feedRepository.startSync(_activeFeedType.value);
+
+      // Subscribe to reactive updates from ObjectBox
+      _subscribeToFeed(_activeFeedType.value);
     } catch (e) {
       debugPrint('[YTFeed] ❌ Error initializing: $e');
       _hasError = true;
@@ -139,6 +123,85 @@ class YoutubeFeedProvider extends ChangeNotifier {
     }
 
     _isLoading = false;
+    notifyListeners();
+  }
+
+  void _subscribeToFeed(String feedType) {
+    _feedSubscription?.cancel();
+    _feedSubscription = _feedRepository
+        .watchFeed(feedType)
+        .listen(
+          (items) async {
+            debugPrint(
+              '[YTFeed] 📦 ObjectBox update: ${items.length} items for $feedType',
+            );
+
+            if (items.isEmpty) {
+              // If empty, force a sync attempt
+              await _feedRepository.startSync(feedType);
+              return;
+            }
+
+            // VERIFICATION LOG
+            print('''
+              [YTFeed] 📥 RECEIVED DATA FROM LOCAL DB
+              ------------------------------------------
+              Source:    ObjectBox (Offline-Ready)
+              Feed:      $feedType
+              Items:     ${items.length}
+              Status:    streaming...
+              ------------------------------------------
+              ''');
+
+            await _onFeedChanged(
+              items,
+              FeedType.values.firstWhere((e) => e.value == feedType),
+            );
+          },
+          onError: (e) {
+            debugPrint('[YTFeed] ❌ ObjectBox stream error: $e');
+            _hasError = true;
+            _errorMessage = e.toString();
+            notifyListeners();
+          },
+        );
+  }
+
+  Future<void> _onFeedChanged(
+    List<CachedFeedItem> cachedItems,
+    FeedType type,
+  ) async {
+    // Convert to UI models
+    final videos = cachedItems.map(_cachedToFeedVideo).toList();
+
+    // Personalization (For You only)
+    List<FeedVideo> finalVideos = videos;
+
+    if (type == FeedType.forYou && _currentIndex == 0) {
+      finalVideos = _applyStartVideoGuarantee(videos);
+    }
+
+    _feedsByType[type] = finalVideos;
+
+    // If valid content, update UI
+    if (finalVideos.isNotEmpty) {
+      // Ensure the window includes the current index (e.g. 0)
+      if (!_controllers.containsKey(_currentIndex)) {
+        _updateControllerWindow(_currentIndex);
+
+        // CRITICAL FIX: Add a robust check loop to play once the controller is truly ready.
+        // The simple Future.delayed(500ms) was insufficient for slower devices/network.
+        _waitForControllerAndPlay(_currentIndex);
+      } else {
+        // If controller exists but might be paused (e.g. returning from background),
+        // ensure it's playing if it's the active index.
+        final controller = _controllers[_currentIndex];
+        if (controller != null && !controller.value.isPlaying) {
+          _playWithRetry(_currentIndex);
+        }
+      }
+    }
+
     notifyListeners();
   }
 
@@ -160,147 +223,23 @@ class YoutubeFeedProvider extends ChangeNotifier {
     _activeFeedType = type;
     _currentIndex = 0;
 
-    // 4. Check if we have content for this tab
-    final currentFeed = _feedsByType[type]!;
+    // 4. Start Sync & Subscribe
+    await _feedRepository.startSync(type.value);
+    _subscribeToFeed(type.value);
 
-    if (currentFeed.isEmpty) {
-      // Load from network for this feed type
-      _isLoading = true;
-      notifyListeners();
-
-      await _loadFromNetwork();
-
-      _isLoading = false;
-    } else {
-      // Use cached content, initialize controllers
+    // 5. Initial render from cache (fast)
+    final initialItems = _feedRepository.getVisibleFeed(type.value);
+    if (initialItems.isNotEmpty) {
+      await _onFeedChanged(initialItems, type);
       _updateControllerWindow(0);
+    } else {
+      _isLoading = true; // Show loader while waiting for stream
     }
 
     notifyListeners();
   }
 
-  Future<void> _loadFromNetwork() async {
-    try {
-      final feedType = _activeFeedType;
-      final page = _pagesByType[feedType] ?? 1;
-
-      final items = await _apiClient.getPersonalizedFeedV2(
-        refresh: false,
-        limit: 50,
-        page: page,
-        feedType: feedType, // NEW: Pass feed type to API
-      );
-
-      // DEBUG: Log raw API response count and youtubeKey status
-      final itemsWithKey = items
-          .where((i) => i.youtubeKey != null && i.youtubeKey!.isNotEmpty)
-          .length;
-      debugPrint(
-        '[YTFeed] 📊 API returned ${items.length} items, ${itemsWithKey} have youtubeKey',
-      );
-
-      final feedVideos = _convertFeedItemsToVideos(items);
-
-      // Apply local scoring for For You feed
-      List<FeedVideo> finalVideos = feedVideos;
-      if (feedType == FeedType.forYou) {
-        finalVideos = await _applyLocalScoring(items);
-      }
-
-      _feedsByType[feedType]!.clear();
-      _feedsByType[feedType]!.addAll(finalVideos);
-
-      // Cache for later (only ForYou feed)
-      if (feedType == FeedType.forYou) {
-        await FeedCacheService.saveFeed(items.map((e) => e.toJson()).toList());
-      }
-
-      // Initialize first window
-      if (_feedsByType[feedType]!.isNotEmpty) {
-        _updateControllerWindow(0);
-      }
-
-      debugPrint(
-        '[YTFeed] ✅ Loaded ${feedVideos.length} ${feedType.value} videos from network (filtered from ${items.length} items)',
-      );
-    } catch (e) {
-      debugPrint('[YTFeed] ❌ Network error: $e');
-      _hasError = true;
-      _errorMessage = e.toString();
-    }
-  }
-
-  Future<void> _refreshInBackground() async {
-    try {
-      final items = await _apiClient.getPersonalizedFeedV2(
-        refresh: true,
-        limit: 50,
-        page: 1,
-      );
-
-      if (items.isNotEmpty) {
-        await FeedCacheService.saveFeed(items.map((e) => e.toJson()).toList());
-        debugPrint('[YTFeed] ✅ Background refresh complete');
-      }
-    } catch (e) {
-      debugPrint('[YTFeed] ⚠️ Background refresh failed: $e');
-    }
-  }
-
-  /// Apply local personalization scoring for For You feed
-  Future<List<FeedVideo>> _applyLocalScoring(List<FeedItem> items) async {
-    try {
-      // Get or sync user preferences
-      var prefs = await _prefsCache.getCached();
-
-      if (prefs == null || _prefsCache.needsRefresh) {
-        // Sync from Firestore in background
-        debugPrint('[YTFeed] 📥 Syncing user preferences from Firestore');
-        prefs = await _prefsCache.syncFromFirestore(
-          // Use current user ID - you may need to inject this
-          '', // Will use Firebase Auth internally
-        );
-      }
-
-      if (!prefs.hasPreferences) {
-        // No preferences = no scoring, return as-is
-        debugPrint('[YTFeed] ⚠️ No user preferences, skipping scoring');
-        return _convertFeedItemsToVideos(items);
-      }
-
-      // Debug: Log preference stats
-      debugPrint(
-        '[YTFeed] 📊 Prefs: ${prefs.preferredGenres.length} genres, '
-        '${prefs.watchedTmdbIds.length} watched, '
-        '${prefs.watchlistTmdbIds.length} watchlist',
-      );
-      if (prefs.preferredGenres.isNotEmpty) {
-        debugPrint('[YTFeed] 🎭 Genres: ${prefs.preferredGenres.join(", ")}');
-      }
-
-      // Debug: Check if items have genres
-      final itemsWithGenres = items
-          .where((i) => i.genres != null && i.genres!.isNotEmpty)
-          .length;
-      debugPrint(
-        '[YTFeed] 📦 Items with genres: $itemsWithGenres / ${items.length}',
-      );
-      if (items.isNotEmpty && items.first.genres != null) {
-        debugPrint('[YTFeed] 🎬 First item genres: ${items.first.genres}');
-      }
-
-      // Apply scoring and ranking
-      debugPrint('[YTFeed] 🎯 Applying personalization scoring');
-      final scoredItems = _scoringService.rankFeed(items, prefs);
-
-      debugPrint('[YTFeed] ✅ Scored and ranked ${scoredItems.length} items');
-      return _convertFeedItemsToVideos(scoredItems);
-    } catch (e) {
-      debugPrint('[YTFeed] ❌ Error applying scoring: $e');
-      // Fallback to unscored
-      return _convertFeedItemsToVideos(items);
-    }
-  }
+  // REMOVED _loadFromNetwork - logic is now in FeedSyncService
 
   // ==========================================================================
   // PAGE CHANGE HANDLER (Core Logic)
@@ -313,11 +252,15 @@ class YoutubeFeedProvider extends ChangeNotifier {
 
     debugPrint('[YTFeed] 📱 Page changed: $_currentIndex → $index');
 
+    // 0. Record view duration for previous video
+    _recordEngagement(_currentIndex);
+
     // 1. Pause the previous video
     _pauseController(_currentIndex);
 
     // 2. Update current index
     _currentIndex = index;
+    _videoStartTime = DateTime.now();
 
     // 3. Update the window (creates new, disposes old)
     _updateControllerWindow(index);
@@ -333,36 +276,117 @@ class YoutubeFeedProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Robustly waits for a controller to be created AND READY, then plays it.
+  /// Checks every 100ms up to 50 times (5 seconds total).
+  void _waitForControllerAndPlay(int index) {
+    if (_isDisposed) return;
+
+    int checks = 0;
+    Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      if (_isDisposed) {
+        timer.cancel();
+        return;
+      }
+
+      final controller = _controllers[index];
+      // CRITICAL: Check both existence AND readiness
+      if (controller != null && controller.value.isReady) {
+        timer.cancel();
+        debugPrint(
+          '[YTFeed] ✅ Controller ready for $index after ${checks * 100}ms, playing...',
+        );
+        _playWithRetry(index);
+      } else {
+        checks++;
+        // Use a shorter timeout (1.5s) to avoid leaving user hanging
+        // If it's not ready by then, we force play and hope queueing works.
+        if (checks >= 15) {
+          timer.cancel();
+          debugPrint(
+            '[YTFeed] ❌ Timed out waiting for controller READY at index $index',
+          );
+
+          // Fallback: Try playing anyway if controller exists, sometimes isReady is flaky?
+          if (controller != null) {
+            debugPrint(
+              '[YTFeed] ⚠️ Force playing non-ready controller at index $index',
+            );
+            // Pass attempt=1 to bypass the "wait for ready" check in _playWithRetry
+            _playWithRetry(index, 1);
+          }
+        }
+      }
+    });
+  }
+
   /// Plays the video at index with retry mechanism
-  /// Retries up to 5 times if controller isn't ready or video doesn't start
   void _playWithRetry(int index, [int attempt = 0]) {
     if (_isDisposed || _currentIndex != index) return;
-    if (attempt >= 5) {
-      debugPrint('[YTFeed] ⚠️ Failed to play index $index after 5 attempts');
+    if (attempt >= 10) {
+      debugPrint('[YTFeed] ⚠️ Failed to play index $index after 10 attempts');
       return;
     }
 
     final controller = _controllers[index];
 
     if (controller != null) {
+      // If not ready yet, just wait (handled by _waitForControllerAndPlay usually, but double check)
+      if (!controller.value.isReady && attempt == 0) {
+        // Should have been handled by waiter, but let's delay
+        Future.delayed(
+          const Duration(milliseconds: 200),
+          // Increment attempt to prevent infinite loop
+          () => _playWithRetry(index, attempt + 1),
+        );
+        return;
+      }
+
       debugPrint('[YTFeed] ▶️ Playing index $index (attempt $attempt)');
+
+      // Safety: Pause any other controllers
+      for (var entry in _controllers.entries) {
+        if (entry.key != index) {
+          entry.value.pause();
+        }
+      }
+
+      // Mute/Unmute
+      if (_isMuted) {
+        controller.mute();
+      } else {
+        controller.unMute();
+      }
+
       controller.play();
 
-      // Verify it actually started playing after a short delay
+      // Verify success
       Future.delayed(Duration(milliseconds: 300 + (attempt * 200)), () {
         if (_isDisposed || _currentIndex != index) return;
 
         final currentController = _controllers[index];
-        if (currentController != null && !currentController.value.isPlaying) {
-          debugPrint('[YTFeed] ⚠️ Video at $index not playing, retrying...');
-          _playWithRetry(index, attempt + 1);
+        if (currentController != null) {
+          final state = currentController.value.playerState;
+          // CRITICAL FIX: Consider BUFFERING as success (or at least "working on it")
+          // Also checking "cued" as potential starting state that needs another kick?
+          // Ideally: playing or buffering means we are good.
+          final isWorking =
+              state == PlayerState.playing || state == PlayerState.buffering;
+
+          if (!isWorking) {
+            debugPrint(
+              '[YTFeed] ⚠️ Video at $index state: $state (not playing/buffering), retrying...',
+            );
+            _playWithRetry(index, attempt + 1);
+          } else {
+            debugPrint('[YTFeed] 🚀 Success: Video at $index is $state');
+          }
         }
       });
     } else {
-      // Controller not ready yet, retry with delay
-      final delay = Duration(milliseconds: 150 + (attempt * 150));
+      // Controller missing
+      final delay = Duration(milliseconds: 200);
       debugPrint(
-        '[YTFeed] ⏳ Controller not ready for $index, retrying in ${delay.inMilliseconds}ms...',
+        '[YTFeed] ⏳ Controller missing for $index, retrying in ${delay.inMilliseconds}ms...',
       );
       Future.delayed(delay, () => _playWithRetry(index, attempt + 1));
     }
@@ -378,11 +402,12 @@ class YoutubeFeedProvider extends ChangeNotifier {
     if (_isDisposed || videos.isEmpty) return;
 
     // Define the 3-controller window
-    // Strict Single-Controller Strategy
-    // We only keep the CURRENT controller to force a fresh session on ANY scroll.
-    // This fixes persistent "Watch on YouTube" errors by preventing reuse of stale sessions.
+    // We keep prev, current, and next to ensure smooth scroll transitions
+    // while strictly controlling which one plays audio.
     final windowIndices = <int>{
+      centerIndex - 1,
       centerIndex,
+      centerIndex + 1,
     }.where((i) => i >= 0 && i < videos.length).toSet();
 
     // 1. DISPOSE controllers outside the window
@@ -434,18 +459,17 @@ class YoutubeFeedProvider extends ChangeNotifier {
     try {
       final controller = YoutubePlayerController(
         initialVideoId: videoId,
-        flags: YoutubePlayerFlags(
-          autoPlay:
-              false, // Don't rely on this - we'll manually play the current video
-          mute: _isMuted, // Use the current mute state
+        flags: const YoutubePlayerFlags(
+          autoPlay: false,
+          mute: true, // Start muted for pre-loading smoothness
           loop: true,
-          disableDragSeek: true, // Prevents gesture conflicts
+          disableDragSeek: true,
           enableCaption: false,
           hideControls: true,
           hideThumbnail: true,
-          forceHD: false, // Let it adapt to connection
-          useHybridComposition:
-              false, // Performance: False = Texture Mode (Much faster)
+          forceHD: false,
+          useHybridComposition: false,
+          controlsVisibleAtStart: false,
         ),
       );
 
@@ -481,6 +505,57 @@ class YoutubeFeedProvider extends ChangeNotifier {
     }
     // NOTE: Do NOT call notifyListeners() here!
     // It was causing infinite rebuilds and the self-scrolling bug
+  }
+
+  // ==========================================================================
+  // ENGAGEMENT SCANNING
+  // ==========================================================================
+
+  void _recordEngagement(int index) {
+    if (index < 0 || index >= videos.length) return;
+    if (_videoStartTime == null) return;
+
+    final video = videos[index];
+    final duration = DateTime.now().difference(_videoStartTime!).inMilliseconds;
+
+    debugPrint('[YTFeed] 📊 Engagement for ${video.videoId}: ${duration}ms');
+
+    // 1. Record in Repository (Offline Cache)
+    _feedRepository.recordEngagement(
+      itemId: video.videoId,
+      viewDurationMs: duration,
+    );
+
+    // 2. Update Session Bias
+    if (video.relatedItemId != null) {
+      // In a real app, we'd look up the genre of the item.
+      // For now, we'll just log it.
+      debugPrint('[YTFeed] 🧠 User watched genre signal from ${video.title}');
+    }
+
+    _videoStartTime = null;
+  }
+
+  List<FeedVideo> _applyStartVideoGuarantee(List<FeedVideo> pool) {
+    if (pool.isEmpty) return pool;
+
+    // Rule: Must not be the same first video as last session or today
+    final candidates = pool
+        .where((v) => v.videoId != _lastFirstVideoId)
+        .toList();
+
+    if (candidates.isEmpty) return pool;
+
+    // Move the chosen one to the front
+    final best = candidates.first;
+    _lastFirstVideoId = best.videoId;
+
+    final newList = List<FeedVideo>.from(pool);
+    newList.removeWhere((v) => v.videoId == best.videoId);
+    newList.insert(0, best);
+
+    debugPrint('[YTFeed] ✨ Start Video Guarantee Applied: ${best.title}');
+    return newList;
   }
 
   /// Dispose a single controller
@@ -626,36 +701,9 @@ class YoutubeFeedProvider extends ChangeNotifier {
 
   /// Load more videos (next page) for the active feed type
   Future<void> loadMore() async {
-    if (_isLoadingMore) return;
-
-    _isLoadingMore = true;
-    notifyListeners();
-
-    try {
-      final feedType = _activeFeedType;
-      final currentPage = (_pagesByType[feedType] ?? 1);
-      final nextPage = currentPage + 1;
-
-      final items = await _apiClient.getPersonalizedFeedV2(
-        refresh: false,
-        limit: 50,
-        page: nextPage,
-        feedType: feedType, // Use active feed type
-      );
-
-      final newVideos = _convertFeedItemsToVideos(items);
-      _feedsByType[feedType]!.addAll(newVideos);
-      _pagesByType[feedType] = nextPage;
-
-      debugPrint(
-        '[YTFeed] ✅ Loaded ${newVideos.length} more ${feedType.value} (page $nextPage)',
-      );
-    } catch (e) {
-      debugPrint('[YTFeed] ❌ Error loading more: $e');
-    }
-
-    _isLoadingMore = false;
-    notifyListeners();
+    // Current architecture uses fixed batches (50-100 items).
+    // Infinite scroll acts as "Wait for next batch or just stop".
+    // For now, no-op.
   }
 
   // ==========================================================================
@@ -668,21 +716,12 @@ class YoutubeFeedProvider extends ChangeNotifier {
     _disposeAllControllers();
     _initializing.clear();
 
-    // Clear all feed lists
-    for (final feedType in FeedType.values) {
-      _feedsByType[feedType]!.clear();
-      _pagesByType[feedType] = 1;
-    }
-
     _currentIndex = 0;
     _hasError = false;
     _errorMessage = null;
 
-    // Clear cache
-    await FeedCacheService.clearFeed();
-
-    // Reload
-    await initialize();
+    // Force sync via repository
+    await _feedRepository.forceRefresh(_activeFeedType.value);
   }
 
   /// Trigger backend refresh (cron job)
@@ -696,40 +735,71 @@ class YoutubeFeedProvider extends ChangeNotifier {
   }
 
   // ==========================================================================
+  // FEED MANIPULATION (Remote Trigger)
+  // ==========================================================================
+
+  void injectAndPlayVideo({
+    required String videoId,
+    String? title,
+    String? thumbnail,
+    String? channel,
+  }) {
+    if (_isDisposed) return;
+
+    final feedList = _feedsByType[_activeFeedType]!;
+    final index = feedList.indexWhere((v) => v.videoId == videoId);
+
+    if (index != -1) {
+      debugPrint(
+        '[YTFeed] 📌 Video already in list at index $index, jumping...',
+      );
+      _jumpToPageController.add(index);
+    } else {
+      debugPrint('[YTFeed] 📥 Injecting new shared video: $videoId');
+
+      final newVideo = FeedVideo(
+        videoId: videoId,
+        title: title ?? 'Shared Video',
+        thumbnailUrl: thumbnail ?? '',
+        channelName: channel ?? '',
+        description: 'Shared from chat',
+      );
+
+      // Insert it right after the current index so it's the next video
+      final insertIndex = (_currentIndex + 1).clamp(0, feedList.length);
+      feedList.insert(insertIndex, newVideo);
+
+      // Wait for list update then jump
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (!_isDisposed) {
+          _jumpToPageController.add(insertIndex);
+        }
+      });
+    }
+    notifyListeners();
+  }
+
+  // ==========================================================================
   // CONVERSION HELPERS
   // ==========================================================================
 
-  List<FeedVideo> _convertToFeedVideos(List<Map<String, dynamic>> items) {
-    debugPrint(
-      '[YTFeed] 🔄 Converting ${items.length} cached items to FeedVideos',
+  FeedVideo _cachedToFeedVideo(CachedFeedItem item) {
+    return FeedVideo(
+      videoId: item.youtubeKey ?? '',
+      title: item.title,
+      thumbnailUrl:
+          item.backdrop ??
+          (item.poster != null
+              ? 'https://image.tmdb.org/t/p/w780${item.poster}'
+              : ''),
+      channelName: '', // Cached version often lacks channel, acceptable
+      description: item.overview ?? '',
+      recommendationReason: item.title,
+      relatedItemId: item.tmdbId?.toString(),
+      relatedItemType: item.mediaType,
+      feedType: item.feedType,
+      // Convert comma-separated string back to list if needed
     );
-    final converted = items
-        .map((json) => FeedVideo.fromFeedItem(FeedItem.fromJson(json)))
-        .toList();
-    final filtered = converted.where((v) => v.videoId.isNotEmpty).toList();
-    debugPrint(
-      '[YTFeed] 📊 Cached conversion: ${converted.length} total, ${filtered.length} with valid videoId',
-    );
-    return filtered;
-  }
-
-  List<FeedVideo> _convertFeedItemsToVideos(List<FeedItem> items) {
-    debugPrint(
-      '[YTFeed] 🔄 Converting ${items.length} FeedItems to FeedVideos',
-    );
-    final converted = items
-        .map((item) => FeedVideo.fromFeedItem(item))
-        .toList();
-    final filtered = converted.where((v) => v.videoId.isNotEmpty).toList();
-    debugPrint(
-      '[YTFeed] 📊 Network conversion: ${converted.length} total, ${filtered.length} with valid videoId',
-    );
-    if (filtered.length < converted.length) {
-      debugPrint(
-        '[YTFeed] ⚠️ Filtered out ${converted.length - filtered.length} items without videoId',
-      );
-    }
-    return filtered;
   }
 
   // ==========================================================================
@@ -746,6 +816,9 @@ class YoutubeFeedProvider extends ChangeNotifier {
     }
     _controllers.clear();
     _initializing.clear();
+    _jumpToPageController.close();
+    _feedSubscription?.cancel();
+    _feedRepository.dispose();
 
     super.dispose();
   }

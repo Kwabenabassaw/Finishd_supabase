@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:finishd/services/chat_sync_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -191,6 +192,13 @@ class AuthService {
 
   // Sign Out
   Future<void> signOut() async {
+    // Clear local chat data to prevent leaking between accounts
+    try {
+      ChatSyncService.instance.clearLocalData();
+    } catch (e) {
+      // Ignore if ChatSyncService not initialized
+    }
+
     // Disconnect Google Sign-In to fully clear cached account
     // This allows switching to a different Google account on next sign-in
     try {

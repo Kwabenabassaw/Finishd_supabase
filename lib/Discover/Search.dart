@@ -1,4 +1,5 @@
 import 'dart:io' show Platform;
+import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:finishd/Model/Searchdiscover.dart';
 import 'package:finishd/Model/movie_list_item.dart';
 import 'package:finishd/Model/trending.dart';
@@ -170,20 +171,11 @@ class _SearchScreenState extends State<SearchScreen> {
         Expanded(
           child: Container(
             height: 40,
-            decoration: BoxDecoration(
-              color: theme.brightness == Brightness.dark
-                  ? Colors.grey[900]
-                  : Colors.grey[200],
-              borderRadius: BorderRadius.circular(20),
-            ),
+          
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(
               children: [
-                Icon(
-                  isIOS ? CupertinoIcons.search : Icons.search,
-                  size: 20,
-                  color: Colors.grey,
-                ),
+             
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
@@ -196,10 +188,11 @@ class _SearchScreenState extends State<SearchScreen> {
                       hintText: "Movies, shows, or people",
                       border: InputBorder.none,
                       isDense: true,
-                      contentPadding: EdgeInsets.symmetric(vertical: 8),
+                      contentPadding: EdgeInsets.symmetric(vertical: 18),
                     ),
                   ),
                 ),
+                SizedBox(width: 8),
                 if (_searchController.text.isNotEmpty)
                   GestureDetector(
                     onTap: () {
@@ -228,8 +221,8 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildTabBar(ThemeData theme) {
     return TabBar(
-      isScrollable: true,
-      indicatorWeight: 3,
+     
+      
       indicatorColor: theme.primaryColor,
       labelColor: theme.textTheme.bodyLarge?.color,
       unselectedLabelColor: Colors.grey,
@@ -245,7 +238,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildResultsGrid(String mediaType) {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: LogoLoadingScreen());
     }
 
     final filtered = mediaType == 'all'

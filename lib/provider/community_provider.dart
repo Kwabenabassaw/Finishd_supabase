@@ -2,12 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:finishd/Model/community_models.dart';
 import 'package:finishd/Model/trending.dart';
 import 'package:finishd/services/community_service.dart';
-import 'package:finishd/Model/trendingmovies.dart'; // Ensure correct import for TMDB service if needed
+import 'package:finishd/Model/trendingmovies.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
+import 'package:finishd/services/storage_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class CommunityProvider extends ChangeNotifier {
   final CommunityService _communityService = CommunityService();
   final Trending _trending = Trending();
+  final StorageService _storageService = StorageService();
+
+  bool _isUploadingMedia = false;
+  bool get isUploadingMedia => _isUploadingMedia;
 
   // My Communities
   List<Community> _myCommunities = [];
@@ -410,15 +418,56 @@ class CommunityProvider extends ChangeNotifier {
     String? posterPath,
     required String mediaType,
     required String content,
+    List<XFile> mediaFiles = const [],
     List<String> hashtags = const [],
     bool isSpoiler = false,
   }) async {
+    List<String> mediaUrls = [];
+    List<String> mediaTypes = [];
+
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return null;
+
+    if (mediaFiles.isNotEmpty) {
+      _isUploadingMedia = true;
+      notifyListeners();
+
+      try {
+        for (final xFile in mediaFiles) {
+          final file = File(xFile.path);
+          final isVideo =
+              file.path.endsWith('.mp4') ||
+              file.path.endsWith('.mov') ||
+              file.path.endsWith('.avi');
+
+          final url = await _storageService.uploadCommunityMedia(
+            showId.toString(),
+            uid,
+            file,
+          );
+
+          mediaUrls.add(url);
+          mediaTypes.add(isVideo ? 'video' : 'image');
+        }
+      } catch (e) {
+        print('Error uploading media for community post: $e');
+        _isUploadingMedia = false;
+        notifyListeners();
+        rethrow;
+      }
+
+      _isUploadingMedia = false;
+      notifyListeners();
+    }
+
     return _communityService.createPost(
       showId: showId,
       showTitle: showTitle,
       posterPath: posterPath,
       mediaType: mediaType,
       content: content,
+      mediaUrls: mediaUrls,
+      mediaTypes: mediaTypes,
       hashtags: hashtags,
       isSpoiler: isSpoiler,
     );

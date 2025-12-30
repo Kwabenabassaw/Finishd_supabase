@@ -16,6 +16,8 @@ import 'package:finishd/provider/community_provider.dart';
 import 'package:finishd/provider/actor_provider.dart';
 import 'dart:io' show Platform;
 
+import 'package:finishd/provider/app_navigation_provider.dart';
+import 'package:finishd/provider/youtube_feed_provider.dart';
 import 'package:finishd/SplashScreen/splash_screen.dart';
 import 'package:finishd/onboarding/CategoriesTypeMove.dart';
 import 'package:finishd/onboarding/Login.dart';
@@ -35,6 +37,9 @@ import 'package:finishd/firebase_options.dart';
 import 'package:finishd/services/auth_service.dart';
 import 'package:finishd/services/push_notification_service.dart';
 import 'package:finishd/theme/app_theme.dart';
+import 'package:finishd/db/objectbox/objectbox_store.dart'; // ObjectBox Init
+import 'package:finishd/services/chat_sync_service.dart'; // Offline-first chat
+import 'package:finishd/provider/chat_provider.dart'; // Chat state management
 
 void main() async {
   try {
@@ -42,6 +47,12 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+
+    // Initialize ObjectBox (Offline-First DB)
+    await ObjectBoxStore.create();
+
+    // Initialize ChatSyncService (after ObjectBox is ready)
+    await ChatSyncService.instance.initialize();
 
     final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -59,6 +70,11 @@ void main() async {
           ChangeNotifierProvider(create: (_) => ThemeProvider()),
           ChangeNotifierProvider(create: (_) => CommunityProvider()),
           ChangeNotifierProvider(create: (_) => ActorProvider()),
+          ChangeNotifierProvider(create: (_) => AppNavigationProvider()),
+          ChangeNotifierProvider(
+            create: (_) => YoutubeFeedProvider()..initialize(),
+          ),
+          ChangeNotifierProvider(create: (_) => ChatProvider()..initialize()),
           Provider<AuthService>(create: (_) => AuthService()),
         ],
         child: MyApp(navigatorKey: navigatorKey),
@@ -140,25 +156,30 @@ final List<Widget> _pages = [
 ];
 
 class _HomePageState extends State<HomePage> {
-  int _selectedIndex = 0;
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
+    final navProvider = context.watch<AppNavigationProvider>();
+    final selectedIndex = navProvider.currentIndex;
+
     return Scaffold(
       extendBody: true, // IMPORTANT for transparency
 
-      body: _pages[_selectedIndex],
+      body: IndexedStack(index: selectedIndex, children: _pages),
 
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
+        currentIndex: selectedIndex,
+        onTap: (index) {
+          // Handle video playback on tab switch
+          final feedProvider = context.read<YoutubeFeedProvider>();
+          if (index != 0) {
+            feedProvider.pauseAll();
+          } else if (index == 0 && selectedIndex != 0) {
+            // Only resume if actually switching TO home from another tab
+            feedProvider.resumeCurrent();
+          }
+          navProvider.setTab(index);
+        },
         showUnselectedLabels: false,
         iconSize: 24,
         enableFeedback: true,
@@ -166,10 +187,10 @@ class _HomePageState extends State<HomePage> {
         unselectedItemColor: const Color.fromARGB(255, 1, 118, 32),
 
         // 🔥 Make transparent on Home tab
-        backgroundColor: _selectedIndex == 0 ? Colors.transparent : null,
+        backgroundColor: selectedIndex == 0 ? Colors.transparent : null,
 
         // ⚡ Remove shadow when transparent
-        elevation: _selectedIndex == 4 ? 8 : 8,
+        elevation: selectedIndex == 4 ? 8 : 8,
 
         items: [
           if (Platform.isAndroid) ...[

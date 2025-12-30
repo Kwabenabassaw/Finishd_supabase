@@ -71,49 +71,90 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   }
 
   Future<void> _createPost() async {
-    if (_contentController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please write something')));
+    final content = _contentController.text.trim();
+    if (content.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please write something'),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
       return;
     }
 
-    setState(() => _isPosting = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final provider = Provider.of<CommunityProvider>(context, listen: false);
 
+    // Show initial toast
+    messenger.showSnackBar(
+      SnackBar(
+        content: const Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            ),
+            SizedBox(width: 12),
+            Text('Uploading your post...'),
+          ],
+        ),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 4),
+      ),
+    );
+
+    // Pop the screen immediately
+    Navigator.pop(context);
+
+    // Perform the upload in the background
     try {
-      final provider = Provider.of<CommunityProvider>(context, listen: false);
-
-      // TODO: Upload media to Firebase Storage and get URLs
-      // For now, we'll just create the post without media
-
       final postId = await provider.createPost(
         showId: widget.showId,
         showTitle: widget.showTitle,
         posterPath: widget.posterPath,
         mediaType: widget.mediaType,
-        content: _contentController.text.trim(),
-        hashtags: _hashtags,
+        content: content,
+        mediaFiles: List.from(_selectedMedia),
+        hashtags: List.from(_hashtags),
         isSpoiler: _isSpoiler,
       );
 
       if (postId != null) {
-        if (mounted) {
-          Navigator.pop(context, true); // Return true to indicate success
-        }
+        messenger.hideCurrentSnackBar();
+        messenger.showSnackBar(
+          SnackBar(
+            content: const Text('Post uploaded successfully!'),
+            backgroundColor: const Color(0xFF1A8927),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
       } else {
         throw Exception('Failed to create post');
       }
     } catch (e) {
       print('Error creating post: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isPosting = false);
-      }
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Failed to upload post: $e'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
     }
   }
 
@@ -142,25 +183,30 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: ElevatedButton(
-              onPressed: _isPosting ? null : _createPost,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryGreen,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-              ),
-              child: _isPosting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text('Post'),
+            child: Consumer<CommunityProvider>(
+              builder: (context, provider, child) {
+                final isUploading = provider.isUploadingMedia || _isPosting;
+                return ElevatedButton(
+                  onPressed: isUploading ? null : _createPost,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryGreen,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  child: isUploading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Post'),
+                );
+              },
             ),
           ),
         ],

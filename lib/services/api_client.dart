@@ -20,9 +20,8 @@ enum FeedType {
 /// Handles all communication with the FastAPI backend deployed on Railway.
 /// All endpoints require Firebase authentication (unless public).
 class ApiClient {
-  // Railway backend URL
-  static const String baseUrl =
-      'https://finishdbackend-master.onrender.com';
+  // Backend URL (Vercel deployment)
+  static const String baseUrl = 'https://finishdbackend-master.vercel.app';
 
   // Risk 2 FIX: Hide logs behind debug flag - TEMPORARILY ENABLED FOR DEBUGGING
   static const bool _debugLogging = true;

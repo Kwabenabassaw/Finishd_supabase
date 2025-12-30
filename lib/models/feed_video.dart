@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:finishd/models/feed_item.dart';
+import 'package:finishd/db/objectbox/feed_entities.dart';
 
 class FeedVideo {
   final String videoId;
@@ -12,6 +13,9 @@ class FeedVideo {
   final String? relatedItemType; // e.g., "friend", "trending", "movie"
   final String?
   feedType; // 'trending', 'following', 'for_you' - indicates where content is from
+  final String? type; // 'MEDIA_LINKED' or 'VIDEO_ONLY'
+  final Map<String, dynamic>? tmdb; // {id, mediaType, confidence}
+  final Map<String, dynamic>? fallback; // {thumbnail, channel}
   final Map<String, dynamic>? availability;
   final DateTime? lastEnriched;
 
@@ -25,11 +29,37 @@ class FeedVideo {
     this.relatedItemId,
     this.relatedItemType,
     this.feedType,
+    this.type,
+    this.tmdb,
+    this.fallback,
     this.availability,
     this.lastEnriched,
   });
 
-  /// Factory to create from FeedItem
+  /// Factory to create from CachedFeedItem (ObjectBox)
+  factory FeedVideo.fromCachedFeedItem(CachedFeedItem item) {
+    return FeedVideo(
+      videoId: item.youtubeKey ?? '',
+      title: item.title,
+      thumbnailUrl: item.poster ?? item.fallbackThumbnail ?? '',
+      channelName: item.fallbackChannel ?? '',
+      description: item.overview ?? '',
+      recommendationReason: null, // Populated by provider
+      relatedItemId: item.tmdbId?.toString(),
+      relatedItemType: item.mediaType,
+      feedType: item.feedType,
+      type: item.type,
+      tmdb: item.tmdbId != null
+          ? {'id': item.tmdbId, 'mediaType': item.mediaType}
+          : null,
+      fallback: {
+        'thumbnail': item.fallbackThumbnail,
+        'channel': item.fallbackChannel,
+      },
+    );
+  }
+
+  /// Factory to create from FeedItem (Legacy compat)
   factory FeedVideo.fromFeedItem(FeedItem item) {
     return FeedVideo(
       videoId: item.youtubeKey ?? '',
@@ -39,7 +69,7 @@ class FeedVideo {
       description: item.description ?? item.overview ?? '',
       recommendationReason: item.reason,
       relatedItemId: item.tmdbId?.toString() ?? item.relatedTmdbId?.toString(),
-      relatedItemType: item.relatedType ?? item.mediaType,
+      relatedItemType: item.mediaType,
       feedType: item.feedType,
     );
   }
@@ -101,6 +131,9 @@ class FeedVideo {
       'relatedItemId': relatedItemId,
       'relatedItemType': relatedItemType,
       'feedType': feedType,
+      'type': type,
+      'tmdb': tmdb,
+      'fallback': fallback,
       'availability': availability,
       'lastEnriched': lastEnriched?.toIso8601String(),
     };

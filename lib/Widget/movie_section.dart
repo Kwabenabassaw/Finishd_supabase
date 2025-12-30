@@ -133,7 +133,7 @@ class MovieSection extends StatelessWidget {
                       Text(
                         '${socialSignals.friendsLiked.length}',
                         style: const TextStyle(
-                          color: Colors.white,
+                        
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),

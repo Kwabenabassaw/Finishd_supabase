@@ -1,4 +1,5 @@
-import 'package:finishd/LoadingWidget/Tvshowscreenloader.dart';
+import 'package:finishd/LoadingWidget/LogoLoading.dart';
+
 import 'package:finishd/Model/MovieDetails.dart';
 import 'package:finishd/Model/tvdetail.dart';
 import 'package:finishd/MovieDetails/MovieScreen.dart';
@@ -77,10 +78,10 @@ class _GenericDetailsScreenState extends State<GenericDetailsScreen> {
         body: isTV
             ? (provider.showDetail != null
                   ? ShowDetailsScreen(movie: provider.showDetail!)
-                  : const ShowDetailsShimmer())
+                  : const LogoLoadingScreen())
             : (provider.movieDetail != null
                   ? MovieDetailsScreen(movie: provider.movieDetail!)
-                  : const ShowDetailsShimmer()),
+                  : const LogoLoadingScreen()),
       ),
     );
   }

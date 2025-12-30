@@ -1,0 +1,561 @@
+{
+  "_note1": "KEEP THIS FILE! Check it into a version control system (VCS) like git.",
+  "_note2": "ObjectBox manages crucial IDs for your object model. See docs for details.",
+  "_note3": "If you have VCS merge conflicts, you must resolve them according to ObjectBox docs.",
+  "entities": [
+    {
+      "id": "1:2305464559775899733",
+      "lastPropertyId": "31:7780718996706113705",
+      "name": "CachedFeedItem",
+      "properties": [
+        {
+          "id": "1:2030110448348204875",
+          "name": "localId",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:6265441929106783762",
+          "name": "id",
+          "type": 9
+        },
+        {
+          "id": "3:292365231786896847",
+          "name": "tmdbId",
+          "type": 6
+        },
+        {
+          "id": "4:1965774991035548976",
+          "name": "mediaType",
+          "type": 9
+        },
+        {
+          "id": "5:1994003507970201802",
+          "name": "title",
+          "type": 9
+        },
+        {
+          "id": "6:3201059551979247326",
+          "name": "overview",
+          "type": 9
+        },
+        {
+          "id": "9:4301067571903412515",
+          "name": "youtubeKey",
+          "type": 9
+        },
+        {
+          "id": "12:4234103317627870858",
+          "name": "source",
+          "type": 9
+        },
+        {
+          "id": "14:7119203931168175594",
+          "name": "feedType",
+          "type": 9
+        },
+        {
+          "id": "15:956065914174313094",
+          "name": "position",
+          "type": 6
+        },
+        {
+          "id": "17:1472262738250591875",
+          "name": "cachedAt",
+          "type": 10
+        },
+        {
+          "id": "20:6966689232468569380",
+          "name": "genresJson",
+          "type": 9
+        },
+        {
+          "id": "21:6541873968033022058",
+          "name": "genres",
+          "type": 30
+        },
+        {
+          "id": "22:195713887359034703",
+          "name": "poster",
+          "type": 9
+        },
+        {
+          "id": "23:1484071192511307047",
+          "name": "backdrop",
+          "type": 9
+        },
+        {
+          "id": "24:4817454813962239214",
+          "name": "releaseDate",
+          "type": 9
+        },
+        {
+          "id": "25:1769285649005596844",
+          "name": "popularity",
+          "type": 8
+        },
+        {
+          "id": "26:1210924337403377674",
+          "name": "voteAverage",
+          "type": 8
+        },
+        {
+          "id": "27:2241293413637272079",
+          "name": "videoType",
+          "type": 9
+        },
+        {
+          "id": "28:6615221941200064135",
+          "name": "version",
+          "type": 9
+        },
+        {
+          "id": "29:2062157947869744104",
+          "name": "type",
+          "type": 9
+        },
+        {
+          "id": "30:4269811279036171550",
+          "name": "fallbackThumbnail",
+          "type": 9
+        },
+        {
+          "id": "31:7780718996706113705",
+          "name": "fallbackChannel",
+          "type": 9
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "3:7229925374468275782",
+      "lastPropertyId": "7:3933606902895287817",
+      "name": "SeenItem",
+      "properties": [
+        {
+          "id": "1:3703854749306802216",
+          "name": "localId",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:536096821680769858",
+          "name": "itemId",
+          "type": 9,
+          "flags": 2080,
+          "indexId": "3:4803534543321528267"
+        },
+        {
+          "id": "3:1224035866487339195",
+          "name": "seenAt",
+          "type": 10
+        },
+        {
+          "id": "4:8036585211454583561",
+          "name": "suppressed",
+          "type": 1
+        },
+        {
+          "id": "5:1695917865872719141",
+          "name": "lastSeenAt",
+          "type": 10
+        },
+        {
+          "id": "6:4814002446751723000",
+          "name": "viewDurationMs",
+          "type": 6
+        },
+        {
+          "id": "7:3933606902895287817",
+          "name": "liked",
+          "type": 1
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "4:5898609316714232361",
+      "lastPropertyId": "14:5808113675719174907",
+      "name": "LocalConversation",
+      "properties": [
+        {
+          "id": "1:7121095485274841134",
+          "name": "localId",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:4484027024310292286",
+          "name": "firestoreId",
+          "type": 9,
+          "flags": 2080,
+          "indexId": "4:3906381599556492607"
+        },
+        {
+          "id": "3:9152551853944956835",
+          "name": "participantsJson",
+          "type": 9
+        },
+        {
+          "id": "4:6808463861761287229",
+          "name": "lastMessageText",
+          "type": 9
+        },
+        {
+          "id": "5:558080672317823673",
+          "name": "lastMessageType",
+          "type": 9
+        },
+        {
+          "id": "6:2732672898980603055",
+          "name": "lastMessageSenderId",
+          "type": 9
+        },
+        {
+          "id": "7:5408095849447728150",
+          "name": "lastMessageAt",
+          "type": 10
+        },
+        {
+          "id": "8:4768231950188287366",
+          "name": "lastSyncedAt",
+          "type": 10
+        },
+        {
+          "id": "9:1498921646435197669",
+          "name": "unreadCount",
+          "type": 6
+        },
+        {
+          "id": "10:4348944910948148500",
+          "name": "isGroup",
+          "type": 1
+        },
+        {
+          "id": "11:6350644550523687297",
+          "name": "groupName",
+          "type": 9
+        },
+        {
+          "id": "12:8847408169455362904",
+          "name": "groupImageUrl",
+          "type": 9
+        },
+        {
+          "id": "13:6052819395793178590",
+          "name": "createdAt",
+          "type": 10
+        },
+        {
+          "id": "14:5808113675719174907",
+          "name": "participants",
+          "type": 30
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "5:3586160544059811964",
+      "lastPropertyId": "21:104777825775197555",
+      "name": "LocalMessage",
+      "properties": [
+        {
+          "id": "1:8064968720767321291",
+          "name": "localId",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:443959914094702004",
+          "name": "firestoreId",
+          "type": 9
+        },
+        {
+          "id": "3:339998508385256544",
+          "name": "conversationId",
+          "type": 9,
+          "flags": 2048,
+          "indexId": "5:4892426888363789072"
+        },
+        {
+          "id": "4:2156894154906857347",
+          "name": "senderId",
+          "type": 9
+        },
+        {
+          "id": "5:8594266727301572396",
+          "name": "receiverId",
+          "type": 9
+        },
+        {
+          "id": "6:2725723622052003666",
+          "name": "content",
+          "type": 9
+        },
+        {
+          "id": "7:8499259079060033794",
+          "name": "type",
+          "type": 9
+        },
+        {
+          "id": "8:6543571654791382228",
+          "name": "mediaUrl",
+          "type": 9
+        },
+        {
+          "id": "9:468476358281745490",
+          "name": "movieId",
+          "type": 9
+        },
+        {
+          "id": "10:8671369773825475579",
+          "name": "movieTitle",
+          "type": 9
+        },
+        {
+          "id": "11:3300423133220963876",
+          "name": "moviePoster",
+          "type": 9
+        },
+        {
+          "id": "12:763512357333980527",
+          "name": "mediaType",
+          "type": 9
+        },
+        {
+          "id": "13:6586519840644753567",
+          "name": "videoId",
+          "type": 9
+        },
+        {
+          "id": "14:4552599511967380305",
+          "name": "videoTitle",
+          "type": 9
+        },
+        {
+          "id": "15:8410658147335075965",
+          "name": "videoThumbnail",
+          "type": 9
+        },
+        {
+          "id": "16:1152635275466891156",
+          "name": "videoChannel",
+          "type": 9
+        },
+        {
+          "id": "17:1987228158509835804",
+          "name": "createdAt",
+          "type": 10
+        },
+        {
+          "id": "18:559861863027195003",
+          "name": "status",
+          "type": 6
+        },
+        {
+          "id": "19:4324812335190970693",
+          "name": "retryCount",
+          "type": 6
+        },
+        {
+          "id": "20:4741967198628343439",
+          "name": "isPending",
+          "type": 1
+        },
+        {
+          "id": "21:104777825775197555",
+          "name": "isRead",
+          "type": 1
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "6:2196388408067714446",
+      "lastPropertyId": "8:3246253778674633305",
+      "name": "LocalParticipant",
+      "properties": [
+        {
+          "id": "1:9022432052807672200",
+          "name": "localId",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:7332254250201174398",
+          "name": "conversationId",
+          "type": 9,
+          "flags": 2048,
+          "indexId": "6:1656900575815390775"
+        },
+        {
+          "id": "3:3750619337453923233",
+          "name": "uid",
+          "type": 9
+        },
+        {
+          "id": "4:2042701002324135580",
+          "name": "username",
+          "type": 9
+        },
+        {
+          "id": "5:3674886355062323012",
+          "name": "profileImage",
+          "type": 9
+        },
+        {
+          "id": "6:8595664106130122670",
+          "name": "lastSeenAt",
+          "type": 10
+        },
+        {
+          "id": "7:2499077191937884905",
+          "name": "isTyping",
+          "type": 1
+        },
+        {
+          "id": "8:3246253778674633305",
+          "name": "isOnline",
+          "type": 1
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "7:2876239502257983497",
+      "lastPropertyId": "5:7096231345594461174",
+      "name": "PendingMessageQueue",
+      "properties": [
+        {
+          "id": "1:6318398943961923833",
+          "name": "localId",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:945570654918069425",
+          "name": "messageLocalId",
+          "type": 6
+        },
+        {
+          "id": "3:5039571534900134916",
+          "name": "queuedAt",
+          "type": 10
+        },
+        {
+          "id": "4:8961130639399892848",
+          "name": "retryCount",
+          "type": 6
+        },
+        {
+          "id": "5:7096231345594461174",
+          "name": "lastError",
+          "type": 9
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "8:195582632628087964",
+      "lastPropertyId": "6:7201811634293036176",
+      "name": "FeedPointer",
+      "properties": [
+        {
+          "id": "1:5270207633331972996",
+          "name": "localId",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:746354880702542573",
+          "name": "feedType",
+          "type": 9,
+          "flags": 2080,
+          "indexId": "7:6431288059572128110"
+        },
+        {
+          "id": "3:8084142039131415366",
+          "name": "version",
+          "type": 9
+        },
+        {
+          "id": "4:6133302295962675270",
+          "name": "itemCount",
+          "type": 6
+        },
+        {
+          "id": "5:3779814504332354261",
+          "name": "checkedAt",
+          "type": 10
+        },
+        {
+          "id": "6:7201811634293036176",
+          "name": "expiresAt",
+          "type": 10
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "9:3951725673702315505",
+      "lastPropertyId": "4:6966818340164713914",
+      "name": "FeedItemMeta",
+      "properties": [
+        {
+          "id": "1:4990755812415188729",
+          "name": "localId",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:478053237296806941",
+          "name": "id",
+          "type": 9,
+          "flags": 2080,
+          "indexId": "8:3252746451004809340"
+        },
+        {
+          "id": "3:5647671737585716655",
+          "name": "publishedAt",
+          "type": 10
+        },
+        {
+          "id": "4:6966818340164713914",
+          "name": "baseScore",
+          "type": 8
+        }
+      ],
+      "relations": []
+    }
+  ],
+  "lastEntityId": "9:3951725673702315505",
+  "lastIndexId": "8:3252746451004809340",
+  "lastRelationId": "0:0",
+  "lastSequenceId": "0:0",
+  "modelVersion": 5,
+  "modelVersionParserMinimum": 5,
+  "retiredEntityUids": [
+    6259640920451398742
+  ],
+  "retiredIndexUids": [
+    5050873118745731097
+  ],
+  "retiredPropertyUids": [
+    4136116018475878467,
+    8291203067061176426,
+    3138280338164359794,
+    8590276416066245538,
+    9020811007297669510,
+    5184114814123524714,
+    9020389057621037387,
+    7998383011909362008,
+    1610266952036725798,
+    3268485935260837401,
+    8523805696224982320,
+    5278573601173417051,
+    8214048009090720490,
+    7996873072210705209
+  ],
+  "retiredRelationUids": [],
+  "version": 1
+}

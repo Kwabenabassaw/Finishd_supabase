@@ -153,12 +153,24 @@ class UserService {
     }
   }
 
-  // Get all users (for Find Friends)
-  Future<List<UserModel>> getAllUsers() async {
+  // Get all users with pagination (for Find Friends)
+  // limit: number of users to fetch per page
+  // lastDocument: the last document from previous page for pagination
+  Future<List<UserModel>> getAllUsers({
+    int limit = 50,
+    DocumentSnapshot? lastDocument,
+  }) async {
     try {
-      QuerySnapshot snapshot = await _firestore
+      Query query = _firestore
           .collection(_usersCollection)
-          .get();
+          .orderBy('username')
+          .limit(limit);
+
+      if (lastDocument != null) {
+        query = query.startAfterDocument(lastDocument);
+      }
+
+      QuerySnapshot snapshot = await query.get();
       return snapshot.docs.map((doc) => UserModel.fromDocument(doc)).toList();
     } catch (e) {
       print('Error fetching all users: $e');
@@ -166,21 +178,44 @@ class UserService {
     }
   }
 
-  // Get users by list of IDs
+  // Search users by username (for Find Friends search)
+  Future<List<UserModel>> searchUsers(String query, {int limit = 20}) async {
+    if (query.isEmpty) return [];
+    try {
+      // Firestore doesn't support full-text search, so we use prefix matching
+      final String searchEnd =
+          query.substring(0, query.length - 1) +
+          String.fromCharCode(query.codeUnitAt(query.length - 1) + 1);
+
+      QuerySnapshot snapshot = await _firestore
+          .collection(_usersCollection)
+          .where('username', isGreaterThanOrEqualTo: query.toLowerCase())
+          .where('username', isLessThan: searchEnd.toLowerCase())
+          .limit(limit)
+          .get();
+
+      return snapshot.docs.map((doc) => UserModel.fromDocument(doc)).toList();
+    } catch (e) {
+      print('Error searching users: $e');
+      return [];
+    }
+  }
+
+  // Get users by list of IDs - OPTIMIZED with parallel fetching
   Future<List<UserModel>> getUsers(List<String> uids) async {
     if (uids.isEmpty) return [];
     try {
-      List<UserModel> users = [];
-      for (String uid in uids) {
-        DocumentSnapshot doc = await _firestore
-            .collection(_usersCollection)
-            .doc(uid)
-            .get();
-        if (doc.exists) {
-          users.add(UserModel.fromDocument(doc));
-        }
-      }
-      return users;
+      // Fetch all users in parallel instead of sequentially
+      final futures = uids.map(
+        (uid) => _firestore.collection(_usersCollection).doc(uid).get(),
+      );
+
+      final docs = await Future.wait(futures);
+
+      return docs
+          .where((doc) => doc.exists)
+          .map((doc) => UserModel.fromDocument(doc))
+          .toList();
     } catch (e) {
       print('Error fetching users by IDs: $e');
       return [];

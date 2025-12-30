@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:finishd/Model/movie_item.dart';
 import 'package:finishd/Model/movie_list_item.dart';
@@ -12,6 +13,7 @@ import 'package:finishd/services/user_service.dart';
 import 'package:flutter/material.dart';
 import 'package:finishd/Chat/chatScreen.dart';
 import 'package:finishd/services/chat_service.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 
 // --- Main Profile Screen Widget ---
@@ -135,7 +137,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         stream: _userService.getUserStream(widget.uid),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: LogoLoadingScreen());
           }
 
           if (snapshot.hasError) {
@@ -228,10 +230,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 .first,
                           ]);
                         },
-                        color: const Color(0xFF1A8927),
+
                         child: SingleChildScrollView(
                           padding: const EdgeInsets.symmetric(vertical: 20),
-                          physics: const NeverScrollableScrollPhysics(),
+                          physics: const BouncingScrollPhysics(),
 
                           child: Column(
                             children: [
@@ -274,7 +276,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     MainAxisAlignment.spaceEvenly,
                                 children: [
                                   _buildStatColumn(
-                                    "Finishd",
+                                    "FinishD",
                                     finishedMovies.length,
                                   ), // Real count from Firebase
                                   FutureBuilder<int>(
@@ -350,7 +352,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     style: TextStyle(color: Colors.white),
                                   ),
                                   style: ElevatedButton.styleFrom(
-                                    fixedSize: Size(200, 50),
+                                    fixedSize: Size(200, 40),
 
                                     backgroundColor: const Color.fromARGB(
                                       255,
@@ -368,80 +370,79 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   ),
                                 )
                               else
-                                ElevatedButton(
-                                  onPressed: _isCheckingFollow
-                                      ? null
-                                      : _toggleFollow,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: _isFollowing
-                                        ? Colors.grey.shade300
-                                        : const Color.fromARGB(255, 3, 130, 7),
-                                    foregroundColor: _isFollowing
-                                        ? Colors.black
-                                        : Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 40,
-                                      vertical: 10,
-                                    ),
-                                  ),
-                                  child: _isCheckingFollow
-                                      ? const SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    ElevatedButton(
+                                      onPressed: _isCheckingFollow
+                                          ? null
+                                          : _toggleFollow,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: _isFollowing
+                                            ? Colors.grey.shade300
+                                            : const Color.fromARGB(
+                                                255,
+                                                3,
+                                                130,
+                                                7,
+                                              ),
+                                        foregroundColor: _isFollowing
+                                            ? Colors.black
+                                            : Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
                                           ),
-                                        )
-                                      : Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 40,
+                                          vertical: 10,
+                                        ),
+                                      ),
+                                      child: _isCheckingFollow
+                                          ? const SizedBox(
+                                              width: 25,
+                                              height: 20,
+                                              child: LogoLoadingScreen(),
+                                            )
+                                          : Text(
                                               _isFollowing
                                                   ? 'Friends'
                                                   : 'Add Friend',
                                             ),
-                                            if (_isFollowing) ...[
-                                              const SizedBox(width: 8),
-                                              GestureDetector(
-                                                onTap: () async {
-                                                  // Navigate to chat
-                                                  final chatService =
-                                                      ChatService(); // Instantiate locally or use provider
-                                                  // We need the full user object to pass to ChatScreen
-                                                  // Since we only have uid here, we might need to fetch it or pass it if available
-                                                  // Ideally ProfileScreen should have the full user object from the stream
-                                                  final chatId =
-                                                      await chatService
-                                                          .createChat(
-                                                            _currentUserId,
-                                                            widget.uid,
-                                                          );
-                                                  if (context.mounted) {
-                                                    Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder: (context) =>
-                                                            ChatScreen(
-                                                              chatId: chatId,
-                                                              otherUser: user,
-                                                            ),
-                                                      ),
-                                                    );
-                                                  }
-                                                },
-                                                child: const Icon(
-                                                  Icons.chat_bubble_outline,
-                                                  size: 20,
-                                               
-                                                ),
+                                    ),
+                                    if (_isFollowing) ...[
+                                      const SizedBox(width: 5),
+                                      IconButton(
+                                        onPressed: () async {
+                                          final chatService = ChatService();
+                                          final chatId = await chatService
+                                              .createChat(
+                                                _currentUserId,
+                                                widget.uid,
+                                              );
+                                          if (context.mounted) {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    ChatScreen(
+                                                      chatId: chatId,
+                                                      otherUser: user,
+                                                    ),
                                               ),
-                                            ],
-                                          ],
+                                            );
+                                          }
+                                        },
+                                        icon: Icon(
+                                          FontAwesomeIcons.message,
+                                          color: isDark
+                                              ? Colors.white
+                                              : Colors.black,
                                         ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                               const SizedBox(height: 15),
 
@@ -453,10 +454,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   ),
                                   child: Text(
                                     user.bio,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                     
-                                    ),
+                                    style: const TextStyle(fontSize: 16),
                                     textAlign: TextAlign.center,
                                   ),
                                 ),
@@ -475,7 +473,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     finishedSnapshot.connectionState ==
                                             ConnectionState.waiting
                                         ? const Center(
-                                            child: CircularProgressIndicator(),
+                                            child: LogoLoadingScreen(),
                                           )
                                         : MoviePosterGrid(
                                             movies: finishedMovies,
@@ -483,7 +481,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     watchingSnapshot.connectionState ==
                                             ConnectionState.waiting
                                         ? const Center(
-                                            child: CircularProgressIndicator(),
+                                            child: LogoLoadingScreen(),
                                           )
                                         : MoviePosterGrid(
                                             movies: watchingMovies,
@@ -491,7 +489,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     watchlistSnapshot.connectionState ==
                                             ConnectionState.waiting
                                         ? const Center(
-                                            child: CircularProgressIndicator(),
+                                            child: LogoLoadingScreen(),
                                           )
                                         : MoviePosterGrid(
                                             movies: watchLaterMovies,
@@ -525,7 +523,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             count.toString(),
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-          Text(label, style: const TextStyle(fontSize: 16, )),
+          Text(label, style: const TextStyle(fontSize: 16)),
         ],
       ),
     );
@@ -545,7 +543,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         labelStyle: const TextStyle(fontWeight: FontWeight.bold),
         unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
         tabs: const [
-          Tab(text: 'Finishd'),
+          Tab(text: 'FinishD'),
           Tab(text: 'Watching'),
           Tab(text: 'Watch Later'),
         ],

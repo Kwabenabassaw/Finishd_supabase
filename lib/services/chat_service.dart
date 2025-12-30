@@ -198,6 +198,40 @@ class ChatService {
     );
   }
 
+  /// Send an image message
+  Future<void> sendImageMessage({
+    required String chatId,
+    required String senderId,
+    required String receiverId,
+    required String mediaUrl,
+  }) async {
+    await sendMessage(
+      chatId: chatId,
+      senderId: senderId,
+      receiverId: receiverId,
+      text: '',
+      type: 'image',
+      mediaUrl: mediaUrl,
+    );
+  }
+
+  /// Send a video message with auto-generated thumbnail
+  Future<void> sendVideoMessage({
+    required String chatId,
+    required String senderId,
+    required String receiverId,
+    required String mediaUrl,
+  }) async {
+    await sendMessage(
+      chatId: chatId,
+      senderId: senderId,
+      receiverId: receiverId,
+      text: '',
+      type: 'video',
+      mediaUrl: mediaUrl,
+    );
+  }
+
   // Get Messages Stream
   Stream<List<Message>> getMessagesStream(String chatId) {
     return _firestore

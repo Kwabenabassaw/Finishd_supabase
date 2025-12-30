@@ -3,8 +3,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:finishd/MovieDetails/EpisodeDetailsScreen.dart';
 import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:finishd/Model/season_detail_model.dart';
-import 'package:finishd/Widget/TrailerPlayer.dart';
-import 'package:finishd/tmbd/fetch_trialler.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:flutter/material.dart';
 
@@ -28,9 +26,7 @@ class SeasonDetailsScreen extends StatefulWidget {
 
 class _SeasonDetailsScreenState extends State<SeasonDetailsScreen> {
   final Trending _api = Trending();
-  final TvService _tvService = TvService();
   late Future<SeasonDetail?> _seasonDetailFuture;
-  late Future<String?> _trailerFuture;
 
   @override
   void initState() {
@@ -39,7 +35,6 @@ class _SeasonDetailsScreenState extends State<SeasonDetailsScreen> {
       widget.tvId,
       widget.seasonNumber,
     );
-    _trailerFuture = _tvService.getTVShowTrailerKey(widget.tvId.toString());
   }
 
   @override
@@ -249,33 +244,23 @@ class _SeasonDetailsScreenState extends State<SeasonDetailsScreen> {
         background: Stack(
           fit: StackFit.expand,
           children: [
-            FutureBuilder<String?>(
-              future: _trailerFuture,
-              builder: (context, snapshot) {
-                if (snapshot.hasData && snapshot.data != null) {
-                  return AnimatedTrailerCover(
-                    poster: season.posterPath.isNotEmpty
-                        ? season.posterPath
-                        : widget.posterPath ?? '',
-                    youtubeKey: snapshot.data!,
-                  );
-                }
-                return Hero(
-                  tag: 'season_poster_${widget.tvId}_${widget.seasonNumber}',
-                  child: CachedNetworkImage(
-                    imageUrl: season.posterPath.isNotEmpty
-                        ? 'https://image.tmdb.org/t/p/original${season.posterPath}'
-                        : widget.posterPath != null
-                        ? 'https://image.tmdb.org/t/p/original${widget.posterPath}'
-                        : 'https://via.placeholder.com/500x750',
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) =>
-                        Container(color: Colors.black26),
-                    errorWidget: (context, url, error) =>
-                        const Center(child: Icon(Icons.error)),
-                  ),
-                );
-              },
+            Hero(
+              tag: 'season_poster_${widget.tvId}_${widget.seasonNumber}',
+              child: CachedNetworkImage(
+                imageUrl: season.posterPath.isNotEmpty
+                    ? 'https://image.tmdb.org/t/p/original${season.posterPath}'
+                    : widget.posterPath != null
+                    ? 'https://image.tmdb.org/t/p/original${widget.posterPath}'
+                    : 'https://via.placeholder.com/500x750',
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.black26
+                      : Colors.black12,
+                ),
+                errorWidget: (context, url, error) =>
+                    const Center(child: Icon(Icons.error)),
+              ),
             ),
             // Gradient Overlay
             DecoratedBox(

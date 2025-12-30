@@ -1,11 +1,9 @@
 import 'package:finishd/Home/widgets/contentNav.dart';
 import 'package:finishd/LoadingWidget/LogoLoading.dart';
-import 'package:finishd/LoadingWidget/StreamingLoading.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../provider/youtube_feed_provider.dart';
-import '../Feed/youtube_video_item.dart';
 import '../Feed/tiktok_scroll_wrapper.dart';
 import '../services/cache/feed_cache_service.dart';
 
@@ -24,35 +22,31 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
-  late YoutubeFeedProvider _provider;
-  int currentindex = 0;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _provider = YoutubeFeedProvider();
-    _provider.initialize();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _provider.dispose();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!mounted) return;
+    final provider = context.read<YoutubeFeedProvider>();
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
-      _provider.pauseAll();
+      provider.pauseAll();
     } else if (state == AppLifecycleState.resumed) {
-      _provider.resumeCurrent();
+      provider.resumeCurrent();
     }
   }
 
-  void _showDebugOptions(BuildContext context) {
+  void _showDebugOptions(BuildContext context, YoutubeFeedProvider provider) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.grey[900],
@@ -73,7 +67,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ListTile(
             leading: const Icon(Icons.download, color: Colors.blue),
             title: Text(
-              "Load Next Page (Page ${_provider.currentPage + 1})",
+              "Load Next Page (Page ${provider.currentPage + 1})",
               style: const TextStyle(color: Colors.white),
             ),
             subtitle: const Text(
@@ -82,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
             onTap: () {
               Navigator.pop(ctx);
-              _provider.loadMore();
+              provider.loadMore();
             },
           ),
           ListTile(
@@ -97,7 +91,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
             onTap: () {
               Navigator.pop(ctx);
-              _provider.refresh();
+              provider.refresh();
             },
           ),
           ListTile(
@@ -115,7 +109,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text("Triggering backend job...")),
               );
-              final success = await _provider.triggerBackendRefresh();
+              final success = await provider.triggerBackendRefresh();
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -147,7 +141,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               // Clear SQLite feed cache
               await FeedCacheService.clearFeed();
               // Refresh from network
-              await _provider.refresh();
+              await provider.refresh();
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -165,158 +159,151 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider.value(
-      value: _provider,
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        body: SafeArea(
-          bottom: false,
-          child: Column(
-            children: [
-              // 1. Sleek Top Navigation Header (Always Visible)
-              _buildHeader(),
+    final provider = context.watch<YoutubeFeedProvider>();
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            // 1. Sleek Top Navigation Header (Always Visible)
+            _buildHeader(provider),
 
-              // 2. Main Content Area (Scroller / Loading / Error)
-              Expanded(
-                child: Consumer<YoutubeFeedProvider>(
-                  builder: (context, provider, _) {
-                    // Loading state
-                    if (provider.videos.isEmpty && provider.isLoading) {
-                      return const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            LogoLoadingScreen(),
-                            SizedBox(height: 16),
-                            Text(
-                              'Loading your feed...',
-                              style: TextStyle(color: Colors.white70),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    // Error state
-                    if (provider.hasError && provider.videos.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.error_outline,
-                              color: Colors.red,
-                              size: 64,
-                            ),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'Something went wrong',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                              ),
-                            ),
-                            if (provider.errorMessage != null) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                provider.errorMessage!,
-                                style: const TextStyle(color: Colors.white54),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                            const SizedBox(height: 24),
-                            ElevatedButton.icon(
-                              onPressed: () => provider.refresh(),
-                              icon: const Icon(Icons.refresh),
-                              label: const Text('Try Again'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                foregroundColor: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    // Empty state
-                    if (provider.videos.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.video_library_outlined,
-                              color: Colors.white54,
-                              size: 64,
-                            ),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'No videos available',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            ElevatedButton.icon(
-                              onPressed: () => provider.refresh(),
-                              icon: const Icon(Icons.refresh),
-                              label: const Text('Refresh'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                foregroundColor: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    return Stack(
-                      children: [
-                        // Main TikTok-style scroller
-                        RefreshIndicator(
-                          onRefresh: provider.refresh,
-                          child: const TikTokScrollWrapper(),
-                        ),
-
-                        // Debug Button (Floating on player)
-                        Positioned(
-                          top: 100, // Adjusted for new header
-                          right: 16,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.black54,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white24),
-                            ),
-                            child: IconButton(
-                              icon: const Icon(
-                                Icons.build,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                              onPressed: () => _showDebugOptions(context),
-                            ),
+            // 2. Main Content Area (Scroller / Loading / Error)
+            Expanded(
+              child: Consumer<YoutubeFeedProvider>(
+                builder: (context, provider, _) {
+                  // Loading state
+                  if (provider.videos.isEmpty && provider.isLoading) {
+                    return const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          LogoLoadingScreen(),
+                          SizedBox(height: 16),
+                          Text(
+                            'Loading your feed...',
+                            style: TextStyle(color: Colors.white70),
                           ),
-                        ),
-
-                        // Loading More Indicator
-                        if (provider.isLoadingMore)
-                          const Positioned(
-                            bottom: 100,
-                            left: 0,
-                            right: 0,
-                            child: Center(child: LogoLoadingScreen()),
-                          ),
-                      ],
+                        ],
+                      ),
                     );
-                  },
-                ),
+                  }
+
+                  // Error state
+                  if (provider.hasError && provider.videos.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            color: Colors.red,
+                            size: 64,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Something went wrong',
+                            style: TextStyle(color: Colors.white, fontSize: 18),
+                          ),
+                          if (provider.errorMessage != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              provider.errorMessage!,
+                              style: const TextStyle(color: Colors.white54),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: () => provider.refresh(),
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Try Again'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  // Empty state
+                  if (provider.videos.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.video_library_outlined,
+                            color: Colors.white54,
+                            size: 64,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'No videos available',
+                            style: TextStyle(color: Colors.white, fontSize: 18),
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: () => provider.refresh(),
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Refresh'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return Stack(
+                    children: [
+                      // Main TikTok-style scroller
+                      RefreshIndicator(
+                        onRefresh: provider.refresh,
+                        child: const TikTokScrollWrapper(),
+                      ),
+
+                      // Debug Button (Floating on player)
+                      Positioned(
+                        top: 100, // Adjusted for new header
+                        right: 16,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white24),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.build,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            onPressed: () =>
+                                _showDebugOptions(context, provider),
+                          ),
+                        ),
+                      ),
+
+                      // Loading More Indicator
+                      if (provider.isLoadingMore)
+                        const Positioned(
+                          bottom: 100,
+                          left: 0,
+                          right: 0,
+                          child: Center(child: LogoLoadingScreen()),
+                        ),
+                    ],
+                  );
+                },
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -325,7 +312,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// --------------------------------------------------------------------------
   /// New Dedicated Header (Off the Player)
   /// --------------------------------------------------------------------------
-  Widget _buildHeader() {
+  Widget _buildHeader(YoutubeFeedProvider provider) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
       decoration: BoxDecoration(
@@ -348,10 +335,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
               onPressed: () {
                 // Pause video before navigating
-                _provider.pauseAll();
+                provider.pauseAll();
                 Navigator.pushNamed(context, 'notification').then((_) {
                   // Resume video when returning
-                  if (mounted) _provider.resumeCurrent();
+                  if (mounted) provider.resumeCurrent();
                 });
               },
             ),
@@ -371,10 +358,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
               onPressed: () {
                 // Pause video before navigating
-                _provider.pauseAll();
+                provider.pauseAll();
                 Navigator.pushNamed(context, 'friends').then((_) {
                   // Resume video when returning
-                  if (mounted) _provider.resumeCurrent();
+                  if (mounted) provider.resumeCurrent();
                 });
               },
             ),
@@ -387,10 +374,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               icon: const Icon(Icons.search, color: Colors.white, size: 24),
               onPressed: () {
                 // Pause video before navigating
-                _provider.pauseAll();
+                provider.pauseAll();
                 Navigator.pushNamed(context, 'homesearch').then((_) {
                   // Resume video when returning
-                  if (mounted) _provider.resumeCurrent();
+                  if (mounted) provider.resumeCurrent();
                 });
               },
             ),

@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:finishd/Model/actor_model.dart';
 import 'package:finishd/provider/actor_provider.dart';
 import 'package:flutter/cupertino.dart';
@@ -593,7 +594,7 @@ class _ActorProfileScreenState extends State<ActorProfileScreen> {
 
   Widget _buildLoadingState(Color bg) {
     return Center(
-      child: CircularProgressIndicator(color: const Color(0xFF4ADE80)),
+      child: LogoLoadingScreen()
     );
   }
 

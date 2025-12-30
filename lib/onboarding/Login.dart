@@ -222,7 +222,7 @@ class _LoginState extends State<Login> {
                         const Text(
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.right,
-                          'Contiune With Google ',
+                          'Continue With Google ',
 
                           style: TextStyle(
                             fontSize: 18,
@@ -264,7 +264,7 @@ class _LoginState extends State<Login> {
                         const Text(
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.right,
-                          'Contiune With Apple ',
+                          'Continue With Apple ',
 
                           style: TextStyle(
                             fontSize: 18,

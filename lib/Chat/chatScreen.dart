@@ -1,13 +1,23 @@
+import 'dart:io';
+import 'package:finishd/Chat/media_preview_screen.dart';
 import 'package:finishd/Model/user_model.dart';
 import 'package:finishd/Widget/message_bubble.dart';
-import 'package:finishd/models/message_model.dart';
-import 'package:finishd/services/chat_service.dart';
+import 'package:finishd/db/objectbox/chat_entities.dart';
+import 'package:finishd/provider/chat_provider.dart';
+import 'package:finishd/services/storage_service.dart';
 import 'package:finishd/MovieDetails/MovieScreen.dart';
 import 'package:finishd/MovieDetails/Tvshowscreen.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:finishd/provider/app_navigation_provider.dart';
+import 'package:finishd/provider/youtube_feed_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
+import 'package:finishd/Widget/image_preview.dart';
+import 'package:finishd/profile/profileScreen.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ChatScreen extends StatefulWidget {
   final String chatId;
@@ -21,16 +31,20 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
-  final ChatService _chatService = ChatService();
   final ScrollController _scrollController = ScrollController();
   final String _currentUserId = FirebaseAuth.instance.currentUser!.uid;
   bool _showEmojiPicker = false;
+  bool _isUploadingMedia = false;
   final FocusNode _focusNode = FocusNode();
+  final StorageService _storageService = StorageService();
+  final ImagePicker _imagePicker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
-    _markAsRead();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ChatProvider>().openConversation(widget.chatId);
+    });
     _focusNode.addListener(() {
       if (_focusNode.hasFocus && _showEmojiPicker) {
         setState(() {
@@ -42,22 +56,20 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    // Note: Don't call closeConversation here if you want it to stay open when navigating away
+    // but usually we close it to stop the stream.
+    // context.read<ChatProvider>().closeConversation(); // Can't use context in dispose safely if unmounted
     _messageController.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
     super.dispose();
   }
 
-  void _markAsRead() {
-    _chatService.markMessagesAsRead(widget.chatId, _currentUserId);
-  }
-
   void _sendMessage() {
     if (_messageController.text.trim().isEmpty) return;
 
-    _chatService.sendMessage(
-      chatId: widget.chatId,
-      senderId: _currentUserId,
+    context.read<ChatProvider>().sendTextMessage(
+      conversationId: widget.chatId,
       receiverId: widget.otherUser.uid,
       text: _messageController.text.trim(),
     );
@@ -69,7 +81,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
-        0, // List is reversed, so 0 is the bottom
+        0,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );
@@ -87,6 +99,115 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  void _showMediaPicker() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Photo from Gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickAndPreviewMedia(ImageSource.gallery, 'image');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take a Photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickAndPreviewMedia(ImageSource.camera, 'image');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.videocam),
+              title: const Text('Video from Gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickAndPreviewMedia(ImageSource.gallery, 'video');
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickAndPreviewMedia(ImageSource source, String type) async {
+    try {
+      XFile? pickedFile;
+      if (type == 'image') {
+        pickedFile = await _imagePicker.pickImage(
+          source: source,
+          imageQuality: 70,
+          maxWidth: 1200,
+        );
+      } else {
+        pickedFile = await _imagePicker.pickVideo(
+          source: source,
+          maxDuration: const Duration(seconds: 60),
+        );
+      }
+
+      if (pickedFile == null) return;
+
+      if (!mounted) return;
+
+      // Navigate to Preview Screen
+      final String? caption = await Navigator.push<String>(
+        context,
+        MaterialPageRoute(
+          builder: (context) =>
+              MediaPreviewScreen(file: File(pickedFile!.path), type: type),
+        ),
+      );
+
+      if (caption == null) return; // User cancelled
+
+      setState(() => _isUploadingMedia = true);
+
+      final mediaUrl = type == 'image'
+          ? await _storageService.uploadChatImage(
+              widget.chatId,
+              File(pickedFile.path),
+            )
+          : await _storageService.uploadChatVideo(
+              widget.chatId,
+              File(pickedFile.path),
+            );
+
+      if (!mounted) return;
+
+      if (type == 'image') {
+        await context.read<ChatProvider>().sendImageMessage(
+          conversationId: widget.chatId,
+          receiverId: widget.otherUser.uid,
+          mediaUrl: mediaUrl,
+          caption: caption,
+        );
+      } else {
+        await context.read<ChatProvider>().sendVideoMessage(
+          conversationId: widget.chatId,
+          receiverId: widget.otherUser.uid,
+          mediaUrl: mediaUrl,
+          caption: caption,
+        );
+      }
+
+      _scrollToBottom();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to send ${type}: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingMedia = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -100,42 +221,57 @@ class _ChatScreenState extends State<ChatScreen> {
             Icons.arrow_back,
             color: isDark ? Colors.white : Colors.black,
           ),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () {
+            context.read<ChatProvider>().closeConversation();
+            Navigator.of(context).pop();
+          },
         ),
         titleSpacing: 0,
-        title: Row(
-          children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundImage: widget.otherUser.profileImage.isNotEmpty
-                  ? NetworkImage(widget.otherUser.profileImage)
-                  : null,
-              backgroundColor: Colors.grey[300],
-              child: widget.otherUser.profileImage.isEmpty
-                  ? Text(
-                      widget.otherUser.username[0].toUpperCase(),
-                      style: TextStyle(color: Colors.grey[800]),
-                    )
-                  : null,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.otherUser.username,
-                    style: TextStyle(
-                      color: isDark ? Colors.white : Colors.black,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+        title: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProfileScreen(uid: widget.otherUser.uid),
               ),
-            ),
-          ],
+            );
+          },
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundImage: widget.otherUser.profileImage.isNotEmpty
+                    ? NetworkImage(widget.otherUser.profileImage)
+                    : null,
+                backgroundColor: isDark ? Colors.grey[800] : Colors.grey[300],
+                child: widget.otherUser.profileImage.isEmpty
+                    ? Text(
+                        widget.otherUser.username[0].toUpperCase(),
+                        style: TextStyle(
+                          color: isDark ? Colors.white70 : Colors.grey[800],
+                        ),
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.otherUser.username,
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           IconButton(
@@ -147,204 +283,224 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: StreamBuilder<List<Message>>(
-              stream: _chatService.getMessagesStream(widget.chatId),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+      body: WillPopScope(
+        onWillPop: () async {
+          context.read<ChatProvider>().closeConversation();
+          return true;
+        },
+        child: Column(
+          children: [
+            Expanded(
+              child: Consumer<ChatProvider>(
+                builder: (context, chatProvider, child) {
+                  final messages = chatProvider.messages;
 
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return Center(
-                    child: Text(
-                      'No messages yet.',
-                      style: TextStyle(color: Colors.grey[600]),
+                  if (messages.isEmpty) {
+                    return Center(
+                      child: Text(
+                        'No messages yet.',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    controller: _scrollController,
+                    reverse: true,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 20,
                     ),
-                  );
-                }
+                    itemCount: messages.length,
+                    itemBuilder: (context, index) {
+                      final message = messages[index];
+                      final isMe = message.senderId == _currentUserId;
 
-                final messages = snapshot.data!;
+                      return MessageBubble(
+                        text: message.content,
+                        isMe: isMe,
+                        timestamp: Timestamp.fromDate(message.createdAt),
+                        isRead: message.isRead,
+                        type: message.type,
+                        mediaUrl: message.mediaUrl,
+                        videoId: message.videoId,
+                        videoTitle: message.videoTitle,
+                        videoThumbnail: message.videoThumbnail,
+                        videoChannel: message.videoChannel,
+                        onVideoTap: message.isVideoLink
+                            ? () {
+                                final navProvider = context
+                                    .read<AppNavigationProvider>();
+                                final ytProvider = context
+                                    .read<YoutubeFeedProvider>();
 
-                return ListView.builder(
-                  controller: _scrollController,
-                  reverse: true,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 20,
-                  ),
-                  itemCount: messages.length,
-                  itemBuilder: (context, index) {
-                    final message = messages[index];
-                    final isMe = message.senderId == _currentUserId;
+                                ytProvider.injectAndPlayVideo(
+                                  videoId: message.videoId!,
+                                  title: message.videoTitle,
+                                  thumbnail: message.videoThumbnail,
+                                  channel: message.videoChannel,
+                                );
 
-                    return MessageBubble(
-                      text: message.text,
-                      isMe: isMe,
-                      timestamp: message.timestamp,
-                      isRead: message.isRead,
-                      type: message.type,
-                      videoId: message.videoId,
-                      videoTitle: message.videoTitle,
-                      videoThumbnail: message.videoThumbnail,
-                      videoChannel: message.videoChannel,
-                      onVideoTap: message.isVideoLink
-                          ? () {
-                              debugPrint('Tapped video: ${message.videoId}');
-                            }
-                          : null,
-                      movieId: message.movieId,
-                      movieTitle: message.movieTitle,
-                      moviePoster: message.moviePoster,
-                      mediaType: message.mediaType,
-                      onRecommendationTap: message.isRecommendation
-                          ? () async {
-                              final tmdbId = int.tryParse(
-                                message.movieId ?? '',
-                              );
-                              if (tmdbId == null) return;
+                                navProvider.setTab(0);
+                                Navigator.of(
+                                  context,
+                                ).popUntil((route) => route.isFirst);
+                              }
+                            : null,
+                        movieId: message.movieId,
+                        movieTitle: message.movieTitle,
+                        moviePoster: message.moviePoster,
+                        mediaType: message.mediaType,
+                        onImageTap: message.type == 'image'
+                            ? () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        FullscreenImagePreview(
+                                          imageUrl: message.mediaUrl!,
+                                          heroTag: message.mediaUrl!,
+                                          caption: message.content,
+                                        ),
+                                  ),
+                                );
+                              }
+                            : null,
+                        onRecommendationTap: message.isShowCard
+                            ? () async {
+                                final tmdbId = int.tryParse(
+                                  message.movieId ?? '',
+                                );
+                                if (tmdbId == null) return;
 
-                              showDialog(
-                                context: context,
-                                barrierDismissible: false,
-                                builder: (_) => const Center(
-                                  child: CircularProgressIndicator(),
-                                ),
-                              );
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (_) => const Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                );
 
-                              try {
-                                final api = Trending();
-                                if (message.mediaType == 'tv') {
-                                  final tvDetails = await api
-                                      .fetchDetailsTvShow(tmdbId);
-                                  if (context.mounted) Navigator.pop(context);
-                                  if (tvDetails != null && context.mounted) {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            ShowDetailsScreen(movie: tvDetails),
-                                      ),
-                                    );
+                                try {
+                                  final api = Trending();
+                                  if (message.mediaType == 'tv') {
+                                    final tvDetails = await api
+                                        .fetchDetailsTvShow(tmdbId);
+                                    if (context.mounted) Navigator.pop(context);
+                                    if (tvDetails != null && context.mounted) {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => ShowDetailsScreen(
+                                            movie: tvDetails,
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  } else {
+                                    final movieDetails = await api
+                                        .fetchMovieDetails(tmdbId);
+                                    if (context.mounted) Navigator.pop(context);
+                                    if (context.mounted) {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => MovieDetailsScreen(
+                                            movie: movieDetails,
+                                          ),
+                                        ),
+                                      );
+                                    }
                                   }
-                                } else {
-                                  final movieDetails = await api
-                                      .fetchMovieDetails(tmdbId);
+                                } catch (e) {
                                   if (context.mounted) Navigator.pop(context);
                                   if (context.mounted) {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => MovieDetailsScreen(
-                                          movie: movieDetails,
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Error loading details: $e',
                                         ),
                                       ),
                                     );
                                   }
                                 }
-                              } catch (e) {
-                                if (context.mounted) Navigator.pop(context);
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Error loading details: $e',
-                                      ),
-                                    ),
-                                  );
-                                }
                               }
-                            }
-                          : null,
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-          _buildMessageInput(isDark),
-          if (_showEmojiPicker)
-            SizedBox(
-              height: 250,
-              child: EmojiPicker(
-                onEmojiSelected: (category, emoji) {
-                  _messageController.text += emoji.emoji;
+                            : null,
+                      );
+                    },
+                  );
                 },
-                config: const Config(
-                  checkPlatformCompatibility: true,
-                  emojiViewConfig: EmojiViewConfig(
-                    columns: 7,
-                    emojiSizeMax: 28,
+              ),
+            ),
+            _buildMessageInput(isDark),
+            if (_showEmojiPicker)
+              SizedBox(
+                height: 250,
+                child: EmojiPicker(
+                  onEmojiSelected: (category, emoji) {
+                    _messageController.text += emoji.emoji;
+                  },
+                  config: const Config(
+                    checkPlatformCompatibility: true,
+                    emojiViewConfig: EmojiViewConfig(
+                      columns: 7,
+                      emojiSizeMax: 28,
+                    ),
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildMessageInput(bool isDark) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 10.0),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        border: Border(
-          top: BorderSide(
-            color: isDark ? Colors.white12 : Colors.grey.shade200,
-          ),
-        ),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
       child: SafeArea(
         top: false,
         child: Row(
           children: [
-            // Plus Button
-            Container(
-              decoration: BoxDecoration(
-                color: isDark ? Colors.grey[800] : Colors.grey[200],
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                icon: Icon(
-                  Icons.add,
-                  color: isDark ? Colors.white : Colors.black54,
-                ),
-                onPressed: () {},
-              ),
+            IconButton(
+              icon: _isUploadingMedia
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(
+                      Icons.add_circle_outline,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                      size: 28,
+                    ),
+              onPressed: _isUploadingMedia ? null : _showMediaPicker,
+              padding: EdgeInsets.zero,
             ),
-            const SizedBox(width: 8),
-            // Text Field
             Expanded(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF2C2C2C) : Colors.grey[100],
-                  borderRadius: BorderRadius.circular(30.0),
-                ),
                 child: Row(
                   children: [
+                    const SizedBox(width: 15),
                     Expanded(
                       child: TextField(
                         controller: _messageController,
                         focusNode: _focusNode,
                         style: TextStyle(
-                          color: isDark ? Colors.white : Colors.black,
+                          color: isDark ? Colors.white : Colors.black87,
+                          fontSize: 15,
                         ),
                         decoration: InputDecoration(
                           hintText: 'Message...',
                           hintStyle: TextStyle(
                             color: isDark ? Colors.grey[500] : Colors.grey[500],
                           ),
-                          border: InputBorder.none,
-                          isDense: true,
                           contentPadding: const EdgeInsets.symmetric(
-                            vertical: 12,
+                            vertical: 10,
                           ),
                         ),
-                        maxLines: null,
+                        maxLines: 5,
+                        minLines: 1,
                         textCapitalization: TextCapitalization.sentences,
                         onSubmitted: (_) => _sendMessage(),
                       ),
@@ -352,12 +508,13 @@ class _ChatScreenState extends State<ChatScreen> {
                     IconButton(
                       icon: Icon(
                         _showEmojiPicker
-                            ? Icons.keyboard
+                            ? Icons.keyboard_outlined
                             : Icons.emoji_emotions_outlined,
-                        color: Colors.grey[500],
+                        color: isDark ? Colors.grey[500] : Colors.grey[600],
+                        size: 22,
                       ),
                       onPressed: _toggleEmojiPicker,
-                      padding: EdgeInsets.zero,
+                      padding: const EdgeInsets.all(8),
                       constraints: const BoxConstraints(),
                     ),
                   ],
@@ -365,15 +522,27 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            // Send Button
-            Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFF00C853), // Green
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.arrow_upward, color: Colors.white),
-                onPressed: _sendMessage,
+            GestureDetector(
+              onTap: _sendMessage,
+              child: Container(
+                width: 42,
+                height: 42,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF00C853),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.arrow_upward,
+                  color: Colors.white,
+                  size: 24,
+                ),
               ),
             ),
           ],

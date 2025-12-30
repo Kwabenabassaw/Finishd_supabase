@@ -24,6 +24,10 @@ class _FriendsScreenState extends State<FriendsScreen>
   List<UserModel> _allUsers = []; // Find Friends
   bool _isLoadingFriends = true;
   bool _isLoadingAll = true;
+  bool _isLoadingMore = false; // For pagination
+  bool _hasMoreUsers = true; // More users to load
+  Set<String> _friendIds = {}; // Cache friend IDs for filtering
+  final ScrollController _findFriendsScrollController = ScrollController();
 
   // Search functionality
   final TextEditingController _searchController = TextEditingController();
@@ -41,6 +45,19 @@ class _FriendsScreenState extends State<FriendsScreen>
     _fetchMyFriends();
     _fetchAllUsers();
     _searchController.addListener(_onSearchChanged);
+
+    // Add scroll listener for infinite scroll
+    _findFriendsScrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_findFriendsScrollController.position.pixels >=
+            _findFriendsScrollController.position.maxScrollExtent - 200 &&
+        !_isLoadingMore &&
+        _hasMoreUsers &&
+        !_isSearching) {
+      _loadMoreUsers();
+    }
   }
 
   void _onSearchChanged() {
@@ -53,6 +70,7 @@ class _FriendsScreenState extends State<FriendsScreen>
       List<String> followerIds = await _userService.getFollowers(
         _currentUserId,
       );
+      _friendIds = followerIds.toSet(); // Cache for filtering
       List<UserModel> friends = await _userService.getUsers(followerIds);
       if (mounted) {
         setState(() {
@@ -72,10 +90,18 @@ class _FriendsScreenState extends State<FriendsScreen>
 
   Future<void> _fetchAllUsers() async {
     try {
-      List<String> friendIds = await _userService.getFollowers(_currentUserId);
-      List<UserModel> users = await _userService.getAllUsers();
+      // Fetch friend IDs first (if not already fetched)
+      if (_friendIds.isEmpty) {
+        List<String> friendIds = await _userService.getFollowers(
+          _currentUserId,
+        );
+        _friendIds = friendIds.toSet();
+      }
+
+      // Use paginated fetch - only get first 50 users
+      List<UserModel> users = await _userService.getAllUsers(limit: 50);
       users.removeWhere(
-        (user) => user.uid == _currentUserId || friendIds.contains(user.uid),
+        (user) => user.uid == _currentUserId || _friendIds.contains(user.uid),
       );
 
       if (mounted) {
@@ -83,12 +109,50 @@ class _FriendsScreenState extends State<FriendsScreen>
           _allUsers = users;
           _filteredAllUsers = users;
           _isLoadingAll = false;
+          _hasMoreUsers = users.length >= 50; // Assume more if we got full page
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isLoadingAll = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadMoreUsers() async {
+    if (_isLoadingMore || !_hasMoreUsers) return;
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      // Fetch next batch starting after current users
+      List<UserModel> moreUsers = await _userService.getAllUsers(limit: 50);
+
+      // Filter out self and friends
+      moreUsers.removeWhere(
+        (user) =>
+            user.uid == _currentUserId ||
+            _friendIds.contains(user.uid) ||
+            _allUsers.any((existing) => existing.uid == user.uid),
+      );
+
+      if (mounted) {
+        setState(() {
+          _allUsers.addAll(moreUsers);
+          _filteredAllUsers = _allUsers;
+          _isLoadingMore = false;
+          _hasMoreUsers =
+              moreUsers.length >= 20; // Stop if we got less than expected
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingMore = false;
         });
       }
     }
@@ -135,6 +199,7 @@ class _FriendsScreenState extends State<FriendsScreen>
   void dispose() {
     _tabController.dispose();
     _searchController.dispose();
+    _findFriendsScrollController.dispose();
     super.dispose();
   }
 
@@ -359,6 +424,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                   _isSearching && _searchController.text.isNotEmpty
                       ? "No friends found"
                       : "No friends yet",
+                  scrollController: null,
                 ),
                 _buildTabContent(
                   _isLoadingAll,
@@ -366,6 +432,8 @@ class _FriendsScreenState extends State<FriendsScreen>
                   _isSearching && _searchController.text.isNotEmpty
                       ? "No users found"
                       : "No users to add",
+                  scrollController: _findFriendsScrollController,
+                  showLoadingMore: _isLoadingMore,
                 ),
               ],
             ),
@@ -378,8 +446,10 @@ class _FriendsScreenState extends State<FriendsScreen>
   Widget _buildTabContent(
     bool isLoading,
     List<UserModel> users,
-    String emptyMessage,
-  ) {
+    String emptyMessage, {
+    ScrollController? scrollController,
+    bool showLoadingMore = false,
+  }) {
     if (isLoading) {
       return Center(
         child: Platform.isIOS
@@ -413,10 +483,25 @@ class _FriendsScreenState extends State<FriendsScreen>
     }
 
     return ListView.builder(
+      controller: scrollController,
       padding: const EdgeInsets.only(bottom: 20, top: 10),
       physics: const BouncingScrollPhysics(),
-      itemCount: users.length,
+      itemCount: users.length + (showLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
+        if (index == users.length && showLoadingMore) {
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Center(
+              child: Platform.isIOS
+                  ? const CupertinoActivityIndicator()
+                  : const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+            ),
+          );
+        }
         return _buildFriendListItem(users[index]);
       },
     );

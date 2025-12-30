@@ -641,11 +641,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
       children: [
         Text(
           'Seasons',
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 15),
         SizedBox(

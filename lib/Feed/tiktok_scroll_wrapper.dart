@@ -8,6 +8,7 @@
 /// - Configurable swipe thresholds and animation duration
 /// - Uses YoutubeVideoItem for each page
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:tiktoklikescroller/tiktoklikescroller.dart';
 import 'package:provider/provider.dart';
@@ -25,6 +26,7 @@ class TikTokScrollWrapper extends StatefulWidget {
 class _TikTokScrollWrapperState extends State<TikTokScrollWrapper> {
   late Controller _scrollController;
   int _currentPageIndex = 0;
+  StreamSubscription? _jumpSubscription;
 
   @override
   void initState() {
@@ -35,11 +37,27 @@ class _TikTokScrollWrapperState extends State<TikTokScrollWrapper> {
       ..addListener((event) {
         _handleScrollEvent(event);
       });
+
+    // Listen for remote jump requests
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = context.read<YoutubeFeedProvider>();
+      _jumpSubscription = provider.jumpToPageStream.listen((index) {
+        if (mounted && index != _currentPageIndex) {
+          debugPrint(
+            '[TikTokScroll] 🚀 Jumping to page $index by remote request',
+          );
+          _scrollController.jumpToPosition(index);
+          // animateTo triggers the listener which calls onPageChanged
+          _currentPageIndex = index;
+        }
+      });
+    });
   }
 
   @override
   void dispose() {
     _scrollController.disposeListeners();
+    _jumpSubscription?.cancel();
     super.dispose();
   }
 

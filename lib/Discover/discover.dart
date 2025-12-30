@@ -486,7 +486,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         provider.airingToday,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 100),
                   ],
                 ),
               ),

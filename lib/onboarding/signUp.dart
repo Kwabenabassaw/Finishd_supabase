@@ -267,7 +267,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         const Text(
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.right,
-                          'Contiune With Google ',
+                          'Continue With Google ',
 
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
@@ -310,7 +310,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         const Text(
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.right,
-                          'Contiune With Apple ',
+                          'Continue With Apple ',
 
                           style: TextStyle(
                             fontSize: 18,

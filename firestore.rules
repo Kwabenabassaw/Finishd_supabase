@@ -54,6 +54,12 @@ service cloud.firestore {
         allow read: if isAuthenticated();
         allow write: if isOwner(userId);
       }
+
+      // Consolidates all title-specific data (ratings, status, etc.)
+      match /user_titles/{titleId} {
+        allow read: if isAuthenticated();
+        allow write: if isOwner(userId);
+      }
     }
 
     // =========================================================================

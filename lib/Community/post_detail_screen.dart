@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:finishd/Model/community_models.dart';
 import 'package:finishd/provider/community_provider.dart';
+import 'package:finishd/Widget/image_preview.dart';
 import 'package:provider/provider.dart';
 
 /// Screen showing a single post with its comments
@@ -316,15 +317,24 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             // Content
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Text(
-                widget.post.content,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  height: 1.5,
-                  fontSize: 16,
-                  letterSpacing: 0.2,
-                ),
-              ),
+              child: widget.post.isSpoiler
+                  ? _buildSpoilerContent(context, widget.post)
+                  : Text(
+                      widget.post.content,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        height: 1.5,
+                        fontSize: 16,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
             ),
+
+            // Media
+            if (widget.post.mediaUrls.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _buildMediaGallery(context, widget.post),
+              ),
 
             // Hashtags
             if (widget.post.hashtags.isNotEmpty)
@@ -739,5 +749,161 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     if (diff.inHours < 24) return '${diff.inHours}h';
     if (diff.inDays < 7) return '${diff.inDays}d';
     return '${diff.inDays ~/ 7}w';
+  }
+
+  Widget _buildMediaGallery(BuildContext context, CommunityPost post) {
+    if (post.mediaUrls.length == 1) {
+      return SizedBox(
+        height: 220,
+        width: double.infinity,
+        child: _buildSingleMedia(
+          context,
+          post.mediaUrls[0],
+          post.mediaTypes[0],
+          caption: post.content,
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 220,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: post.mediaUrls.length,
+        itemBuilder: (context, index) {
+          return Container(
+            width: MediaQuery.of(context).size.width * 0.7,
+            margin: const EdgeInsets.only(right: 12),
+            child: _buildSingleMedia(
+              context,
+              post.mediaUrls[index],
+              post.mediaTypes[index],
+              caption: post.content,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSingleMedia(
+    BuildContext context,
+    String url,
+    String type, {
+    String? caption,
+  }) {
+    final isVideo = type == 'video';
+    final displayUrl = isVideo ? _getVideoThumbnail(url) : url;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            GestureDetector(
+              onTap: isVideo
+                  ? null
+                  : () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => FullscreenImagePreview(
+                            imageUrl: url,
+                            heroTag: url,
+                            caption: caption,
+                          ),
+                        ),
+                      );
+                    },
+              child: Hero(
+                tag: url,
+                child: Image.network(
+                  displayUrl,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Center(
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                            : null,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            if (isVideo)
+              IgnorePointer(
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.play_arrow_rounded,
+                      color: Colors.white,
+                      size: 40,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getVideoThumbnail(String videoUrl) {
+    return videoUrl
+        .replaceFirst(
+          '/video/upload/',
+          '/video/upload/so_0,w_800,h_600,c_fill/',
+        )
+        .replaceFirst(RegExp(r'\.(mp4|mov|avi|webm)$'), '.jpg');
+  }
+
+  Widget _buildSpoilerContent(BuildContext context, CommunityPost post) {
+    final theme = Theme.of(context);
+
+    return InkWell(
+      onTap: () {},
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: theme.hintColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.visibility_off, color: theme.hintColor, size: 32),
+            const SizedBox(height: 8),
+            Text(
+              'TAP TO REVEAL SPOILER',
+              style: TextStyle(
+                color: theme.hintColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
