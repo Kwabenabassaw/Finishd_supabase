@@ -8,6 +8,7 @@ import 'package:finishd/Widget/movie_action_drawer.dart';
 import 'package:finishd/tmbd/fetch_trialler.dart';
 import 'package:finishd/Model/recommendation_model.dart';
 import 'package:finishd/Model/user_model.dart';
+import 'package:finishd/Model/movie_ratings_model.dart';
 
 import 'package:finishd/services/recommendation_service.dart';
 import 'package:finishd/services/user_service.dart';
@@ -26,6 +27,11 @@ import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:finishd/services/user_titles_service.dart';
 import 'package:finishd/Widget/rating_action_button.dart';
 import 'package:finishd/Widget/emotion_rating_slider.dart';
+import 'package:finishd/MovieDetails/widgets/ai_chat_sheet.dart';
+import 'package:finishd/MovieDetails/widgets/ai_floating_button.dart';
+import 'package:finishd/provider/ai_assistant_provider.dart';
+import 'package:sizer/sizer.dart';
+import 'package:finishd/services/ratings_service.dart';
 // --- Placeholder/Mock Data Models ---
 // Replace these with your actual TMDB models (Movie, CastMember, Season)
 
@@ -54,6 +60,8 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
   bool _showPreview = false;
   bool _showEmojiPicker = false;
   Timer? _previewTimer;
+  MovieRatings _ratings = MovieRatings.empty();
+  final RatingsService _ratingsService = RatingsService();
 
   @override
   void initState() {
@@ -66,6 +74,16 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
         );
     _syncFullDetails();
     _loadUserRating();
+    _loadRatings();
+  }
+
+  Future<void> _loadRatings() async {
+    final r = await _ratingsService.getRatings(_movie.id);
+    if (mounted) {
+      setState(() {
+        _ratings = r;
+      });
+    }
   }
 
   Future<void> _loadUserRating() async {
@@ -153,13 +171,23 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
 
     return Scaffold(
       backgroundColor: themeBackground,
+      floatingActionButton: AiFloatingActionButton(
+        onPressed: () {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (context) => AiChatSheet(movie: _movie, ratings: _ratings),
+          );
+        },
+      ),
       body: CustomScrollView(
         physics: Platform.isIOS
             ? const BouncingScrollPhysics()
             : const ClampingScrollPhysics(),
         slivers: <Widget>[
           SliverAppBar(
-            expandedHeight: 400.0,
+            expandedHeight: 45.h,
             pinned: true,
             stretch: true,
             backgroundColor: themeBackground,
@@ -243,7 +271,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
           ),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+              padding: EdgeInsets.fromLTRB(5.w, 1.h, 5.w, 2.h),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
@@ -251,45 +279,46 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                   Text(
                     _movie.title,
                     style: TextStyle(
-                      fontSize: 32,
+                      fontSize: 24.sp,
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).textTheme.titleLarge?.color,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 1.h),
                   Row(
                     children: [
                       Text(
                         _movie.releaseDate?.substring(0, 4) ?? '',
-                        style: TextStyle(fontSize: 16),
+                        style: TextStyle(fontSize: 12.sp),
                       ),
-                      const SizedBox(width: 8),
-                      Text('•', style: TextStyle()),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 2.w),
+                      const Text('•'),
+                      SizedBox(width: 2.w),
                       Text(
                         '${_movie.runtime} min',
-                        style: TextStyle(fontSize: 16),
+                        style: TextStyle(fontSize: 12.sp),
                       ),
-                      const SizedBox(width: 8),
-                      Text('•', style: TextStyle()),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 2.w),
+                      const Text('•'),
+                      SizedBox(width: 2.w),
                       Expanded(
                         child: Text(
                           _movie.genres.take(2).map((g) => g.name).join(', '),
-                          style: TextStyle(fontSize: 16),
+                          style: TextStyle(fontSize: 12.sp),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
 
-                  const SizedBox(height: 24),
+                  SizedBox(height: 3.h),
 
                   // Action Buttons Row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        ElevatedButton.icon(
                           onPressed: () async {
                             String? youtubeKey;
                             if (_movie.videos.isNotEmpty) {
@@ -308,6 +337,11 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                             }
 
                             if (youtubeKey != null && mounted) {
+                              // Pause preview player to prevent resource conflict
+                              _previewTimer?.cancel();
+                              _previewController?.pause();
+                              setState(() => _showPreview = false);
+
                               YouTubeTrailerPlayerDialog.show(
                                 context,
                                 youtubeKey,
@@ -325,7 +359,10 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF4ADE80),
                             foregroundColor: Colors.black,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                              horizontal: 20,
+                            ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -335,80 +372,80 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      RatingActionButton(
-                        initialRating: _userRating,
-                        onTap: () {
-                          setState(() {
-                            _showEmojiPicker = !_showEmojiPicker;
-                          });
-                        },
-                        onRatingChanged: (rating) {
-                          // This is still needed for internal state update if RatingActionButton
-                          // was used in dialog mode, but here we'll handle it via the inline slider.
-                        },
-                      ),
-                      const SizedBox(width: 12),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? Colors.white.withOpacity(0.1)
-                              : Colors.black.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-
-                        child: IconButton(
-                          icon: Icon(
-                            FontAwesomeIcons.share,
-                            color: Theme.of(context).iconTheme.color,
-                            size: 24,
-                          ),
-                          onPressed: () {
-                            final movieItem = MovieListItem(
-                              id: _movie.id.toString(),
-                              title: _movie.title,
-                              posterPath: _movie.posterPath,
-                              mediaType: 'movie',
-                              addedAt: DateTime.now(),
-                            );
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    FriendSelectionScreen(movie: movieItem),
-                              ),
-                            );
+                        const SizedBox(width: 12),
+                        RatingActionButton(
+                          initialRating: _userRating,
+                          onTap: () {
+                            setState(() {
+                              _showEmojiPicker = !_showEmojiPicker;
+                            });
+                          },
+                          onRatingChanged: (rating) {
+                            // This is still needed for internal state update if RatingActionButton
+                            // was used in dialog mode, but here we'll handle it via the inline slider.
                           },
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? Colors.white.withOpacity(0.1)
-                              : Colors.black.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-
-                        child: IconButton(
-                          icon: Icon(
-                            Icons.add_rounded,
-                            color: Theme.of(context).iconTheme.color,
+                        const SizedBox(width: 12),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.white.withOpacity(0.1)
+                                : Colors.black.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          onPressed: () {
-                            final movieItem = MovieListItem(
-                              id: _movie.id.toString(),
-                              title: _movie.title,
-                              posterPath: _movie.posterPath,
-                              mediaType: 'movie',
-                              addedAt: DateTime.now(),
-                            );
-                            showMovieActionDrawer(context, movieItem);
-                          },
+
+                          child: IconButton(
+                            icon: Icon(
+                              FontAwesomeIcons.share,
+                              color: Theme.of(context).iconTheme.color,
+                              size: 24,
+                            ),
+                            onPressed: () {
+                              final movieItem = MovieListItem(
+                                id: _movie.id.toString(),
+                                title: _movie.title,
+                                posterPath: _movie.posterPath,
+                                mediaType: 'movie',
+                                addedAt: DateTime.now(),
+                              );
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      FriendSelectionScreen(movie: movieItem),
+                                ),
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 10),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.white.withOpacity(0.1)
+                                : Colors.black.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.add_rounded,
+                              color: Theme.of(context).iconTheme.color,
+                            ),
+                            onPressed: () {
+                              final movieItem = MovieListItem(
+                                id: _movie.id.toString(),
+                                title: _movie.title,
+                                posterPath: _movie.posterPath,
+                                mediaType: 'movie',
+                                addedAt: DateTime.now(),
+                              );
+                              showMovieActionDrawer(context, movieItem);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
 
                   AnimatedSize(

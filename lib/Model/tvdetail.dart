@@ -1,5 +1,7 @@
 import 'package:finishd/Model/tmdb_extras.dart';
 import 'package:finishd/Model/Watchprovider.dart';
+import 'package:finishd/Model/movie_list_item.dart';
+import 'package:finishd/Model/trending.dart';
 
 class TvShowDetails {
   final int id;
@@ -25,6 +27,7 @@ class TvShowDetails {
   final List<Video> videos;
   final List<Cast> cast;
   final WatchProvidersResponse? watchProviders;
+  final String? mediaType;
 
   TvShowDetails({
     required this.id,
@@ -50,7 +53,55 @@ class TvShowDetails {
     this.videos = const [],
     this.cast = const [],
     this.watchProviders,
+    this.mediaType,
   });
+
+  /// Create a shallow TvShowDetails object from a MovieListItem
+  factory TvShowDetails.shallowFromListItem(MovieListItem item) {
+    return TvShowDetails(
+      id: int.parse(item.id),
+      name: item.title,
+      originalName: item.title,
+      overview: '',
+      firstAirDate: '',
+      inProduction: false,
+      genres: [],
+      languages: [],
+      networks: [],
+      numberOfEpisodes: 0,
+      numberOfSeasons: 0,
+      seasons: [],
+      status: 'Loading...',
+      type: 'tv',
+      voteAverage: 0.0,
+      voteCount: 0,
+      posterPath: item.posterPath,
+    );
+  }
+
+  /// Create a shallow TvShowDetails object from a MediaItem
+  factory TvShowDetails.shallowFromMediaItem(MediaItem item) {
+    return TvShowDetails(
+      id: item.id,
+      name: item.title,
+      originalName: item.title,
+      overview: item.overview,
+      posterPath: item.posterPath,
+      backdropPath: item.backdropPath,
+      firstAirDate: item.releaseDate,
+      inProduction: false,
+      genres: item.genreIds.map((id) => Genre(id: id, name: '')).toList(),
+      languages: [],
+      networks: [],
+      numberOfEpisodes: 0,
+      numberOfSeasons: 0,
+      seasons: [],
+      status: 'Loading...',
+      type: 'tv',
+      voteAverage: item.voteAverage,
+      voteCount: 0,
+    );
+  }
 
   factory TvShowDetails.fromJson(Map<String, dynamic> json) {
     var videosList = <Video>[];
@@ -105,6 +156,7 @@ class TvShowDetails {
       videos: videosList,
       cast: castList,
       watchProviders: providers,
+      mediaType: 'tv',
     );
   }
 }

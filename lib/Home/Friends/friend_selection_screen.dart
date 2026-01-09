@@ -19,11 +19,19 @@ class _FriendSelectionScreenState extends State<FriendSelectionScreen> {
   final UserService _userService = UserService();
   final RecommendationService _recommendationService = RecommendationService();
   final String _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+  final ScrollController _scrollController = ScrollController();
 
   List<UserModel> _friends = [];
+  List<String> _allFollowerIds = []; // Store all friend IDs for pagination
   Set<String> _selectedUserIds = {};
-  Set<String> _alreadyRecommendedUserIds =
-      {}; // Friends who already got this movie
+  Set<String> _alreadyRecommendedUserIds = {};
+
+  // Pagination state
+  int _currentPage = 0;
+  static const int _pageSize = 20;
+  bool _hasMoreFriends = true;
+  bool _isLoadingMore = false;
+
   bool _isLoading = true;
   bool _isSending = false;
 
@@ -31,12 +39,29 @@ class _FriendSelectionScreenState extends State<FriendSelectionScreen> {
   void initState() {
     super.initState();
     _fetchFriends();
+
+    // Add scroll listener for pagination
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    // Load more when scrolled to 80% of the list
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent * 0.8) {
+      _loadMoreFriends();
+    }
   }
 
   Future<void> _fetchFriends() async {
     if (_currentUserId.isEmpty) return;
     try {
-      // Fetch friends and already-recommended users in parallel
+      // Fetch all friend IDs and already-recommended users in parallel
       final followerIdsFuture = _userService.getFollowers(_currentUserId);
       final alreadyRecommendedFuture = _recommendationService
           .getAlreadyRecommendedFriends(
@@ -51,15 +76,16 @@ class _FriendSelectionScreenState extends State<FriendSelectionScreen> {
       final List<String> followerIds = results[0] as List<String>;
       final Set<String> alreadyRecommended = results[1] as Set<String>;
 
-      List<UserModel> friends = await _userService.getUsers(followerIds);
-
       if (mounted) {
         setState(() {
-          _friends = friends;
+          _allFollowerIds = followerIds;
           _alreadyRecommendedUserIds = alreadyRecommended;
-          _isLoading = false;
+          _hasMoreFriends = followerIds.length > _pageSize;
         });
       }
+
+      // Load first page
+      await _loadPage(0);
     } catch (e) {
       print('Error fetching friends: $e');
       if (mounted) {
@@ -68,6 +94,44 @@ class _FriendSelectionScreenState extends State<FriendSelectionScreen> {
         });
       }
     }
+  }
+
+  Future<void> _loadPage(int page) async {
+    final startIndex = page * _pageSize;
+    final endIndex = (startIndex + _pageSize).clamp(0, _allFollowerIds.length);
+
+    if (startIndex >= _allFollowerIds.length) {
+      setState(() {
+        _hasMoreFriends = false;
+        _isLoading = false;
+        _isLoadingMore = false;
+      });
+      return;
+    }
+
+    final pageIds = _allFollowerIds.sublist(startIndex, endIndex);
+    final pageFriends = await _userService.getUsers(pageIds);
+
+    if (mounted) {
+      setState(() {
+        _friends.addAll(pageFriends);
+        _currentPage = page;
+        _hasMoreFriends = endIndex < _allFollowerIds.length;
+        _isLoading = false;
+        _isLoadingMore = false;
+      });
+
+      print(
+        '[Pagination] Loaded page $page: ${pageFriends.length} friends (total: ${_friends.length}/${_allFollowerIds.length})',
+      );
+    }
+  }
+
+  Future<void> _loadMoreFriends() async {
+    if (_isLoadingMore || !_hasMoreFriends) return;
+
+    setState(() => _isLoadingMore = true);
+    await _loadPage(_currentPage + 1);
   }
 
   Future<void> _sendRecommendation() async {
@@ -215,6 +279,7 @@ class _FriendSelectionScreenState extends State<FriendSelectionScreen> {
               ),
             )
           : CustomScrollView(
+              controller: _scrollController, // Add scroll controller
               physics: const BouncingScrollPhysics(),
               slivers: [
                 // Movie preview header
@@ -501,6 +566,29 @@ class _FriendSelectionScreenState extends State<FriendSelectionScreen> {
                     }, childCount: _friends.length),
                   ),
                 ),
+
+                // Loading indicator for pagination
+                if (_isLoadingMore)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            const CircularProgressIndicator(strokeWidth: 2),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Loading more friends...',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context).hintColor,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
     );

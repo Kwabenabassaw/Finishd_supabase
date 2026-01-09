@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:finishd/Model/community_models.dart';
 import 'package:finishd/Community/create_post_screen.dart';
 import 'package:finishd/Community/post_detail_screen.dart';
 import 'package:finishd/Widget/image_preview.dart';
 import 'package:finishd/provider/community_provider.dart';
+import 'package:finishd/provider/user_provider.dart';
+import 'package:finishd/Home/share_post_sheet.dart';
+import 'package:finishd/MovieDetails/MovieScreen.dart';
+import 'package:finishd/MovieDetails/Tvshowscreen.dart';
+import 'package:finishd/Model/MovieDetails.dart';
+import 'package:finishd/Model/tvdetail.dart';
+import 'package:finishd/Model/movie_list_item.dart';
+import 'package:finishd/Widget/fullscreen_video_player.dart';
 import 'package:provider/provider.dart';
 
 /// Detail screen for a specific community showing posts feed
@@ -26,12 +35,17 @@ class CommunityDetailScreen extends StatefulWidget {
 }
 
 class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+  final Set<String> _revealedSpoilers = {};
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<CommunityProvider>(context, listen: false);
       provider.loadCommunityDetails(widget.showId);
+      provider.setSearchQuery(''); // Reset search on entry
     });
   }
 
@@ -40,7 +54,21 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     // Optionally clear data, but maybe keep it cached for back navigation?
     // For now, let's clear it to ensure fresh data next time or handle in provider
     // Provider.of<CommunityProvider>(context, listen: false).clearCurrentCommunity();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  void _toggleSearch() {
+    setState(() {
+      _isSearching = !_isSearching;
+      if (!_isSearching) {
+        _searchController.clear();
+        Provider.of<CommunityProvider>(
+          context,
+          listen: false,
+        ).setSearchQuery('');
+      }
+    });
   }
 
   void _openCreatePost() async {
@@ -74,7 +102,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     // Watch the provider
     final provider = Provider.of<CommunityProvider>(context);
     final community = provider.currentCommunity;
-    final posts = provider.currentPosts;
+    final posts = provider.filteredPosts;
     final isMember = provider.isMemberOfCurrent;
     final isLoading = provider.isLoadingCommunityDetails;
     final userVotes = provider.currentUserVotes;
@@ -91,6 +119,49 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
             stretch: true,
             backgroundColor: theme.scaffoldBackgroundColor,
             elevation: 0,
+            title: _isSearching
+                ? Hero(
+                    tag: 'community_search',
+                    child: Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: theme.brightness == Brightness.dark
+                            ? Colors.white10
+                            : Colors.black.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        autofocus: true,
+                        style: theme.textTheme.bodyMedium,
+                        decoration: InputDecoration(
+                          hintText: 'Search community...',
+                          hintStyle: TextStyle(
+                            color: theme.hintColor.withOpacity(0.5),
+                            fontSize: 14,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search_rounded,
+                            size: 18,
+                            color: theme.hintColor,
+                          ),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.close_rounded, size: 18),
+                            onPressed: () {
+                              _searchController.clear();
+                              provider.setSearchQuery('');
+                            },
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 10,
+                          ),
+                        ),
+                        onChanged: (value) => provider.setSearchQuery(value),
+                      ),
+                    ),
+                  )
+                : null,
             leading: CircleAvatar(
               backgroundColor: Colors.black26,
               child: IconButton(
@@ -99,33 +170,41 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                   color: Colors.white,
                   size: 18,
                 ),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  if (_isSearching) {
+                    _toggleSearch();
+                  } else {
+                    Navigator.pop(context);
+                  }
+                },
               ),
             ),
             actions: [
-              CircleAvatar(
-                backgroundColor: Colors.black26,
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.search_rounded,
-                    color: Colors.white,
-                    size: 20,
+              if (!_isSearching)
+                CircleAvatar(
+                  backgroundColor: Colors.black26,
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.search_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                    onPressed: _toggleSearch,
                   ),
-                  onPressed: () {},
                 ),
-              ),
               const SizedBox(width: 8),
-              CircleAvatar(
-                backgroundColor: Colors.black26,
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.more_horiz_rounded,
-                    color: Colors.white,
-                    size: 20,
+              if (!_isSearching)
+                CircleAvatar(
+                  backgroundColor: Colors.black26,
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.more_horiz_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                    onPressed: () => _showCommunityOptions(context, provider),
                   ),
-                  onPressed: () {},
                 ),
-              ),
               const SizedBox(width: 16),
             ],
             flexibleSpace: FlexibleSpaceBar(
@@ -305,6 +384,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
             ),
           ),
 
+          // Trending Hashtags
+          SliverToBoxAdapter(child: _buildTrendingHashtags(context, provider)),
+
           // Posts or empty state
           if (isLoading)
             const SliverFillRemaining(
@@ -385,35 +467,58 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   Widget _buildEmptyState(BuildContext context) {
     final theme = Theme.of(context);
     final primaryGreen = const Color(0xFF1A8927);
+    final provider = Provider.of<CommunityProvider>(context, listen: false);
+    final isSearching = _searchController.text.isNotEmpty;
 
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.forum_outlined, size: 80, color: theme.hintColor),
+          Icon(
+            isSearching ? Icons.search_off_rounded : Icons.forum_outlined,
+            size: 80,
+            color: theme.hintColor.withOpacity(0.3),
+          ),
           const SizedBox(height: 24),
           Text(
-            'No discussions yet',
+            isSearching ? 'No results found' : 'No discussions yet',
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 12),
           Text(
-            'Be the first to start a conversation!',
-            style: theme.textTheme.bodyMedium,
+            isSearching
+                ? 'Try searching for something else'
+                : 'Be the first to start a conversation!',
+            style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor),
           ),
           const SizedBox(height: 32),
-          ElevatedButton.icon(
-            onPressed: () => _openCreatePost(),
-            icon: const Icon(Icons.add),
-            label: const Text('Start Discussion'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryGreen,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          if (!isSearching)
+            ElevatedButton.icon(
+              onPressed: () => _openCreatePost(),
+              icon: const Icon(Icons.add),
+              label: const Text('Start Discussion'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryGreen,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 16,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
+            )
+          else
+            TextButton(
+              onPressed: () {
+                _searchController.clear();
+                provider.setSearchQuery('');
+              },
+              child: const Text('Clear Search'),
             ),
-          ),
         ],
       ),
     );
@@ -550,7 +655,8 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                         Icons.more_horiz_rounded,
                         color: theme.hintColor.withOpacity(0.5),
                       ),
-                      onPressed: () {},
+                      onPressed: () =>
+                          _showPostOptions(context, post, provider),
                     ),
                   ],
                 ),
@@ -558,8 +664,12 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                 // Content
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: post.isSpoiler
-                      ? _buildSpoilerContent(context, post)
+                  child: post.isSpoiler && !_revealedSpoilers.contains(post.id)
+                      ? _buildSpoilerContent(context, post, () {
+                          setState(() {
+                            _revealedSpoilers.add(post.id);
+                          });
+                        })
                       : Text(
                           post.content,
                           style: theme.textTheme.bodyLarge?.copyWith(
@@ -570,7 +680,8 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                 ),
 
                 // Media
-                if (post.mediaUrls.isNotEmpty)
+                if (post.mediaUrls.isNotEmpty &&
+                    (!post.isSpoiler || _revealedSpoilers.contains(post.id)))
                   Padding(
                     padding: const EdgeInsets.only(bottom: 16),
                     child: _buildMediaGallery(context, post),
@@ -585,12 +696,16 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                       runSpacing: 4,
                       children: post.hashtags
                           .map(
-                            (tag) => Text(
-                              '#$tag',
-                              style: TextStyle(
-                                color: primaryGreen,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
+                            (tag) => InkWell(
+                              onTap: () => provider.setHashtagFilter(tag),
+                              borderRadius: BorderRadius.circular(4),
+                              child: Text(
+                                '#$tag',
+                                style: TextStyle(
+                                  color: primaryGreen,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                ),
                               ),
                             ),
                           )
@@ -692,7 +807,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                           color: theme.hintColor.withOpacity(0.6),
                           size: 18,
                         ),
-                        onPressed: () {},
+                        onPressed: () => SharePostSheet.show(context, post),
                         padding: const EdgeInsets.all(8),
                         constraints: const BoxConstraints(),
                       ),
@@ -707,12 +822,17 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     );
   }
 
-  Widget _buildSpoilerContent(BuildContext context, CommunityPost post) {
+  Widget _buildSpoilerContent(
+    BuildContext context,
+    CommunityPost post,
+    VoidCallback onReveal,
+  ) {
     final theme = Theme.of(context);
 
     return InkWell(
-      onTap: () {},
+      onTap: onReveal,
       child: Container(
+        width: double.infinity,
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: theme.hintColor.withOpacity(0.1),
@@ -749,6 +869,44 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
         context,
         listen: false,
       ).loadCommunityDetails(widget.showId);
+    }
+  }
+
+  void _navigateToDetails() {
+    if (widget.mediaType == 'movie') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MovieDetailsScreen(
+            movie: MovieDetails.shallowFromListItem(
+              MovieListItem(
+                id: widget.showId.toString(),
+                title: widget.showTitle,
+                posterPath: widget.posterPath,
+                mediaType: 'movie',
+                addedAt: DateTime.now(),
+              ),
+            ),
+          ),
+        ),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ShowDetailsScreen(
+            movie: TvShowDetails.shallowFromListItem(
+              MovieListItem(
+                id: widget.showId.toString(),
+                title: widget.showTitle,
+                posterPath: widget.posterPath,
+                mediaType: 'tv',
+                addedAt: DateTime.now(),
+              ),
+            ),
+          ),
+        ),
+      );
     }
   }
 
@@ -815,7 +973,17 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
           children: [
             GestureDetector(
               onTap: isVideo
-                  ? null
+                  ? () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => FullscreenVideoPlayer(
+                            videoUrl: url,
+                            caption: caption,
+                          ),
+                        ),
+                      );
+                    }
                   : () {
                       Navigator.push(
                         context,
@@ -878,5 +1046,495 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
           '/video/upload/so_0,w_800,h_600,c_fill/',
         )
         .replaceFirst(RegExp(r'\.(mp4|mov|avi|webm)$'), '.jpg');
+  }
+
+  void _showPostOptions(
+    BuildContext context,
+    CommunityPost post,
+    CommunityProvider provider,
+  ) {
+    final theme = Theme.of(context);
+    final isAuthor = post.authorId == provider.currentUid;
+
+    // Ensure following list is loaded for accurate Follow/Unfollow status
+    if (provider.currentUid != null) {
+      Provider.of<UserProvider>(
+        context,
+        listen: false,
+      ).ensureFollowingLoaded(provider.currentUid!);
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 24),
+              decoration: BoxDecoration(
+                color: theme.dividerColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            if (isAuthor)
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.delete_outline_rounded,
+                    color: Colors.red,
+                  ),
+                ),
+                title: const Text(
+                  'Delete Post',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                subtitle: Text(
+                  'This action cannot be undone',
+                  style: TextStyle(
+                    color: theme.hintColor.withOpacity(0.6),
+                    fontSize: 12,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context); // Close bottom sheet
+                  _confirmDelete(context, post, provider);
+                },
+              )
+            else
+              ListTile(
+                leading: const Icon(Icons.report_gmailerrorred_rounded),
+                title: const Text('Report Post'),
+                onTap: () {
+                  Navigator.pop(context);
+                  // Implement report logic
+                },
+              ),
+            ListTile(
+              leading: const Icon(Icons.share_rounded),
+              title: const Text('Share Post'),
+              onTap: () {
+                Navigator.pop(context);
+                SharePostSheet.show(context, post);
+              },
+            ),
+            if (!isAuthor)
+              Consumer<UserProvider>(
+                builder: (context, userProvider, child) {
+                  final isFollowing = userProvider.isFollowing(post.authorId);
+
+                  return ListTile(
+                    leading: Icon(
+                      isFollowing
+                          ? Icons.person_remove_rounded
+                          : Icons.person_add_rounded,
+                    ),
+                    title: Text(isFollowing ? 'Unfollow' : 'Follow'),
+                    subtitle: Text(
+                      isFollowing
+                          ? 'Stop following ${post.authorName}'
+                          : 'Follow ${post.authorName}',
+                    ),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      try {
+                        if (isFollowing) {
+                          await userProvider.unfollowUser(post.authorId);
+                        } else {
+                          await userProvider.followUser(post.authorId);
+                        }
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                isFollowing
+                                    ? 'Unfollowed ${post.authorName}'
+                                    : 'Following ${post.authorName}',
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Failed to update follow status'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  );
+                },
+              ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDelete(
+    BuildContext context,
+    CommunityPost post,
+    CommunityProvider provider,
+  ) {
+    final theme = Theme.of(context);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Post?'),
+        content: const Text(
+          'Are you sure you want to delete this post? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: theme.hintColor)),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context); // Close dialog
+              final result = await provider.deletePost(post.id, widget.showId);
+              if (result && mounted) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Post deleted')));
+              } else if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Failed to delete post')),
+                );
+              }
+            },
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCommunityOptions(BuildContext context, CommunityProvider provider) {
+    if (Theme.of(context).platform == TargetPlatform.iOS ||
+        Theme.of(context).platform == TargetPlatform.macOS) {
+      _showCupertinoCommunityMenu(context, provider);
+    } else {
+      _showMaterialCommunityMenu(context, provider);
+    }
+  }
+
+  void _showMaterialCommunityMenu(
+    BuildContext context,
+    CommunityProvider provider,
+  ) {
+    final theme = Theme.of(context);
+    final community = provider.currentCommunity;
+    if (community == null) return;
+
+    final isCreator = community.createdBy == provider.currentUid;
+    final isMember = provider.isMemberOfCurrent;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 24),
+              decoration: BoxDecoration(
+                color: theme.dividerColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.info_outline_rounded),
+              title: const Text('Info'),
+              subtitle: Text(
+                'View ${widget.mediaType == 'movie' ? 'movie' : 'TV show'} details',
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _navigateToDetails();
+              },
+            ),
+            if (isMember)
+              ListTile(
+                leading: const Icon(Icons.exit_to_app_rounded),
+                title: const Text('Leave Community'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmLeave(context, provider);
+                },
+              ),
+            if (isCreator)
+              ListTile(
+                leading: const Icon(
+                  Icons.delete_forever_rounded,
+                  color: Colors.red,
+                ),
+                title: const Text(
+                  'Delete Community',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmDeleteCommunity(context, provider);
+                },
+              ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCupertinoCommunityMenu(
+    BuildContext context,
+    CommunityProvider provider,
+  ) {
+    final community = provider.currentCommunity;
+    if (community == null) return;
+
+    final isCreator = community.createdBy == provider.currentUid;
+    final isMember = provider.isMemberOfCurrent;
+
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => CupertinoActionSheet(
+        title: Text(community.title),
+        message: const Text('Community Options'),
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _navigateToDetails();
+            },
+            child: const Text('Info'),
+          ),
+          if (isMember)
+            CupertinoActionSheetAction(
+              onPressed: () {
+                Navigator.pop(context);
+                _confirmLeave(context, provider);
+              },
+              child: const Text('Leave Community'),
+            ),
+          if (isCreator)
+            CupertinoActionSheetAction(
+              isDestructiveAction: true,
+              onPressed: () {
+                Navigator.pop(context);
+                _confirmDeleteCommunity(context, provider);
+              },
+              child: const Text('Delete Community'),
+            ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+      ),
+    );
+  }
+
+  void _confirmLeave(BuildContext context, CommunityProvider provider) {
+    final theme = Theme.of(context);
+    final community = provider.currentCommunity;
+    if (community == null) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Leave Community?'),
+        content: Text('Are you sure you want to leave ${community.title}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: theme.hintColor)),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await provider.leaveCommunity(community.showId);
+              if (mounted) {
+                Navigator.pop(
+                  context,
+                ); // Go back to discover or previous screen
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Left ${community.title}')),
+                );
+              }
+            },
+            child: const Text('Leave', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteCommunity(
+    BuildContext context,
+    CommunityProvider provider,
+  ) {
+    final theme = Theme.of(context);
+    final community = provider.currentCommunity;
+    if (community == null) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Community?'),
+        content: const Text(
+          'This will permanently delete this community and all its data. This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: theme.hintColor)),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final result = await provider.deleteCommunity(community.showId);
+              if (result && mounted) {
+                Navigator.pop(context); // Go back
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Community deleted')),
+                );
+              } else if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Failed to delete community')),
+                );
+              }
+            },
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrendingHashtags(
+    BuildContext context,
+    CommunityProvider provider,
+  ) {
+    final trending = provider.trendingHashtags;
+    if (trending.isEmpty) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    final primaryGreen = const Color(0xFF1A8927);
+    final selectedTag = provider.selectedHashtag;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Trending Topics',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: theme.hintColor.withOpacity(0.8),
+                ),
+              ),
+              if (selectedTag != null)
+                TextButton(
+                  onPressed: () => provider.setHashtagFilter(null),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(0, 0),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    'Clear Filter',
+                    style: TextStyle(
+                      color: primaryGreen,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              children: trending.map((tag) {
+                final isSelected = selectedTag == tag;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text('#$tag'),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      provider.setHashtagFilter(selected ? tag : null);
+                    },
+                    backgroundColor: theme.cardColor,
+                    selectedColor: primaryGreen.withOpacity(0.1),
+                    labelStyle: TextStyle(
+                      color: isSelected ? primaryGreen : theme.hintColor,
+                      fontSize: 13,
+                      fontWeight: isSelected
+                          ? FontWeight.w900
+                          : FontWeight.w600,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      side: BorderSide(
+                        color: isSelected
+                            ? primaryGreen
+                            : theme.dividerColor.withOpacity(0.05),
+                      ),
+                    ),
+                    showCheckmark: false,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

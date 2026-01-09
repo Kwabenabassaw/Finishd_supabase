@@ -18,7 +18,7 @@ class ChatSyncService {
   static ChatSyncService? _instance;
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final String _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+  String get _currentUserId => FirebaseAuth.instance.currentUser?.uid ?? '';
 
   late final Box<LocalConversation> _convBox;
   late final Box<LocalMessage> _msgBox;
@@ -28,6 +28,7 @@ class ChatSyncService {
   final Queue<int> _pendingQueue = Queue();
   Timer? _queueProcessor;
   StreamSubscription? _connectivitySub;
+  StreamSubscription? _globalConvsSub;
   bool _isOnline = true;
 
   ChatSyncService._();
@@ -65,6 +66,9 @@ class ChatSyncService {
     // Initial sync
     await syncAllConversations();
 
+    // Start global real-time listener
+    _startGlobalListener();
+
     print(
       '✅ [ChatSync] Initialized with ${_pendingQueue.length} pending messages',
     );
@@ -76,6 +80,7 @@ class ChatSyncService {
   void dispose() {
     _queueProcessor?.cancel();
     _connectivitySub?.cancel();
+    _globalConvsSub?.cancel();
   }
 
   /// Clear all local chat data.
@@ -94,8 +99,10 @@ class ChatSyncService {
   /// Call this after login when user changes.
   Future<void> reinitialize() async {
     print('🔄 [ChatSync] Re-initializing for new user...');
+    _globalConvsSub?.cancel();
     await clearLocalData();
     await syncAllConversations();
+    _startGlobalListener();
     print('✅ [ChatSync] Re-initialized for user: $_currentUserId');
   }
 
@@ -214,6 +221,35 @@ class ChatSyncService {
     return _saveAndQueueMessage(message);
   }
 
+  /// Share a community post.
+  Future<LocalMessage> sendPostLink({
+    required String conversationId,
+    required String receiverId,
+    required String postId,
+    required String postContent,
+    required String authorName,
+    required String showTitle,
+    required int showId,
+  }) async {
+    final message = LocalMessage(
+      conversationId: conversationId,
+      senderId: _currentUserId,
+      receiverId: receiverId,
+      content: postContent,
+      type: 'shared_post',
+      postId: postId,
+      postContent: postContent,
+      postAuthorName: authorName,
+      postShowTitle: showTitle,
+      showId: showId,
+      createdAt: DateTime.now(),
+      status: MessageStatus.pending,
+      isPending: true,
+    );
+
+    return _saveAndQueueMessage(message);
+  }
+
   /// Send a show/movie recommendation card.
   Future<LocalMessage> sendShowCard({
     required String conversationId,
@@ -290,6 +326,8 @@ class ChatSyncService {
         return 'GIF';
       case 'recommendation':
         return '🎬 Recommendation';
+      case 'shared_post':
+        return '📝 Shared Post';
       default:
         return 'Message';
     }
@@ -350,6 +388,7 @@ class ChatSyncService {
         'lastMessageTime': FieldValue.serverTimestamp(),
         'lastMessageSender': message.senderId,
         'unreadCounts.${message.receiverId}': FieldValue.increment(1),
+        if (message.type == 'shared_post') 'lastMessageType': 'shared_post',
       });
 
       print(
@@ -387,10 +426,16 @@ class ChatSyncService {
 
   Future<void> syncAllConversations() async {
     try {
+      final uid = _currentUserId;
+      if (uid.isEmpty) {
+        print('⚠️ [ChatSync] Cannot sync conversations: No user logged in');
+        return;
+      }
+
       // Get all conversations for current user
       final snapshot = await _firestore
           .collection('chats')
-          .where('participants', arrayContains: _currentUserId)
+          .where('participants', arrayContains: uid)
           .get();
 
       for (final doc in snapshot.docs) {
@@ -473,6 +518,10 @@ class ChatSyncService {
           videoTitle: msgData['videoTitle'],
           videoThumbnail: msgData['videoThumbnail'],
           videoChannel: msgData['videoChannel'],
+          postId: msgData['postId'],
+          postContent: msgData['postContent'],
+          postAuthorName: msgData['postAuthorName'],
+          postShowTitle: msgData['postShowTitle'],
           createdAt:
               (msgData['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
           status: MessageStatus.delivered,
@@ -543,5 +592,40 @@ class ChatSyncService {
     if (_isOnline) {
       await _processPendingQueue();
     }
+  }
+
+  // ============================================================
+  // REAL-TIME LISTENER
+  // ============================================================
+
+  void _startGlobalListener() {
+    _globalConvsSub?.cancel();
+
+    final uid = _currentUserId;
+    if (uid.isEmpty) return;
+
+    print('📡 [ChatSync] Starting global real-time listener for user: $uid');
+
+    _globalConvsSub = _firestore
+        .collection('chats')
+        .where('participants', arrayContains: uid)
+        .snapshots()
+        .listen(
+          (snapshot) {
+            for (final change in snapshot.docChanges) {
+              if (change.type == DocumentChangeType.added ||
+                  change.type == DocumentChangeType.modified) {
+                final doc = change.doc;
+                print(
+                  '🔔 [ChatSync] Real-time change detected for conversation: ${doc.id}',
+                );
+                _syncConversation(doc);
+              }
+            }
+          },
+          onError: (e) {
+            print('❌ [ChatSync] Global listener error: $e');
+          },
+        );
   }
 }

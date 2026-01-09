@@ -121,6 +121,13 @@ class LocalMessage {
   String? videoThumbnail;
   String? videoChannel;
 
+  /// Post sharing fields
+  String? postId;
+  String? postContent;
+  String? postAuthorName;
+  String? postShowTitle;
+  int? showId;
+
   @Property(type: PropertyType.date)
   DateTime createdAt;
 
@@ -152,6 +159,11 @@ class LocalMessage {
     this.videoTitle,
     this.videoThumbnail,
     this.videoChannel,
+    this.postId,
+    this.postContent,
+    this.postAuthorName,
+    this.postShowTitle,
+    this.showId,
     required this.createdAt,
     this.status = MessageStatus.pending,
     this.retryCount = 0,
@@ -168,6 +180,9 @@ class LocalMessage {
 
   /// Check if message is a video link
   bool get isVideoLink => type == 'video_link' && videoId != null;
+
+  /// Check if message is a shared post
+  bool get isSharedPost => type == 'shared_post' && postId != null;
 
   /// Convert to Firestore-compatible map
   Map<String, dynamic> toFirestore() {
@@ -187,6 +202,11 @@ class LocalMessage {
       if (videoTitle != null) 'videoTitle': videoTitle,
       if (videoThumbnail != null) 'videoThumbnail': videoThumbnail,
       if (videoChannel != null) 'videoChannel': videoChannel,
+      if (postId != null) 'postId': postId,
+      if (postContent != null) 'postContent': postContent,
+      if (postAuthorName != null) 'postAuthorName': postAuthorName,
+      if (postShowTitle != null) 'postShowTitle': postShowTitle,
+      if (showId != null) 'showId': showId,
     };
   }
 }

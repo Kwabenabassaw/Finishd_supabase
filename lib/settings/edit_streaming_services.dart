@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:finishd/Model/Watchprovider.dart';
@@ -296,7 +297,7 @@ class _ServiceTile extends StatelessWidget {
                       "https://image.tmdb.org/t/p/w500${service.logoPath}",
                   fit: BoxFit.contain,
                   placeholder: (_, __) => const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: LogoLoadingScreen(),
                   ),
                   errorWidget: (_, __, ___) =>
                       const Icon(Icons.tv, color: Colors.grey),

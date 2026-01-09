@@ -1,14 +1,13 @@
-import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:finishd/Model/trending.dart';
 import 'package:finishd/Model/movie_list_item.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:finishd/Widget/movie_card.dart';
 import 'package:finishd/Widget/movie_action_drawer.dart';
+import 'package:finishd/Model/MovieDetails.dart';
+import 'package:finishd/Model/tvdetail.dart';
 import 'package:finishd/MovieDetails/MovieScreen.dart';
 import 'package:finishd/MovieDetails/Tvshowscreen.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:finishd/provider/MovieProvider.dart';
 
 class MovieSection extends StatelessWidget {
   final String title;
@@ -28,7 +27,6 @@ class MovieSection extends StatelessWidget {
   Widget build(BuildContext context) {
     if (items.isEmpty) return const SizedBox.shrink();
 
-    final provider = Provider.of<MovieProvider>(context);
     final screenWidth = MediaQuery.of(context).size.width;
     final cardWidth = screenWidth * 0.90 > 160
         ? 135.0
@@ -111,45 +109,12 @@ class MovieSection extends StatelessWidget {
                   ? genres.take(2).toList()
                   : genres;
 
-              final socialSignals = provider.socialSignals[item.id.toString()];
-              Widget? socialBadge;
-              if (socialSignals != null &&
-                  socialSignals.friendsLiked.isNotEmpty) {
-                socialBadge = Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white10, width: 0.5),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.favorite, color: Colors.red, size: 10),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${socialSignals.friendsLiked.length}',
-                        style: const TextStyle(
-                        
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
               return GenericMovieCard<MediaItem>(
                 item: item,
                 titleBuilder: (m) => m.title,
                 posterBuilder: (m) =>
                     "https://image.tmdb.org/t/p/w500${m.posterPath}",
                 typeBuilder: (m) => limited.join(", "),
-                socialBadge: socialBadge,
                 width: cardWidth,
                 imageHeight: imgHeight,
                 onActionMenuTap: () {
@@ -165,79 +130,29 @@ class MovieSection extends StatelessWidget {
                   // Show action drawer
                   showMovieActionDrawer(context, movieListItem);
                 },
-                onTap: () async {
-                  /*
-                  final provider = Provider.of<MovieProvider>(
-                    context,
-                    listen: false,
-                  );
-                  provider.selectItem(items, index);
-                  */
-
-                  // Show loading indicator
-                  showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (context) =>
-                        const Center(child: LogoLoadingScreen()),
-                  );
-
-                  try {
-                    if (item.mediaType == 'tv') {
-                      // Fetch full TV show details
-                      final tvDetails = await movieApi.fetchDetailsTvShow(
-                        item.id,
-                      );
-
-                      // Close loading indicator
-                      if (context.mounted) Navigator.pop(context);
-
-                      if (tvDetails != null && context.mounted) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                ShowDetailsScreen(movie: tvDetails),
-                          ),
-                        );
-                      } else if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Failed to load TV show details'),
-                          ),
-                        );
-                      }
-                    } else {
-                      // Default to movie
-                      // Fetch full movie details
-                      final movieDetails = await movieApi.fetchMovieDetails(
-                        item.id,
-                      );
-
-                      // Close loading indicator
-                      if (context.mounted) Navigator.pop(context);
-
-                      // Navigate to details screen
-                      if (context.mounted) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                MovieDetailsScreen(movie: movieDetails),
-                          ),
-                        );
-                      }
-                    }
-                  } catch (e) {
-                    // Close loading indicator
-                    if (context.mounted) Navigator.pop(context);
-
-                    // Show error
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed to load details: $e')),
-                      );
-                    }
+                onTap: () {
+                  if (item.mediaType == 'tv') {
+                    final shallowShow = TvShowDetails.shallowFromMediaItem(
+                      item,
+                    );
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            ShowDetailsScreen(movie: shallowShow),
+                      ),
+                    );
+                  } else {
+                    final shallowMovie = MovieDetails.shallowFromMediaItem(
+                      item,
+                    );
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            MovieDetailsScreen(movie: shallowMovie),
+                      ),
+                    );
                   }
                 },
               );

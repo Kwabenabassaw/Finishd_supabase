@@ -112,6 +112,7 @@ class CommunityService {
       // Step 3: Create the post
       final postData = {
         'showId': showId,
+        'showTitle': showTitle,
         'communityId': showId.toString(),
         'authorId': _currentUid,
         'authorName': userData['username'] ?? 'Anonymous',
@@ -149,6 +150,41 @@ class CommunityService {
     }
   }
 
+  /// Delete a post and update community stats
+  Future<bool> deletePost(String postId, int showId) async {
+    if (_currentUid == null) return false;
+
+    try {
+      final postDoc = await _posts.doc(postId).get();
+      if (!postDoc.exists) return false;
+
+      // Check if user is author
+      final data = postDoc.data() as Map<String, dynamic>?;
+      if (data == null || data['authorId'] != _currentUid) {
+        throw Exception('Unauthorized: You can only delete your own posts');
+      }
+
+      final batch = _firestore.batch();
+
+      // Delete the post
+      batch.delete(_posts.doc(postId));
+
+      // Decrement post count in community
+      batch.update(_communities.doc(showId.toString()), {
+        'postCount': FieldValue.increment(-1),
+      });
+
+      // Note: In a production app, we would also delete all comments
+      // and media associated with this post. For now, we'll keep it simple.
+
+      await batch.commit();
+      return true;
+    } catch (e) {
+      print('❌ Error deleting post: $e');
+      return false;
+    }
+  }
+
   /// Get posts for a community, sorted by recent activity
   Future<List<Map<String, dynamic>>> getPosts({
     required int showId,
@@ -172,11 +208,28 @@ class CommunityService {
         final data = doc.data() as Map<String, dynamic>;
         data['id'] = doc.id;
         data['docSnapshot'] = doc; // For pagination
+        print(
+          '[CommunityService] Post ${doc.id} - upvotes: ${data['upvotes']}, downvotes: ${data['downvotes']}, score: ${data['score']}',
+        );
         return data;
       }).toList();
     } catch (e) {
       print('❌ Error fetching posts: $e');
       return [];
+    }
+  }
+
+  /// Get a single post by ID
+  Future<Map<String, dynamic>?> getPost(String postId) async {
+    try {
+      final doc = await _posts.doc(postId).get();
+      if (!doc.exists) return null;
+      final data = doc.data() as Map<String, dynamic>;
+      data['id'] = doc.id;
+      return data;
+    } catch (e) {
+      print('❌ Error fetching single post: $e');
+      return null;
     }
   }
 
@@ -371,13 +424,18 @@ class CommunityService {
     if (_currentUid == null) return 0;
 
     final voteId = '${showId}_${postId}_$_currentUid';
+    print('[CommunityService] Looking up vote: $voteId');
+
     final doc = await _firestore
         .collection('community_votes')
         .doc(voteId)
         .get();
 
-    if (!doc.exists) return 0;
-    return doc.data()?['vote'] as int? ?? 0;
+    final vote = doc.exists ? (doc.data()?['vote'] as int? ?? 0) : 0;
+    print(
+      '[CommunityService] Vote document exists: ${doc.exists}, vote: $vote',
+    );
+    return vote;
   }
 
   /// Vote on a comment using a Transaction to ensure atomic updates.
@@ -672,5 +730,32 @@ class CommunityService {
         .get();
 
     return memberDoc.exists;
+  }
+
+  /// Delete a community (only if creator)
+  Future<bool> deleteCommunity(int showId) async {
+    if (_currentUid == null) return false;
+
+    try {
+      final docRef = _communities.doc(showId.toString());
+      final doc = await docRef.get();
+
+      if (!doc.exists) return false;
+
+      final data = doc.data() as Map<String, dynamic>;
+      if (data['createdBy'] != _currentUid) {
+        throw Exception(
+          'Unauthorized: Only the creator can delete this community',
+        );
+      }
+
+      // In a production app, we'd also delete all posts, members, and comments.
+      // For now, we'll just delete the community document.
+      await docRef.delete();
+      return true;
+    } catch (e) {
+      print('❌ Error deleting community: $e');
+      return false;
+    }
   }
 }

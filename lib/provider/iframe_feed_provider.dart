@@ -139,15 +139,23 @@ class IframeFeedProvider extends ChangeNotifier {
 
     debugPrint('📄 Page changed: $oldIndex → $newIndex');
 
-    // Pause old video
-    _controllers[oldIndex]?.pauseVideo();
+    // Pause old video (safely)
+    try {
+      _controllers[oldIndex]?.pauseVideo();
+    } catch (e) {
+      debugPrint('⚠️ Could not pause video at $oldIndex: $e');
+    }
 
     // Update controller window
     _updateControllerWindow(newIndex);
 
-    // Play new video (muted for autoplay policy)
-    Future.delayed(const Duration(milliseconds: 100), () {
-      _controllers[newIndex]?.playVideo();
+    // Play new video with longer delay to ensure WebView is ready
+    Future.delayed(const Duration(milliseconds: 300), () {
+      try {
+        _controllers[newIndex]?.playVideo();
+      } catch (e) {
+        debugPrint('⚠️ Could not play video at $newIndex: $e');
+      }
     });
 
     // Load more if near end
@@ -231,10 +239,14 @@ class IframeFeedProvider extends ChangeNotifier {
 
     final controller = _controllers[_currentIndex];
     if (controller != null) {
-      if (_isMuted) {
-        controller.mute();
-      } else {
-        controller.unMute();
+      try {
+        if (_isMuted) {
+          controller.mute();
+        } else {
+          controller.unMute();
+        }
+      } catch (e) {
+        debugPrint('⚠️ Could not toggle mute: $e');
       }
     }
 
@@ -245,10 +257,14 @@ class IframeFeedProvider extends ChangeNotifier {
     _isMuted = muted;
     final controller = _controllers[_currentIndex];
     if (controller != null) {
-      if (_isMuted) {
-        controller.mute();
-      } else {
-        controller.unMute();
+      try {
+        if (_isMuted) {
+          controller.mute();
+        } else {
+          controller.unMute();
+        }
+      } catch (e) {
+        debugPrint('⚠️ Could not set mute state: $e');
       }
     }
     notifyListeners();

@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:finishd/Model/trending.dart';
+import 'package:finishd/Widget/interactive_media_poster.dart';
 
 class GenericMovieCard<T> extends StatelessWidget {
   final T item;
   final String Function(T) titleBuilder;
   final String Function(T) posterBuilder;
   final String Function(T)? typeBuilder;
-  final Widget? socialBadge; // New parameter for social signals
   final VoidCallback? onTap;
-  final VoidCallback? onActionMenuTap; // New callback for action menu
+  final VoidCallback? onActionMenuTap;
   final double? width;
   final double? imageHeight;
 
@@ -18,9 +19,8 @@ class GenericMovieCard<T> extends StatelessWidget {
     required this.titleBuilder,
     required this.posterBuilder,
     this.typeBuilder,
-    this.socialBadge,
     this.onTap,
-    this.onActionMenuTap, // New parameter
+    this.onActionMenuTap,
     this.width,
     this.imageHeight,
   });
@@ -32,7 +32,6 @@ class GenericMovieCard<T> extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
-      onLongPress: onActionMenuTap,
       child: Padding(
         padding: const EdgeInsets.only(right: 16),
         child: SizedBox(
@@ -40,85 +39,99 @@ class GenericMovieCard<T> extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Stack(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.35),
-                          blurRadius: 10,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: CachedNetworkImage(
+              InteractiveMediaPoster(
+                item: item is MediaItem
+                    ? item as MediaItem
+                    : MediaItem(
+                        id: int.tryParse(item.toString()) ?? 0,
+                        title: titleBuilder(item),
+                        overview: '',
+                        posterPath: posterBuilder(item).split('/').last,
+                        backdropPath: '',
+                        voteAverage: 0,
+                        mediaType: 'movie',
+                        releaseDate: '',
+                        genreIds: [],
                         imageUrl: posterBuilder(item),
-                        fit: BoxFit.cover,
-                        height: imgHeight,
-                        width: cardWidth,
-                        placeholder: (context, url) => Container(
-                          color: Colors.grey[900],
-                          height: imgHeight,
-                          width: cardWidth,
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          color: Colors.grey[850],
-                          height: imgHeight,
-                          width: cardWidth,
-                          child: const Icon(
-                            Icons.broken_image_rounded,
-                            color: Colors.white24,
-                          ),
-                        ),
                       ),
-                    ),
-                  ),
-                  Positioned.fill(
-                    child: Container(
+                child: Stack(
+                  children: [
+                    Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.center,
-                          colors: [
-                            Colors.black.withOpacity(0.5),
-                            Colors.transparent,
-                          ],
-                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.35),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
                       ),
-                    ),
-                  ),
-                  if (onActionMenuTap != null)
-                    Positioned(
-                      top: 6,
-                      right: 6,
-                      child: GestureDetector(
-                        onTap: onActionMenuTap,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.4),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Colors.white12,
-                              width: 0.5,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: CachedNetworkImage(
+                          imageUrl: posterBuilder(item),
+                          fit: BoxFit.cover,
+                          height: imgHeight,
+                          width: cardWidth,
+                          placeholder: (context, url) => Container(
+                            color: Colors.grey[900],
+                            height: imgHeight,
+                            width: cardWidth,
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            color: Colors.grey[850],
+                            height: imgHeight,
+                            width: cardWidth,
+                            child: const Icon(
+                              Icons.broken_image_rounded,
+                              color: Colors.white24,
                             ),
                           ),
-                          child: const Icon(
-                            Icons.more_horiz_rounded,
-                            color: Colors.white70,
-                            size: 14,
+                        ),
+                      ),
+                    ),
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.center,
+                            colors: [
+                              Colors.black.withOpacity(0.5),
+                              Colors.transparent,
+                            ],
                           ),
                         ),
                       ),
                     ),
-                  if (socialBadge != null)
-                    Positioned(bottom: 8, left: 8, child: socialBadge!),
-                ],
+                    if (onActionMenuTap != null)
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: GestureDetector(
+                          onTap: onActionMenuTap,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.4),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white12,
+                                width: 0.5,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.more_horiz_rounded,
+                              color: Colors.white70,
+                              size: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
               const SizedBox(height: 10),
               Text(
@@ -138,9 +151,8 @@ class GenericMovieCard<T> extends StatelessWidget {
                     typeBuilder!(item),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 12,
-                      color: Colors.white.withOpacity(0.5),
                       fontWeight: FontWeight.w500,
                     ),
                   ),

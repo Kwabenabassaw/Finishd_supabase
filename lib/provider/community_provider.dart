@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:finishd/Model/community_models.dart';
 import 'package:finishd/Model/trending.dart';
 import 'package:finishd/services/community_service.dart';
-import 'package:finishd/Model/trendingmovies.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:finishd/services/storage_service.dart';
+import 'package:finishd/services/voting_api_client.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -13,9 +13,15 @@ class CommunityProvider extends ChangeNotifier {
   final CommunityService _communityService = CommunityService();
   final Trending _trending = Trending();
   final StorageService _storageService = StorageService();
+  final VotingApiClient _votingApi = VotingApiClient();
+
+  // Feature flag: Set to true to use new backend, false to use Firestore directly
+  bool _useVotingBackend = true;
 
   bool _isUploadingMedia = false;
+  String? _selectedHashtag;
   bool get isUploadingMedia => _isUploadingMedia;
+  String? get selectedHashtag => _selectedHashtag;
 
   // My Communities
   List<Community> _myCommunities = [];
@@ -38,10 +44,60 @@ class CommunityProvider extends ChangeNotifier {
   bool _isLoadingCommunityDetails = false;
   bool _isMemberOfCurrent = false;
   String _currentSortBy = 'createdAt';
+  String _searchQuery = '';
   Map<String, int> _currentUserVotes = {}; // postId -> vote
   Map<String, int> _commentVotes = {}; // commentId -> vote
 
   // Getters
+  List<CommunityPost> get filteredPosts {
+    List<CommunityPost> results = _currentPosts;
+
+    // Apply hashtag filter if any
+    if (_selectedHashtag != null) {
+      results = results
+          .where((p) => p.hashtags.contains(_selectedHashtag))
+          .toList();
+    }
+
+    // Apply search query filter if any
+    if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
+      results = results.where((post) {
+        final contentMatch = post.content.toLowerCase().contains(query);
+        final authorMatch = post.authorName.toLowerCase().contains(query);
+        final hashtagMatch = post.hashtags.any(
+          (tag) => tag.toLowerCase().contains(query),
+        );
+        return contentMatch || authorMatch || hashtagMatch;
+      }).toList();
+    }
+
+    return results;
+  }
+
+  /// Get trending hashtags for the current community based on post frequency
+  List<String> get trendingHashtags {
+    if (_currentPosts.isEmpty) return [];
+
+    final counts = <String, int>{};
+    for (final post in _currentPosts) {
+      for (final tag in post.hashtags) {
+        counts[tag] = (counts[tag] ?? 0) + 1;
+      }
+    }
+
+    // Sort by frequency and return top 10
+    final sortedTags = counts.keys.toList()
+      ..sort((a, b) => counts[b]!.compareTo(counts[a]!));
+
+    return sortedTags.take(10).toList();
+  }
+
+  void setSearchQuery(String query) {
+    _searchQuery = query;
+    notifyListeners();
+  }
+
   List<Community> get myCommunities => _myCommunities;
   bool get isLoadingMyCommunities => _isLoadingMyCommunities;
 
@@ -59,6 +115,7 @@ class CommunityProvider extends ChangeNotifier {
   bool get isLoadingCommunityDetails => _isLoadingCommunityDetails;
   bool get isMemberOfCurrent => _isMemberOfCurrent;
   String get currentSortBy => _currentSortBy;
+  String? get currentUid => FirebaseAuth.instance.currentUser?.uid;
   Map<String, int> get currentUserVotes => _currentUserVotes;
   Map<String, int> get commentVotes => _commentVotes;
 
@@ -186,6 +243,7 @@ class CommunityProvider extends ChangeNotifier {
     _currentPosts = [];
     _isMemberOfCurrent = false;
     _currentUserVotes = {};
+    _selectedHashtag = null;
     // Don't notify listeners here usually to avoid rebuilds during nav,
     // but if needed: notifyListeners();
   }
@@ -239,13 +297,20 @@ class CommunityProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> joinCommunity(int showId, Community? community) async {
-    // If we have details, ensure existence via service (requires updating service signature or separate call)
-    // Ideally service handles existence check. For now, assuming existence or service handles it.
-    await _communityService.joinCommunity(showId);
-    _isMemberOfCurrent = true;
+  /// Sets the hashtag filter and refreshes the post list
+  void setHashtagFilter(String? tag) {
+    if (_selectedHashtag == tag) return;
+    _selectedHashtag = tag;
+    notifyListeners();
+  }
 
-    // Optimistically update current community member count
+  Future<void> joinCommunity(int showId, Community? community) async {
+    // Store previous state for revert on failure
+    final wasMember = _isMemberOfCurrent;
+    final previousMemberCount = _currentCommunity?.memberCount ?? 0;
+
+    // Optimistic update
+    _isMemberOfCurrent = true;
     if (_currentCommunity != null && _currentCommunity!.showId == showId) {
       _currentCommunity = _currentCommunity!.copyWith(
         memberCount: _currentCommunity!.memberCount + 1,
@@ -254,21 +319,34 @@ class CommunityProvider extends ChangeNotifier {
 
     // Optimistically add to myCommunities if we have the data
     if (community != null) {
-      // Check if already in list
       if (!_myCommunities.any((c) => c.showId == showId)) {
         _myCommunities.add(
           community.copyWith(memberCount: community.memberCount + 1),
         );
       }
-    } else {
-      // Refresh list to be sure
-      fetchMyCommunities();
     }
-
-    // Refresh discover to remove it
-    // fetchDiscoverContent(); // Optional: might be expensive to do every time
-
     notifyListeners();
+
+    try {
+      await _communityService.joinCommunity(showId);
+
+      // On success, refresh list if community was null
+      if (community == null) {
+        fetchMyCommunities();
+      }
+    } catch (e) {
+      // Revert optimistic update on failure
+      _isMemberOfCurrent = wasMember;
+      if (_currentCommunity != null && _currentCommunity!.showId == showId) {
+        _currentCommunity = _currentCommunity!.copyWith(
+          memberCount: previousMemberCount,
+        );
+      }
+      _myCommunities.removeWhere((c) => c.showId == showId);
+      notifyListeners();
+      print('Error joining community: $e');
+      rethrow;
+    }
   }
 
   Future<void> leaveCommunity(int showId) async {
@@ -295,29 +373,29 @@ class CommunityProvider extends ChangeNotifier {
     final currentVote = _currentUserVotes[postId] ?? 0;
     final newVote = currentVote == vote ? 0 : vote;
 
-    // Optimistic update
+    debugPrint(
+      '[CommunityProvider] voteOnPost: postId=$postId, currentVote=$currentVote, newVote=$newVote',
+    );
+
+    // Optimistic update for immediate UI feedback
     _currentUserVotes[postId] = newVote;
 
     // Update the post score in the list locally for immediate feedback
     final index = _currentPosts.indexWhere((p) => p.id == postId);
-    if (index != -1) {
-      // Simplify score update logic for UI
-      int scoreDelta = 0;
-      if (currentVote == 1) scoreDelta -= 1;
-      if (currentVote == -1) scoreDelta += 1;
-      if (newVote == 1) scoreDelta += 1;
-      if (newVote == -1) scoreDelta -= 1;
+    int? previousUpvotes;
+    int? previousDownvotes;
 
+    if (index != -1) {
       final post = _currentPosts[index];
-      // Split delta into upvotes/downvotes changes
+      previousUpvotes = post.upvotes;
+      previousDownvotes = post.downvotes;
+
+      // Calculate deltas for optimistic update
       int upvoteDelta = 0;
       int downvoteDelta = 0;
 
-      // Reverse old vote
       if (currentVote == 1) upvoteDelta -= 1;
       if (currentVote == -1) downvoteDelta -= 1;
-
-      // Apply new vote
       if (newVote == 1) upvoteDelta += 1;
       if (newVote == -1) downvoteDelta += 1;
 
@@ -326,22 +404,56 @@ class CommunityProvider extends ChangeNotifier {
         downvotes: post.downvotes + downvoteDelta,
         score: post.score + (upvoteDelta - downvoteDelta),
       );
+      debugPrint('[CommunityProvider] Optimistic update applied');
     }
     notifyListeners();
 
     try {
-      await _communityService.voteOnPost(
-        postId: postId,
-        showId: showId,
-        vote: newVote,
-      );
-      // Optional: reload posts to get exact server-side counts if strict consistency needed
-      // loadCommunityDetails(showId);
+      if (_useVotingBackend) {
+        // Use backend API (Supabase/Node.js)
+        // We send the original 'vote' intent (1 or -1)
+        // The server handles the toggle-off logic if vote == currentVote
+        debugPrint('[CommunityProvider] Using voting backend API...');
+        final result = await _votingApi.voteOnPost(postId, showId, vote);
+
+        // Update with server values (source of truth)
+        debugPrint('[CommunityProvider] Server response: $result');
+        if (index != -1) {
+          _currentPosts[index] = _currentPosts[index].copyWith(
+            upvotes: result.upvotes,
+            downvotes: result.downvotes,
+            score: result.score,
+          );
+        }
+        _currentUserVotes[postId] = result.userVote ?? 0;
+        notifyListeners();
+      } else {
+        // Fallback to old Firestore method
+        debugPrint('[CommunityProvider] Using Firestore directly (fallback)');
+        final newVote = currentVote == vote ? 0 : vote;
+        await _communityService.voteOnPost(
+          postId: postId,
+          showId: showId,
+          vote: newVote,
+        );
+      }
     } catch (e) {
-      // Revert if failed
+      // Revert optimistic update on failure
+      debugPrint('[CommunityProvider] ❌ Vote failed: $e');
       _currentUserVotes[postId] = currentVote;
+
+      if (index != -1 && previousUpvotes != null && previousDownvotes != null) {
+        _currentPosts[index] = _currentPosts[index].copyWith(
+          upvotes: previousUpvotes,
+          downvotes: previousDownvotes,
+          score: previousUpvotes - previousDownvotes,
+        );
+      }
       notifyListeners();
-      print("Vote failed: $e");
+
+      // Log detailed error for debugging
+      debugPrint('[CommunityProvider] Error details: ${e.toString()}');
+      rethrow; // Let UI handle the error
     }
   }
 
@@ -421,12 +533,19 @@ class CommunityProvider extends ChangeNotifier {
     List<XFile> mediaFiles = const [],
     List<String> hashtags = const [],
     bool isSpoiler = false,
+    List<String> gifUrls = const [],
   }) async {
     List<String> mediaUrls = [];
     List<String> mediaTypes = [];
 
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return null;
+
+    // Add GIFs directly to media lists
+    for (final gifUrl in gifUrls) {
+      mediaUrls.add(gifUrl);
+      mediaTypes.add('image'); // GIFs are treated as images by the renderer
+    }
 
     if (mediaFiles.isNotEmpty) {
       _isUploadingMedia = true;
@@ -471,5 +590,40 @@ class CommunityProvider extends ChangeNotifier {
       hashtags: hashtags,
       isSpoiler: isSpoiler,
     );
+  }
+
+  /// Delete a post and remove it from the local list
+  Future<bool> deletePost(String postId, int showId) async {
+    final success = await _communityService.deletePost(postId, showId);
+    if (success) {
+      _currentPosts.removeWhere((p) => p.id == postId);
+      notifyListeners();
+    }
+    return success;
+  }
+
+  /// Delete a community and remove it from the local list
+  Future<bool> deleteCommunity(int showId) async {
+    final success = await _communityService.deleteCommunity(showId);
+    if (success) {
+      _myCommunities.removeWhere((c) => c.showId == showId);
+      if (_currentCommunity?.showId == showId) {
+        clearCurrentCommunity();
+      }
+      notifyListeners();
+      fetchMyCommunities(); // Refresh list to be sure
+    }
+    return success;
+  }
+
+  Future<CommunityPost?> getPost(String postId) async {
+    try {
+      final postData = await _communityService.getPost(postId);
+      if (postData == null) return null;
+      return CommunityPost.fromJson(postData);
+    } catch (e) {
+      print('Error fetching post: $e');
+      return null;
+    }
   }
 }

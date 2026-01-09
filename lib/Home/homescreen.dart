@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import '../provider/youtube_feed_provider.dart';
 import '../Feed/tiktok_scroll_wrapper.dart';
 import '../services/cache/feed_cache_service.dart';
+import 'package:finishd/main.dart'; // routeObserver
+import 'package:finishd/provider/app_navigation_provider.dart'; // AppNavigationProvider
 
 /// HomeScreen using Provider for state management.
 ///
@@ -21,7 +23,8 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+class _HomeScreenState extends State<HomeScreen>
+    with WidgetsBindingObserver, RouteAware {
   @override
   void initState() {
     super.initState();
@@ -31,18 +34,70 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    routeObserver.unsubscribe(this); // Unsubscribe from route events
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Subscribe to route events
+    final route = ModalRoute.of(context);
+    if (route is ModalRoute<void>) {
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  // Called when this screen is covered by another route (e.g., chat, notification)
+  @override
+  void didPushNext() {
+    debugPrint('[HomeScreen] 🧊 Covered by another route - PAUSING');
+    final provider = context.read<YoutubeFeedProvider>();
+    provider.pauseAll();
+  }
+
+  // Called when the top route is popped and this screen becomes visible again
+  @override
+  void didPopNext() {
+    debugPrint('[HomeScreen] 🔥 Returned to view - Checking tab index');
+    final navProvider = context.read<AppNavigationProvider>();
+    final feedProvider = context.read<YoutubeFeedProvider>();
+
+    if (navProvider.currentIndex == 0) {
+      debugPrint('[HomeScreen] ✅ On Home tab - RESUMING');
+      feedProvider.resumeCurrent();
+    } else {
+      debugPrint('[HomeScreen] 🧊 Not on Home tab - STAYING PAUSED');
+      // Ensure it stays paused just in case
+      feedProvider.pauseAll();
+    }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!mounted) return;
     final provider = context.read<YoutubeFeedProvider>();
+    final navProvider = context.read<AppNavigationProvider>();
+
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
+      debugPrint('[HomeScreen] 📱 App Latency: $state - PAUSING');
       provider.pauseAll();
     } else if (state == AppLifecycleState.resumed) {
-      provider.resumeCurrent();
+      debugPrint('[HomeScreen] 📱 App Resumed - Checking visibility');
+      // Only resume if we are successfully visible AND on the Home tab
+      final isTopRoute = ModalRoute.of(context)?.isCurrent ?? true;
+      final isHomeTab = navProvider.currentIndex == 0;
+
+      if (isTopRoute && isHomeTab) {
+        debugPrint('[HomeScreen] 🚀 Top route & Home tab - RESUMING');
+        provider.resumeCurrent();
+      } else {
+        debugPrint(
+          '[HomeScreen] 🧊 Not visible or not on Home tab - STAYING PAUSED (isTopRoute: $isTopRoute, isHomeTab: $isHomeTab)',
+        );
+        provider.pauseAll();
+      }
     }
   }
 
@@ -162,161 +217,147 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final provider = context.watch<YoutubeFeedProvider>();
     return Scaffold(
       backgroundColor: Colors.black,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            // 1. Sleek Top Navigation Header (Always Visible)
-            _buildHeader(provider),
+      body: Stack(
+        children: [
+          // 1. FULL SCREEN CONTENT (Video Scroller)
+          // We remove SafeArea from the scroller to let it bleed into the top/bottom
+          Consumer<YoutubeFeedProvider>(
+            builder: (context, provider, _) {
+              // Loading state
+              if (provider.videos.isEmpty && provider.isLoading) {
+                return const Center(child: LogoLoadingScreen());
+              }
 
-            // 2. Main Content Area (Scroller / Loading / Error)
-            Expanded(
-              child: Consumer<YoutubeFeedProvider>(
-                builder: (context, provider, _) {
-                  // Loading state
-                  if (provider.videos.isEmpty && provider.isLoading) {
-                    return const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          LogoLoadingScreen(),
-                          SizedBox(height: 16),
-                          Text(
-                            'Loading your feed...',
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  // Error state
-                  if (provider.hasError && provider.videos.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.error_outline,
-                            color: Colors.red,
-                            size: 64,
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Something went wrong',
-                            style: TextStyle(color: Colors.white, fontSize: 18),
-                          ),
-                          if (provider.errorMessage != null) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              provider.errorMessage!,
-                              style: const TextStyle(color: Colors.white54),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                          const SizedBox(height: 24),
-                          ElevatedButton.icon(
-                            onPressed: () => provider.refresh(),
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Try Again'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  // Empty state
-                  if (provider.videos.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.video_library_outlined,
-                            color: Colors.white54,
-                            size: 64,
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'No videos available',
-                            style: TextStyle(color: Colors.white, fontSize: 18),
-                          ),
-                          const SizedBox(height: 24),
-                          ElevatedButton.icon(
-                            onPressed: () => provider.refresh(),
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Refresh'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  return Stack(
+              // Error state
+              if (provider.hasError && provider.videos.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Main TikTok-style scroller
-                      RefreshIndicator(
-                        onRefresh: provider.refresh,
-                        child: const TikTokScrollWrapper(),
+                      const Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                        size: 64,
                       ),
-
-                      // Debug Button (Floating on player)
-                      Positioned(
-                        top: 100, // Adjusted for new header
-                        right: 16,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.black54,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white24),
-                          ),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.build,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                            onPressed: () =>
-                                _showDebugOptions(context, provider),
-                          ),
+                      const SizedBox(height: 10),
+                      const Text(
+                        'Something went wrong',
+                        style: TextStyle(color: Colors.white, fontSize: 18),
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        onPressed: () => provider.refresh(),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Try Again'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
                         ),
                       ),
-
-                      // Loading More Indicator
-                      if (provider.isLoadingMore)
-                        const Positioned(
-                          bottom: 100,
-                          left: 0,
-                          right: 0,
-                          child: Center(child: LogoLoadingScreen()),
-                        ),
                     ],
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
+                  ),
+                );
+              }
+
+              // Empty state (no videos, no error, not loading)
+              if (provider.videos.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.video_library_outlined,
+                        color: Colors.white54,
+                        size: 64,
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'No videos available',
+                        style: TextStyle(color: Colors.white, fontSize: 18),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Pull to refresh or try again later',
+                        style: TextStyle(color: Colors.white54, fontSize: 14),
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        onPressed: () => provider.refresh(),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Refresh'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return Stack(
+                children: [
+                  // Main TikTok-style scroller (Full Screen)
+                  RefreshIndicator(
+                    onRefresh: provider.refresh,
+                    child: const TikTokScrollWrapper(),
+                  ),
+
+                  // Debug Button (Positioned relative to full screen)
+                  Positioned(
+                    top: 150, // Below the header
+                    right: 16,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.build,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        onPressed: () => _showDebugOptions(context, provider),
+                      ),
+                    ),
+                  ),
+
+                  // Loading More Indicator
+                  if (provider.isLoadingMore)
+                    const Positioned(
+                      bottom: 120,
+                      left: 0,
+                      right: 0,
+                      child: Center(child: LogoLoadingScreen()),
+                    ),
+                ],
+              );
+            },
+          ),
+
+          // 2. OVERLAY HEADER (Positioned at Top)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(child: _buildHeader(provider)),
+          ),
+        ],
       ),
     );
   }
 
   /// --------------------------------------------------------------------------
-  /// New Dedicated Header (Off the Player)
+  /// New Dedicated Header (Now Overlays the Player)
   /// --------------------------------------------------------------------------
   Widget _buildHeader(YoutubeFeedProvider provider) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
       decoration: BoxDecoration(
-        color: Colors.black, // Dedicated dark background
+        // Solid black background to cover YouTube edges
+        color: Colors.black.withOpacity(0.8),
         border: Border(
           bottom: BorderSide(color: Colors.white.withOpacity(0.05), width: 1),
         ),
@@ -334,12 +375,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 size: 24,
               ),
               onPressed: () {
-                // Pause video before navigating
-                provider.pauseAll();
-                Navigator.pushNamed(context, 'notification').then((_) {
-                  // Resume video when returning
-                  if (mounted) provider.resumeCurrent();
-                });
+                // Pause handled by didPushNext, resume by didPopNext
+                Navigator.pushNamed(context, 'notification');
               },
             ),
           ),
@@ -357,12 +394,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 size: 24,
               ),
               onPressed: () {
-                // Pause video before navigating
-                provider.pauseAll();
-                Navigator.pushNamed(context, 'friends').then((_) {
-                  // Resume video when returning
-                  if (mounted) provider.resumeCurrent();
-                });
+                // Pause handled by didPushNext, resume by didPopNext
+                Navigator.pushNamed(context, 'friends');
               },
             ),
           ),
@@ -373,12 +406,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             child: IconButton(
               icon: const Icon(Icons.search, color: Colors.white, size: 24),
               onPressed: () {
-                // Pause video before navigating
-                provider.pauseAll();
-                Navigator.pushNamed(context, 'homesearch').then((_) {
-                  // Resume video when returning
-                  if (mounted) provider.resumeCurrent();
-                });
+                // Pause handled by didPushNext, resume by didPopNext
+                Navigator.pushNamed(context, 'homesearch');
               },
             ),
           ),

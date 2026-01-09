@@ -279,33 +279,23 @@ class _WatchlistState extends State<Watchlist>
             : '';
 
         return GestureDetector(
-          onTap: () async {
-            final Trending trendingService = Trending();
+          onTap: () {
             if (movie.mediaType == 'movie') {
-              final movieDetails = await trendingService.fetchMovieDetails(
-                int.parse(movie.id),
+              final shallowMovie = MovieDetails.shallowFromListItem(movie);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MovieDetailsScreen(movie: shallowMovie),
+                ),
               );
-              if (context.mounted) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        MovieDetailsScreen(movie: movieDetails),
-                  ),
-                );
-              }
             } else {
-              final showDetails = await trendingService.fetchDetailsTvShow(
-                int.parse(movie.id),
+              final shallowShow = TvShowDetails.shallowFromListItem(movie);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ShowDetailsScreen(movie: shallowShow),
+                ),
               );
-              if (context.mounted && showDetails != null) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ShowDetailsScreen(movie: showDetails),
-                  ),
-                );
-              }
             }
           },
           child: Container(
@@ -504,33 +494,23 @@ class _WatchlistState extends State<Watchlist>
             : '';
 
         return GestureDetector(
-          onTap: () async {
-            final Trending trendingService = Trending();
+          onTap: () {
             if (movie.mediaType == 'movie') {
-              final movieDetails = await trendingService.fetchMovieDetails(
-                int.parse(movie.id),
+              final shallowMovie = MovieDetails.shallowFromListItem(movie);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MovieDetailsScreen(movie: shallowMovie),
+                ),
               );
-              if (context.mounted) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        MovieDetailsScreen(movie: movieDetails),
-                  ),
-                );
-              }
             } else {
-              final showDetails = await trendingService.fetchDetailsTvShow(
-                int.parse(movie.id),
+              final shallowShow = TvShowDetails.shallowFromListItem(movie);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ShowDetailsScreen(movie: shallowShow),
+                ),
               );
-              if (context.mounted && showDetails != null) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ShowDetailsScreen(movie: showDetails),
-                  ),
-                );
-              }
             }
           },
           child: Column(

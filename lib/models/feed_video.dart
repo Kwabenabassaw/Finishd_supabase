@@ -14,6 +14,7 @@ class FeedVideo {
   final String?
   feedType; // 'trending', 'following', 'for_you' - indicates where content is from
   final String? type; // 'MEDIA_LINKED' or 'VIDEO_ONLY'
+  final String? videoType; // 'trailer', 'bts', 'short', 'interview'
   final Map<String, dynamic>? tmdb; // {id, mediaType, confidence}
   final Map<String, dynamic>? fallback; // {thumbnail, channel}
   final Map<String, dynamic>? availability;
@@ -30,6 +31,7 @@ class FeedVideo {
     this.relatedItemType,
     this.feedType,
     this.type,
+    this.videoType,
     this.tmdb,
     this.fallback,
     this.availability,
@@ -49,6 +51,7 @@ class FeedVideo {
       relatedItemType: item.mediaType,
       feedType: item.feedType,
       type: item.type,
+      videoType: item.videoType,
       tmdb: item.tmdbId != null
           ? {'id': item.tmdbId, 'mediaType': item.mediaType}
           : null,
@@ -149,6 +152,8 @@ class FeedVideo {
     String? relatedItemId,
     String? relatedItemType,
     String? feedType,
+    Map<String, dynamic>? availability, // FIX Bug #4: Add missing parameter
+    DateTime? lastEnriched, // FIX Bug #4: Add missing parameter
   }) {
     return FeedVideo(
       videoId: videoId ?? this.videoId,

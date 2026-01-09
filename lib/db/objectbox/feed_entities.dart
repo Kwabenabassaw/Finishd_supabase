@@ -4,9 +4,7 @@ import 'package:objectbox/objectbox.dart';
 ///
 /// This is the LOCAL source of truth for feed content.
 /// UI reads directly from ObjectBox - NEVER waits for network.
-@Entity()
 class CachedFeedItem {
-  @Id()
   int localId = 0;
 
   /// Unique identifier from backend (e.g., "kinocheck_trending_movie_550")
@@ -64,7 +62,6 @@ class CachedFeedItem {
   /// Version string from pointer (for cache invalidation)
   String version;
 
-  @Property(type: PropertyType.date)
   DateTime cachedAt;
 
   // =========================================================================
@@ -125,12 +122,9 @@ class CachedFeedItem {
 /// Feed pointer - Tracks current version per feed type.
 ///
 /// Client polls API for pointer, compares version, fetches new batch if changed.
-@Entity()
 class FeedPointer {
-  @Id()
   int localId = 0;
 
-  @Unique()
   String feedType; // "trending", "latest", "for_you"
 
   /// Version string from backend (timestamp-based)
@@ -138,11 +132,9 @@ class FeedPointer {
 
   int itemCount;
 
-  @Property(type: PropertyType.date)
   DateTime checkedAt;
 
   /// When this pointer expires (from backend)
-  @Property(type: PropertyType.date)
   DateTime? expiresAt;
 
   FeedPointer({
@@ -168,6 +160,7 @@ class SeenItem {
   int localId = 0;
 
   @Unique()
+  @Index() // Bug fix: index for faster lookups
   String itemId;
 
   @Property(type: PropertyType.date)

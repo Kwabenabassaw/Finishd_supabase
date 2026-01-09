@@ -23,6 +23,12 @@ class MessageBubble extends StatelessWidget {
   final String? mediaType;
   final VoidCallback? onRecommendationTap;
   final VoidCallback? onImageTap;
+  // Post sharing fields
+  final String? postId;
+  final String? postContent;
+  final String? postAuthorName;
+  final String? postShowTitle;
+  final VoidCallback? onPostTap;
 
   const MessageBubble({
     super.key,
@@ -43,12 +49,18 @@ class MessageBubble extends StatelessWidget {
     this.mediaType,
     this.onRecommendationTap,
     this.onImageTap,
+    this.postId,
+    this.postContent,
+    this.postAuthorName,
+    this.postShowTitle,
+    this.onPostTap,
   });
 
   bool get _isVideoLink => type == 'video_link' && videoId != null;
   bool get _isRecommendation => type == 'recommendation' && movieId != null;
   bool get _isImage => type == 'image' && mediaUrl != null;
   bool get _isVideo => type == 'video' && mediaUrl != null;
+  bool get _isSharedPost => type == 'shared_post' && postId != null;
 
   @override
   Widget build(BuildContext context) {
@@ -89,11 +101,18 @@ class MessageBubble extends StatelessWidget {
             // Video message
             else if (_isVideo)
               _buildVideoBubble(context)
+            // Shared post preview
+            else if (_isSharedPost)
+              _buildSharedPostBubble(context)
             // Regular text bubble
             else
               _buildTextBubble(context),
             // Timestamp row (outside bubble for media previews)
-            if (_isVideoLink || _isRecommendation || _isImage || _isVideo)
+            if (_isVideoLink ||
+                _isRecommendation ||
+                _isImage ||
+                _isVideo ||
+                _isSharedPost)
               Padding(
                 padding: const EdgeInsets.only(top: 4, right: 4, left: 4),
                 child: _buildTimestampRow(time),
@@ -108,72 +127,106 @@ class MessageBubble extends StatelessWidget {
     final time = DateFormat('hh:mm a').format(timestamp.toDate());
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Colors based on design/theme
-    // Sent: Bright Green
-    // Received: Dark Grey (in dark mode) or Light Grey (in light mode)
-    final sentColor = const Color(0xFF00C853); // Vibrant Green
-    final receivedColor = isDark ? const Color(0xFF2A2A2A) : Colors.grey[200];
+    // Premium Color Palette
+    final primaryGreen = const Color(0xFF1A8927);
+    final gradientGreen = const Color(0xFF14691E);
+
+    // Glassmorphism/Soft Backgrounds
+    final receivedBgColor = isDark
+        ? Colors.white.withOpacity(0.08)
+        : Colors.white;
+    final receivedBorderColor = isDark
+        ? Colors.white.withOpacity(0.1)
+        : Colors.grey.withOpacity(0.2);
 
     final sentTextColor = Colors.white;
     final receivedTextColor = isDark ? Colors.white : Colors.black87;
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
       decoration: BoxDecoration(
-        color: isMe ? sentColor : receivedColor,
-        borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(18),
-          topRight: const Radius.circular(18),
-          bottomLeft: isMe
-              ? const Radius.circular(18)
-              : const Radius.circular(4),
-          bottomRight: isMe
-              ? const Radius.circular(4)
-              : const Radius.circular(18),
-        ),
-      ),
-      constraints: BoxConstraints(
-        maxWidth: MediaQuery.of(context).size.width * 0.75,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            text,
-            style: TextStyle(
-              color: isMe ? sentTextColor : receivedTextColor,
-              fontSize: 16,
-              height: 1.3,
+        boxShadow: [
+          if (isMe)
+            BoxShadow(
+              color: primaryGreen.withOpacity(0.2),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
-          ),
-          const SizedBox(height: 4),
-          // Time layout integrated or below? Design usually puts it inside or nicely outside.
-          // Keeping it inside for now but aligned end.
-          Align(
-            alignment: Alignment.bottomRight,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  time,
-                  style: TextStyle(
-                    color: (isMe ? sentTextColor : receivedTextColor)
-                        .withOpacity(0.7),
-                    fontSize: 10,
-                  ),
-                ),
-                if (isMe) ...[
-                  const SizedBox(width: 4),
-                  Icon(
-                    isRead ? Icons.done_all : Icons.done,
-                    size: 14,
-                    color: isRead ? Colors.white : Colors.white60,
-                  ),
-                ],
-              ],
+          if (!isMe && !isDark)
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
-          ),
         ],
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+        decoration: BoxDecoration(
+          gradient: isMe
+              ? LinearGradient(
+                  colors: [primaryGreen, gradientGreen],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: isMe ? null : receivedBgColor,
+          border: isMe
+              ? null
+              : Border.all(color: receivedBorderColor, width: 0.5),
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(20),
+            topRight: const Radius.circular(20),
+            bottomLeft: isMe
+                ? const Radius.circular(20)
+                : const Radius.circular(4),
+            bottomRight: isMe
+                ? const Radius.circular(4)
+                : const Radius.circular(20),
+          ),
+        ),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              text,
+              style: TextStyle(
+                color: isMe ? sentTextColor : receivedTextColor,
+                fontSize: 15.5,
+                height: 1.4,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.bottomRight,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    time,
+                    style: TextStyle(
+                      color: (isMe ? sentTextColor : receivedTextColor)
+                          .withOpacity(0.6),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  if (isMe) ...[
+                    const SizedBox(width: 4),
+                    Icon(
+                      isRead ? Icons.done_all : Icons.done,
+                      size: 14,
+                      color: isRead ? Colors.white : Colors.white60,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -199,14 +252,30 @@ class MessageBubble extends StatelessWidget {
 
   Widget _buildImageBubble(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final receivedColor = isDark ? const Color(0xFF2A2A2A) : Colors.grey[200];
-    final sentColor = const Color(0xFF00C853);
+    final receivedBgColor = isDark
+        ? Colors.white.withOpacity(0.08)
+        : Colors.white;
+    final receivedBorderColor = isDark
+        ? Colors.white.withOpacity(0.1)
+        : Colors.grey.withOpacity(0.2);
+    final primaryGreen = const Color(0xFF1A8927);
 
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: isMe ? sentColor : receivedColor,
-        borderRadius: BorderRadius.circular(16),
+        color: isMe ? primaryGreen : receivedBgColor,
+        border: isMe
+            ? null
+            : Border.all(color: receivedBorderColor, width: 0.5),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          if (!isMe && !isDark)
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -262,8 +331,13 @@ class MessageBubble extends StatelessWidget {
 
   Widget _buildVideoBubble(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final receivedColor = isDark ? const Color(0xFF2A2A2A) : Colors.grey[200];
-    final sentColor = const Color(0xFF00C853);
+    final receivedBgColor = isDark
+        ? Colors.white.withOpacity(0.08)
+        : Colors.white;
+    final receivedBorderColor = isDark
+        ? Colors.white.withOpacity(0.1)
+        : Colors.grey.withOpacity(0.2);
+    final primaryGreen = const Color(0xFF1A8927);
 
     // Generate thumbnail URL from Cloudinary video URL
     final thumbnailUrl = mediaUrl!
@@ -276,8 +350,11 @@ class MessageBubble extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: isMe ? sentColor : receivedColor,
-        borderRadius: BorderRadius.circular(16),
+        color: isMe ? primaryGreen : receivedBgColor,
+        border: isMe
+            ? null
+            : Border.all(color: receivedBorderColor, width: 0.5),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -354,4 +431,108 @@ class MessageBubble extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildSharedPostBubble(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryGreen = const Color(0xFF1A8927);
+
+    return GestureDetector(
+      onTap: onPostTap,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isMe
+              ? primaryGreen
+              : (isDark ? Colors.white.withOpacity(0.08) : Colors.white),
+          border: isMe
+              ? null
+              : Border.all(color: Colors.grey.withOpacity(0.2), width: 0.5),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.7,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.description_outlined,
+                  size: 16,
+                  color: isMe ? Colors.white70 : primaryGreen,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Post in ${postShowTitle ?? 'Community'}',
+                  style: TextStyle(
+                    color: isMe ? Colors.white70 : themeHintColor(context),
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              postAuthorName ?? 'Unknown',
+              style: TextStyle(
+                color: isMe
+                    ? Colors.white
+                    : (isDark ? Colors.white : Colors.black),
+                fontWeight: FontWeight.w900,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              postContent ?? '',
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color:
+                    (isMe
+                            ? Colors.white
+                            : (isDark ? Colors.white : Colors.black))
+                        .withOpacity(0.9),
+                fontSize: 14,
+                height: 1.3,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+              decoration: BoxDecoration(
+                color: isMe
+                    ? Colors.white.withOpacity(0.2)
+                    : primaryGreen.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'View Post',
+                    style: TextStyle(
+                      color: isMe ? Colors.white : primaryGreen,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 10,
+                    color: isMe ? Colors.white : primaryGreen,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color themeHintColor(BuildContext context) => Theme.of(context).hintColor;
 }

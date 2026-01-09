@@ -136,6 +136,7 @@ class CommunityPost {
   final int commentCount;
   final DateTime? createdAt;
   final DateTime? lastActivityAt;
+  final String? showTitle;
 
   CommunityPost({
     required this.id,
@@ -155,6 +156,7 @@ class CommunityPost {
     this.commentCount = 0,
     this.createdAt,
     this.lastActivityAt,
+    this.showTitle,
   });
 
   factory CommunityPost.fromJson(Map<String, dynamic> json) {
@@ -181,6 +183,7 @@ class CommunityPost {
       lastActivityAt: json['lastActivityAt'] is Timestamp
           ? (json['lastActivityAt'] as Timestamp).toDate()
           : null,
+      showTitle: json['showTitle'],
     );
   }
 
@@ -203,6 +206,7 @@ class CommunityPost {
     int? commentCount,
     DateTime? createdAt,
     DateTime? lastActivityAt,
+    String? showTitle,
   }) {
     return CommunityPost(
       id: id ?? this.id,
@@ -222,6 +226,7 @@ class CommunityPost {
       commentCount: commentCount ?? this.commentCount,
       createdAt: createdAt ?? this.createdAt,
       lastActivityAt: lastActivityAt ?? this.lastActivityAt,
+      showTitle: showTitle ?? this.showTitle,
     );
   }
 
@@ -243,6 +248,7 @@ class CommunityPost {
     'commentCount': commentCount,
     'createdAt': createdAt,
     'lastActivityAt': lastActivityAt,
+    'showTitle': showTitle,
   };
 
   /// Time ago string for display

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:finishd/services/auth_service.dart';
 import 'package:finishd/services/connectivity_service.dart';
+import 'package:finishd/provider/user_provider.dart';
 import 'package:finishd/SplashScreen/no_internet_screen.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 
@@ -73,6 +74,11 @@ class _SplashScreenState extends State<SplashScreen>
 
     final authService = Provider.of<AuthService>(context, listen: false);
     if (authService.currentUser != null) {
+      // Initialize UserProvider with user data (including following IDs)
+      Provider.of<UserProvider>(
+        context,
+        listen: false,
+      ).fetchCurrentUser(authService.currentUser!.uid);
       Navigator.pushReplacementNamed(context, 'homepage');
     } else {
       Navigator.pushReplacementNamed(context, '/home');

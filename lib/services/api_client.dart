@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:finishd/models/feed_video.dart';
 import 'package:finishd/models/feed_item.dart';
+import 'package:finishd/models/feed_backend_response.dart';
 
 /// Feed Types for personalized content
 enum FeedType {
@@ -20,8 +21,11 @@ enum FeedType {
 /// Handles all communication with the FastAPI backend deployed on Railway.
 /// All endpoints require Firebase authentication (unless public).
 class ApiClient {
-  // Backend URL (Vercel deployment)
+  // Backend URL (Vercel deployment - legacy endpoints)
   static const String baseUrl = 'https://finishdbackend-master.vercel.app';
+
+  // NEW: Feed Backend URL (Render deployment - Generator & Hydrator architecture)
+  static const String feedBackendUrl = 'https://feed-backend-1.onrender.com';
 
   // Risk 2 FIX: Hide logs behind debug flag - TEMPORARILY ENABLED FOR DEBUGGING
   static const bool _debugLogging = true;
@@ -131,7 +135,10 @@ class ApiClient {
       try {
         attempts++;
         final response = await http
-            .get(uri) // No headers injected
+            .get(
+              uri,
+              headers: {'Accept': 'application/json'},
+            ) // Bug fix: add Accept header
             .timeout(
               const Duration(seconds: 30),
               onTimeout: () => throw Exception('Request timeout'),
@@ -177,8 +184,154 @@ class ApiClient {
   }
 
   // =========================================================================
-  // FEED API (TMDB-based)
+  // NEW FEED BACKEND API (Generator & Hydrator Architecture)
   // =========================================================================
+
+  /// GET request to Feed Backend (with auth)
+  Future<http.Response> _getFeedBackend(
+    String endpoint, {
+    Map<String, String>? queryParams,
+  }) async {
+    final headers = await _getHeaders();
+    Uri uri = Uri.parse('$feedBackendUrl$endpoint');
+    if (queryParams != null && queryParams.isNotEmpty) {
+      uri = uri.replace(queryParameters: queryParams);
+    }
+
+    _log('FeedBackend GET: $uri');
+
+    try {
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(
+            const Duration(seconds: 15), // Faster timeout for feed
+            onTimeout: () => throw Exception('Feed request timeout'),
+          );
+
+      _log('FeedBackend Response: ${response.statusCode}');
+      return response;
+    } catch (e) {
+      _log('FeedBackend Error: $e', isError: true);
+      rethrow;
+    }
+  }
+
+  /// POST request to Feed Backend (with auth)
+  Future<http.Response> _postFeedBackend(
+    String endpoint, {
+    Map<String, dynamic>? body,
+  }) async {
+    final headers = await _getHeaders();
+    final uri = Uri.parse('$feedBackendUrl$endpoint');
+
+    _log('FeedBackend POST: $uri');
+
+    try {
+      final response = await http
+          .post(
+            uri,
+            headers: headers,
+            body: body != null ? jsonEncode(body) : null,
+          )
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () => throw Exception('Feed request timeout'),
+          );
+
+      _log('FeedBackend Response: ${response.statusCode}');
+      return response;
+    } catch (e) {
+      _log('FeedBackend Error: $e', isError: true);
+      rethrow;
+    }
+  }
+
+  /// Get personalized feed from new Feed Backend (v3)
+  ///
+  /// Uses Generator & Hydrator architecture with cursor-based pagination.
+  /// Returns hydrated feed items ready for display.
+  Future<FeedBackendResponse> getFeedV3({
+    FeedType feedType = FeedType.forYou,
+    int limit = 10,
+    String? cursor,
+  }) async {
+    try {
+      final queryParams = {
+        'feed_type': feedType.value,
+        'limit': limit.toString(),
+        if (cursor != null) 'cursor': cursor,
+      };
+
+      _log('📡 Calling new feed backend /feed with params: $queryParams');
+
+      final response = await _getFeedBackend('/feed', queryParams: queryParams);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        _log('✅ Feed v3: Got ${(data['feed'] as List?)?.length ?? 0} items');
+        return FeedBackendResponse.fromJson(data);
+      } else if (response.statusCode == 401) {
+        throw Exception('Unauthorized - token may be expired');
+      } else {
+        _log('Feed v3 error: ${response.statusCode}', isError: true);
+        throw Exception('Feed request failed: ${response.statusCode}');
+      }
+    } catch (e) {
+      _log('Error fetching feed v3: $e', isError: true);
+      rethrow;
+    }
+  }
+
+  /// Track analytics events (batched)
+  ///
+  /// Events are sent in batches to reduce network calls.
+  /// Called every 30 seconds by the provider.
+  Future<bool> trackAnalyticsEvents({
+    required List<Map<String, dynamic>> events,
+    String? sessionId,
+  }) async {
+    if (events.isEmpty) return true;
+
+    try {
+      final body = {
+        'events': events,
+        if (sessionId != null) 'session_id': sessionId,
+      };
+
+      final response = await _postFeedBackend('/analytics/event', body: body);
+
+      if (response.statusCode == 200) {
+        _log('✅ Analytics: Sent ${events.length} events');
+        return true;
+      } else {
+        _log('Analytics error: ${response.statusCode}', isError: true);
+        return false;
+      }
+    } catch (e) {
+      _log('Error tracking analytics: $e', isError: true);
+      return false;
+    }
+  }
+
+  /// Check feed backend health
+  Future<bool> checkFeedBackendHealth() async {
+    try {
+      final uri = Uri.parse('$feedBackendUrl/health');
+      final response = await http
+          .get(uri)
+          .timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => throw Exception('Health check timeout'),
+          );
+      return response.statusCode == 200;
+    } catch (e) {
+      _log('Feed backend health check failed: $e', isError: true);
+      return false;
+    }
+  }
+
+  // =========================================================================
+  // FEED API (TMDB-based - Legacy)
 
   /// Get feed based on feed type (NEW - supports three tabs)
   ///
