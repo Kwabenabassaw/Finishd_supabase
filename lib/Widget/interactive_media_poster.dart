@@ -127,9 +127,9 @@ class InteractiveMediaPoster extends StatelessWidget {
           ),
         ),
         PopupMenuItem(
-          value: 'finishd',
+          value: 'finished',
           child: ListTile(
-            leading: Image.asset('assets/FINISHD.png', width: 60, height: 60),
+            leading: Image.asset('assets/icon2.png', width: 40, height: 40),
             title: const Text('Finishd'),
             dense: true,
           ),

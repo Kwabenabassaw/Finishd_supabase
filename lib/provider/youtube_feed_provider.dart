@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../models/feed_video.dart';
 import '../services/api_client.dart';
+import '../services/seen_repository.dart';
 
 import '../services/content_lake_repository.dart';
 import '../db/objectbox/feed_entities.dart';
@@ -143,17 +144,22 @@ class YoutubeFeedProvider extends ChangeNotifier {
       // Fetch initial feed from new backend
       final response = await _apiClient.getFeedV3(
         feedType: _activeFeedType,
-        limit: 15,
+        limit: 80,
       );
 
       // Store cursor for pagination
       _nextCursor = response.nextCursor;
 
-      // Convert to FeedVideo list
+      // Get seen IDs for local filtering
+      final seenIds = SeenRepository.instance.getSeenIds();
+      debugPrint('[YTFeed] 🔍 Filtering out ${seenIds.length} seen videos');
+
+      // Convert to FeedVideo list and filter out seen items
       final feedVideos = response.feed
           .where(
             (item) => item.youtubeKey != null && item.youtubeKey!.isNotEmpty,
           )
+          .where((item) => !seenIds.contains(item.youtubeKey)) // Filter seen
           .map((item) => FeedVideo.fromFeedItem(item))
           .toList();
 
@@ -226,8 +232,11 @@ class YoutubeFeedProvider extends ChangeNotifier {
     );
   }
 
-  /// Track a view event for analytics
+  /// Track a view event for analytics and mark as seen
   void trackViewEvent(String itemId, {int? durationMs}) {
+    // Mark as seen in local ObjectBox (for deduplication)
+    SeenRepository.instance.markSeen(itemId, viewDurationMs: durationMs ?? 0);
+
     if (!useNewFeedBackend) return;
 
     _pendingAnalyticsEvents.add({
@@ -237,7 +246,7 @@ class YoutubeFeedProvider extends ChangeNotifier {
       if (durationMs != null) 'durationWatched': durationMs,
     });
 
-    debugPrint('[YTFeed] 📊 Queued view event for $itemId');
+    debugPrint('[YTFeed] 📊 Queued view event for $itemId (marked seen)');
   }
 
   /// Flush pending analytics events to backend
@@ -748,7 +757,11 @@ class YoutubeFeedProvider extends ChangeNotifier {
       viewDurationMs: duration,
     );
 
-    // 2. Update Session Bias
+    // 2. Mark as SEEN for deduplication (critical for not showing again)
+    SeenRepository.instance.markSeen(video.videoId, viewDurationMs: duration);
+    debugPrint('[YTFeed] ✅ Marked as seen: ${video.videoId}');
+
+    // 3. Update Session Bias
     if (video.relatedItemId != null) {
       // In a real app, we'd look up the genre of the item.
       // For now, we'll just log it.

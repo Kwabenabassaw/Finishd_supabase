@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:finishd/Home/Friends/friend_selection_screen.dart';
 import 'package:finishd/Widget/emotion_rating_slider.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 /// Interactive bottom sheet drawer for movie list actions
 /// Allows users to add movies to watching, watchlist, finished, or favorites
@@ -296,7 +297,7 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
                   iconColor: _movieStatus['favorites']! ? Colors.red : null,
                 ),
                 _buildActionTile(
-                  icon: Icons.share_outlined,
+                  icon: FontAwesomeIcons.share,
                   title: 'Recommend to...',
                   isActive: false,
                   onTap: () {

@@ -47,7 +47,7 @@ class VoteResult {
 class VotingApiClient {
   // Production backend URL (Koyeb)
   static const String _baseUrl =
-      'https://lonely-nataline-kobbytech-d23c3839.koyeb.app';
+      'https://pythonbackend-nu.vercel.app';
 
   final http.Client _client;
 

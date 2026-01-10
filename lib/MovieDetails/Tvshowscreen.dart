@@ -291,18 +291,18 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                     children: [
                       Text(
                         _show.firstAirDate.substring(0, 4),
-                        style: TextStyle(fontSize: 12.sp),
+                        style: TextStyle(fontSize: 18.sp),
                       ),
                       SizedBox(width: 2.w),
                       const Text('•'),
                       SizedBox(width: 2.w),
-                      Text(_show.status, style: TextStyle(fontSize: 12.sp)),
+                      Text(_show.status, style: TextStyle(fontSize: 18.sp)),
                       SizedBox(width: 2.w),
                       const Text('•'),
                       SizedBox(width: 2.w),
                       Text(
                         '${_show.numberOfSeasons} Seasons',
-                        style: TextStyle(fontSize: 12.sp),
+                        style: TextStyle(fontSize: 18.sp),
                       ),
                     ],
                   ),
@@ -368,7 +368,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         RatingActionButton(
                           initialRating: _userRating,
                           onTap: () {
@@ -380,7 +380,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                             // Handled inline via EmotionRatingSlider
                           },
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         Container(
                           decoration: BoxDecoration(
                             color: isDark

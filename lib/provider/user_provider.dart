@@ -88,7 +88,9 @@ class UserProvider with ChangeNotifier {
 
   // Follow user
   Future<void> followUser(String targetUid) async {
-    if (_currentUser == null) return;
+    if (_currentUser == null) {
+      throw Exception('User not logged in. Please log in to follow users.');
+    }
 
     try {
       await _userService.followUser(_currentUser!.uid, targetUid);
@@ -106,7 +108,9 @@ class UserProvider with ChangeNotifier {
 
   // Unfollow user
   Future<void> unfollowUser(String targetUid) async {
-    if (_currentUser == null) return;
+    if (_currentUser == null) {
+      throw Exception('User not logged in. Please log in to unfollow users.');
+    }
 
     try {
       await _userService.unfollowUser(_currentUser!.uid, targetUid);

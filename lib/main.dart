@@ -44,6 +44,7 @@ import 'package:finishd/db/objectbox/objectbox_store.dart'; // ObjectBox Init
 import 'package:finishd/services/chat_sync_service.dart'; // Offline-first chat
 import 'package:finishd/provider/chat_provider.dart'; // Chat state management
 import 'package:finishd/services/deep_link_service.dart';
+import 'package:finishd/services/seen_sync_service.dart'; // Video deduplication sync
 
 // GLOBAL ROUTE OBSERVER
 final RouteObserver<ModalRoute<void>> routeObserver =
@@ -61,6 +62,9 @@ void main() async {
 
     // Initialize ChatSyncService (after ObjectBox is ready)
     await ChatSyncService.instance.initialize();
+
+    // Initialize SeenSyncService for video deduplication (sync on login)
+    SeenSyncService.instance.syncOnLogin();
 
     final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 

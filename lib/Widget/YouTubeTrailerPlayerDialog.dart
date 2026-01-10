@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:youtube_player_flutter/youtube_player_flutter.dart';
-import 'dart:ui';
+import 'package:flutter/services.dart';
+import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
 class YouTubeTrailerPlayerDialog extends StatefulWidget {
   final String youtubeKey;
@@ -12,10 +12,11 @@ class YouTubeTrailerPlayerDialog extends StatefulWidget {
       _YouTubeTrailerPlayerDialogState();
 
   static void show(BuildContext context, String youtubeKey) {
-    showDialog(
-      context: context,
-      barrierColor: Colors.black.withOpacity(0.8),
-      builder: (context) => YouTubeTrailerPlayerDialog(youtubeKey: youtubeKey),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) =>
+            YouTubeTrailerPlayerDialog(youtubeKey: youtubeKey),
+      ),
     );
   }
 }
@@ -27,79 +28,67 @@ class _YouTubeTrailerPlayerDialogState
   @override
   void initState() {
     super.initState();
-    _controller = YoutubePlayerController(
-      initialVideoId: widget.youtubeKey,
-      flags: const YoutubePlayerFlags(
-        autoPlay: true,
+    _controller = YoutubePlayerController.fromVideoId(
+      videoId: widget.youtubeKey,
+      autoPlay: true,
+      params: const YoutubePlayerParams(
+        showControls: true,
+        showFullscreenButton: true,
         mute: false,
         enableCaption: true,
+        playsInline: false,
+        origin: 'https://www.youtube-nocookie.com',
       ),
     );
-  }
 
-  @override
-  void deactivate() {
-    _controller.pause();
-    super.deactivate();
+    // Force landscape for fullscreen experience
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller.close();
+    // Restore portrait orientation
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-      child: Center(
-        child: Container(
-          width: MediaQuery.of(context).size.width * 0.95,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: Colors.black,
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Stack(
-                alignment: Alignment.topRight,
-                children: [
-                  YoutubePlayer(
-                    controller: _controller,
-                    showVideoProgressIndicator: true,
-                    progressIndicatorColor: Colors.red,
-                    onReady: () {
-                      _controller.addListener(() {});
-                    },
-                    onEnded: (data) {
-                      Navigator.of(context).pop();
-                    },
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: IconButton(
-                      icon: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Colors.black45,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.close,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ),
-                ],
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Center(
+              child: YoutubePlayer(
+                controller: _controller,
+                aspectRatio: 16 / 9,
               ),
-            ],
-          ),
+            ),
+            // Close button
+            Positioned(
+              top: 16,
+              left: 16,
+              child: IconButton(
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 24),
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ],
         ),
       ),
     );

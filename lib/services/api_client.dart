@@ -252,7 +252,7 @@ class ApiClient {
   /// Returns hydrated feed items ready for display.
   Future<FeedBackendResponse> getFeedV3({
     FeedType feedType = FeedType.forYou,
-    int limit = 10,
+    int limit = 40,
     String? cursor,
   }) async {
     try {

@@ -13,7 +13,10 @@ import 'package:finishd/Model/MovieDetails.dart';
 import 'package:finishd/Model/tvdetail.dart';
 import 'package:finishd/Model/movie_list_item.dart';
 import 'package:finishd/Widget/fullscreen_video_player.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:finishd/services/social_database_helper.dart';
 
 /// Detail screen for a specific community showing posts feed
 class CommunityDetailScreen extends StatefulWidget {
@@ -38,15 +41,46 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
   final Set<String> _revealedSpoilers = {};
+  final Set<String> _favoritePosts = {};
+  bool _isCommunityFavorited = false;
 
   @override
   void initState() {
     super.initState();
+    _loadFavoritePosts();
+    _loadFavoriteCommunityStatus();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<CommunityProvider>(context, listen: false);
       provider.loadCommunityDetails(widget.showId);
       provider.setSearchQuery(''); // Reset search on entry
+
+      // Ensure UserProvider is loaded for follow functionality
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      if (provider.currentUid != null && userProvider.currentUser == null) {
+        userProvider.fetchCurrentUser(provider.currentUid!);
+      }
     });
+  }
+
+  Future<void> _loadFavoritePosts() async {
+    final dbHelper = SocialDatabaseHelper();
+    final favorites = await dbHelper.getFavoritePostIdsForShow(widget.showId);
+    if (mounted) {
+      setState(() {
+        _favoritePosts.clear();
+        _favoritePosts.addAll(favorites);
+      });
+    }
+  }
+
+  Future<void> _loadFavoriteCommunityStatus() async {
+    final dbHelper = SocialDatabaseHelper();
+    final isFav = await dbHelper.isFavoriteCommunity(widget.showId);
+    if (mounted) {
+      setState(() {
+        _isCommunityFavorited = isFav;
+      });
+    }
   }
 
   @override
@@ -163,10 +197,10 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                   )
                 : null,
             leading: CircleAvatar(
-              backgroundColor: Colors.black26,
+              backgroundColor: Colors.transparent,
               child: IconButton(
                 icon: const Icon(
-                  Icons.arrow_back_ios_new_rounded,
+                  FontAwesomeIcons.arrowLeft,
                   color: Colors.white,
                   size: 18,
                 ),
@@ -182,7 +216,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
             actions: [
               if (!_isSearching)
                 CircleAvatar(
-                  backgroundColor: Colors.black26,
+                  backgroundColor: Colors.transparent,
                   child: IconButton(
                     icon: const Icon(
                       Icons.search_rounded,
@@ -195,7 +229,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
               const SizedBox(width: 8),
               if (!_isSearching)
                 CircleAvatar(
-                  backgroundColor: Colors.black26,
+                  backgroundColor: Colors.transparent,
                   child: IconButton(
                     icon: const Icon(
                       Icons.more_horiz_rounded,
@@ -735,11 +769,11 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                         children: [
                           IconButton(
                             icon: Icon(
-                              Icons.arrow_circle_up_rounded,
-                              size: 24,
+                              FontAwesomeIcons.thumbsUp,
                               color: userVote == 1
                                   ? primaryGreen
                                   : theme.hintColor.withOpacity(0.4),
+                              size: 24,
                             ),
                             onPressed: () =>
                                 provider.voteOnPost(post.id, widget.showId, 1),
@@ -760,7 +794,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                           ),
                           IconButton(
                             icon: Icon(
-                              Icons.arrow_circle_down_rounded,
+                              FontAwesomeIcons.thumbsDown,
                               size: 24,
                               color: userVote == -1
                                   ? Colors.red
@@ -779,10 +813,14 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                       onTap: () => _openPostDetail(post),
                       child: Row(
                         children: [
-                          Icon(
-                            Icons.mode_comment_outlined,
-                            color: theme.hintColor.withOpacity(0.6),
-                            size: 20,
+                          const SizedBox(width: 6),
+                          Transform.flip(
+                            flipX: true,
+                            child: Icon(
+                              LucideIcons.messageCircle,
+                              color: theme.hintColor.withOpacity(0.6),
+                              size: 20,
+                            ),
                           ),
                           const SizedBox(width: 6),
                           Text(
@@ -796,6 +834,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                       ),
                     ),
                     const Spacer(),
+                    // Share button
                     Container(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
@@ -1134,6 +1173,48 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                 SharePostSheet.show(context, post);
               },
             ),
+            ListTile(
+              leading: Icon(
+                _favoritePosts.contains(post.id)
+                    ? Icons.favorite_rounded
+                    : Icons.favorite_border_rounded,
+                color: _favoritePosts.contains(post.id) ? Colors.red : null,
+              ),
+              title: Text(
+                _favoritePosts.contains(post.id)
+                    ? 'Remove from Favorites'
+                    : 'Add to Fav',
+              ),
+              onTap: () async {
+                Navigator.pop(context);
+                final dbHelper = SocialDatabaseHelper();
+                final isFav = _favoritePosts.contains(post.id);
+
+                if (isFav) {
+                  await dbHelper.removeFavoritePost(post.id);
+                  setState(() => _favoritePosts.remove(post.id));
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Removed from favorites'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                } else {
+                  await dbHelper.addFavoritePost(post.id, widget.showId);
+                  setState(() => _favoritePosts.add(post.id));
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Added to favorites'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                }
+              },
+            ),
             if (!isAuthor)
               Consumer<UserProvider>(
                 builder: (context, userProvider, child) {
@@ -1286,6 +1367,49 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                 _navigateToDetails();
               },
             ),
+            ListTile(
+              leading: Icon(
+                _isCommunityFavorited
+                    ? Icons.favorite_rounded
+                    : Icons.favorite_border_rounded,
+                color: _isCommunityFavorited ? Colors.red : null,
+              ),
+              title: Text(
+                _isCommunityFavorited
+                    ? 'Remove from Favorites'
+                    : 'Add to Favorites',
+              ),
+              onTap: () async {
+                Navigator.pop(context);
+                final dbHelper = SocialDatabaseHelper();
+                if (_isCommunityFavorited) {
+                  await dbHelper.removeFavoriteCommunity(widget.showId);
+                  setState(() => _isCommunityFavorited = false);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Removed from favorites'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                } else {
+                  await dbHelper.addFavoriteCommunity(
+                    widget.showId,
+                    widget.showTitle,
+                  );
+                  setState(() => _isCommunityFavorited = true);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Added to favorites'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                }
+              },
+            ),
             if (isMember)
               ListTile(
                 leading: const Icon(Icons.exit_to_app_rounded),
@@ -1342,6 +1466,43 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
               _navigateToDetails();
             },
             child: const Text('Info'),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () async {
+              Navigator.pop(context);
+              final dbHelper = SocialDatabaseHelper();
+              if (_isCommunityFavorited) {
+                await dbHelper.removeFavoriteCommunity(widget.showId);
+                setState(() => _isCommunityFavorited = false);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Removed from favorites'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              } else {
+                await dbHelper.addFavoriteCommunity(
+                  widget.showId,
+                  widget.showTitle,
+                );
+                setState(() => _isCommunityFavorited = true);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Added to favorites'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
+            },
+            child: Text(
+              _isCommunityFavorited
+                  ? 'Remove from Favorites'
+                  : 'Add to Favorites',
+            ),
           ),
           if (isMember)
             CupertinoActionSheetAction(

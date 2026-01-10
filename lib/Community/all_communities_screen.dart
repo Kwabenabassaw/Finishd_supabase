@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:finishd/Model/community_models.dart';
 import 'package:finishd/Community/community_detail_screen.dart';
 import 'package:finishd/provider/community_provider.dart';
+import 'package:finishd/services/social_database_helper.dart';
 import 'package:provider/provider.dart';
 
 /// Screen showing all communities the user has joined with search and filters
@@ -16,10 +17,12 @@ class _AllCommunitiesScreenState extends State<AllCommunitiesScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _selectedFilter = 'All'; // 'All', 'Favorites'
+  Set<int> _favoriteShowIds = {};
 
   @override
   void initState() {
     super.initState();
+    _loadFavoriteShowIds();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<CommunityProvider>(
         context,
@@ -31,6 +34,18 @@ class _AllCommunitiesScreenState extends State<AllCommunitiesScreen> {
         _searchQuery = _searchController.text.toLowerCase();
       });
     });
+  }
+
+  Future<void> _loadFavoriteShowIds() async {
+    final dbHelper = SocialDatabaseHelper();
+    final db = await dbHelper.database;
+    final result = await db.query('favorite_posts');
+    final showIds = result.map((row) => row['showId'] as int).toSet();
+    if (mounted) {
+      setState(() {
+        _favoriteShowIds = showIds;
+      });
+    }
   }
 
   @override
@@ -58,17 +73,16 @@ class _AllCommunitiesScreenState extends State<AllCommunitiesScreen> {
       if (!matchesSearch) return false;
 
       if (_selectedFilter == 'Favorites') {
-        // Assuming we have a way to check favorites?
-        // The Community model doesn't strictly have 'isFavorite'.
-        // We'll simulate or just show all for now, or filter by 'hasRecentActivity' as a proxy if desired?
-        // Let's filter by some logic or just placeholder for 'Favorites' since backend field might be missing.
-        // For now, let's just return true to not break it, or maybe implement a local toggle?
-        // Current requirement: "leave the all and favorities".
-        // I will implement the UI for it, but functionality might be limited without model support.
-        return true;
+        // Filter communities that have favorited posts
+        return _favoriteShowIds.contains(c.showId);
       }
       return true;
     }).toList();
+
+    // Count favorites for the chip
+    final favoriteCount = allCommunities
+        .where((c) => _favoriteShowIds.contains(c.showId))
+        .length;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -106,8 +120,6 @@ class _AllCommunitiesScreenState extends State<AllCommunitiesScreen> {
             padding: const EdgeInsets.all(16.0),
             child: Container(
               decoration: BoxDecoration(
-                color: theme.cardColor,
-                borderRadius: BorderRadius.circular(30),
                 border: Border.all(color: theme.dividerColor),
               ),
               child: TextField(
@@ -146,6 +158,7 @@ class _AllCommunitiesScreenState extends State<AllCommunitiesScreen> {
                 _buildFilterChip(
                   context,
                   label: 'Favorites',
+                  count: favoriteCount,
                   isSelected: _selectedFilter == 'Favorites',
                   isStar: true,
                   onTap: () => setState(() => _selectedFilter = 'Favorites'),
@@ -262,7 +275,6 @@ class _AllCommunitiesScreenState extends State<AllCommunitiesScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: theme.cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: theme.dividerColor),
         boxShadow: [
