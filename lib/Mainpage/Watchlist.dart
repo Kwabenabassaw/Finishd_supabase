@@ -4,9 +4,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:finishd/Model/MovieDetails.dart';
 import 'package:finishd/Model/movie_list_item.dart';
 import 'package:finishd/Model/tvdetail.dart';
+import 'package:finishd/Model/trending.dart';
 import 'package:finishd/MovieDetails/MovieScreen.dart';
 import 'package:finishd/MovieDetails/Tvshowscreen.dart';
 import 'package:finishd/services/movie_list_service.dart';
+import 'package:finishd/Widget/interactive_media_poster.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'dart:io';
@@ -279,33 +281,23 @@ class _WatchlistState extends State<Watchlist>
             : '';
 
         return GestureDetector(
-          onTap: () async {
-            final Trending trendingService = Trending();
+          onTap: () {
             if (movie.mediaType == 'movie') {
-              final movieDetails = await trendingService.fetchMovieDetails(
-                int.parse(movie.id),
+              final shallowMovie = MovieDetails.shallowFromListItem(movie);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MovieDetailsScreen(movie: shallowMovie),
+                ),
               );
-              if (context.mounted) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        MovieDetailsScreen(movie: movieDetails),
-                  ),
-                );
-              }
             } else {
-              final showDetails = await trendingService.fetchDetailsTvShow(
-                int.parse(movie.id),
+              final shallowShow = TvShowDetails.shallowFromListItem(movie);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ShowDetailsScreen(movie: shallowShow),
+                ),
               );
-              if (context.mounted && showDetails != null) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ShowDetailsScreen(movie: showDetails),
-                  ),
-                );
-              }
             }
           },
           child: Container(
@@ -504,67 +496,80 @@ class _WatchlistState extends State<Watchlist>
             : '';
 
         return GestureDetector(
-          onTap: () async {
-            final Trending trendingService = Trending();
+          onTap: () {
             if (movie.mediaType == 'movie') {
-              final movieDetails = await trendingService.fetchMovieDetails(
-                int.parse(movie.id),
+              final shallowMovie = MovieDetails.shallowFromListItem(movie);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MovieDetailsScreen(movie: shallowMovie),
+                ),
               );
-              if (context.mounted) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        MovieDetailsScreen(movie: movieDetails),
-                  ),
-                );
-              }
             } else {
-              final showDetails = await trendingService.fetchDetailsTvShow(
-                int.parse(movie.id),
+              final shallowShow = TvShowDetails.shallowFromListItem(movie);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ShowDetailsScreen(movie: shallowShow),
+                ),
               );
-              if (context.mounted && showDetails != null) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ShowDetailsScreen(movie: showDetails),
-                  ),
-                );
-              }
             }
           },
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+                child: InteractiveMediaPoster(
+                  item: MediaItem(
+                    id: int.tryParse(movie.id) ?? 0,
+                    title: movie.title,
+                    posterPath: posterPath,
+                    mediaType: movie.mediaType,
+                    overview: '',
+                    backdropPath: '',
+                    voteAverage: 0.0,
+                    releaseDate: '',
+                    genreIds: [],
+                    imageUrl: '',
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: posterPath.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: imageUrl,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) => Container(
-                              color: Colors.grey[900],
-                              child: const Center(
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.green,
+                  showSocialBadges: true,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: posterPath.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: imageUrl,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Container(
+                                color: Colors.grey[900],
+                                child: const Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.green,
+                                  ),
                                 ),
                               ),
-                            ),
-                            errorWidget: (context, url, error) => Container(
+                              errorWidget: (context, url, error) => Container(
+                                color: Colors.grey[850],
+                                child: const Icon(
+                                  Icons.movie_filter_rounded,
+                                  size: 40,
+                                  color: Colors.white24,
+                                ),
+                              ),
+                            )
+                          : Container(
                               color: Colors.grey[850],
                               child: const Icon(
                                 Icons.movie_filter_rounded,
@@ -572,15 +577,7 @@ class _WatchlistState extends State<Watchlist>
                                 color: Colors.white24,
                               ),
                             ),
-                          )
-                        : Container(
-                            color: Colors.grey[850],
-                            child: const Icon(
-                              Icons.movie_filter_rounded,
-                              size: 40,
-                              color: Colors.white24,
-                            ),
-                          ),
+                    ),
                   ),
                 ),
               ),

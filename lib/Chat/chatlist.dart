@@ -21,7 +21,7 @@ class ChatListScreen extends StatefulWidget {
 
 class _ChatListScreenState extends State<ChatListScreen> {
   final UserService _userService = UserService();
-  final String _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+  String get _currentUserId => FirebaseAuth.instance.currentUser?.uid ?? '';
   final TextEditingController _searchController = TextEditingController();
 
   List<UserModel> _activeUsers = [];
@@ -207,7 +207,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       final conv = conversations[index];
                       return _ConversationTile(
                         conversation: conv,
-                        currentUserId: _currentUserId,
                         searchQuery: _searchQuery,
                         chatProvider: chatProvider,
                       );
@@ -276,13 +275,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
 /// Individual conversation tile with user resolution.
 class _ConversationTile extends StatelessWidget {
   final LocalConversation conversation;
-  final String currentUserId;
   final String searchQuery;
   final ChatProvider chatProvider;
 
   const _ConversationTile({
     required this.conversation,
-    required this.currentUserId,
     required this.searchQuery,
     required this.chatProvider,
   });

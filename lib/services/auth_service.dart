@@ -36,6 +36,13 @@ class AuthService {
         lastName: lastName,
       );
 
+      // Re-initialize Chat Sync for the new user
+      try {
+        await ChatSyncService.instance.reinitialize();
+      } catch (e) {
+        print('Error re-initializing chat sync: $e');
+      }
+
       return {
         'credential': result,
         'isNewUser': true,
@@ -89,6 +96,13 @@ class AuthService {
         email: email,
         password: password,
       );
+      // Re-initialize Chat Sync
+      try {
+        await ChatSyncService.instance.reinitialize();
+      } catch (e) {
+        print('Error re-initializing chat sync: $e');
+      }
+
       return {'credential': result, 'isNewUser': false};
     } on FirebaseAuthException catch (e) {
       // If user doesn't exist, auto-create account
@@ -147,6 +161,13 @@ class AuthService {
       final onboardingCompleted =
           userDoc.exists && userDoc.data()?['onboardingCompleted'] == true;
 
+      // Re-initialize Chat Sync
+      try {
+        await ChatSyncService.instance.reinitialize();
+      } catch (e) {
+        print('Error re-initializing chat sync: $e');
+      }
+
       return {
         'credential': result,
         'isNewUser': isNewUser,
@@ -183,6 +204,13 @@ class AuthService {
         firstName: firstName,
         lastName: lastName,
       );
+
+      // Re-initialize Chat Sync
+      try {
+        await ChatSyncService.instance.reinitialize();
+      } catch (e) {
+        print('Error re-initializing chat sync: $e');
+      }
 
       return result;
     } catch (e) {

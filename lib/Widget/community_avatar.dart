@@ -1,61 +1,138 @@
 import 'package:flutter/material.dart';
+import 'package:finishd/services/community_service.dart';
+import 'package:finishd/Model/community_models.dart';
+import 'package:finishd/Community/community_detail_screen.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
-class CommunityAvatarList extends StatelessWidget {
+class CommunityAvatarList extends StatefulWidget {
   const CommunityAvatarList({super.key});
 
   @override
+  State<CommunityAvatarList> createState() => _CommunityAvatarListState();
+}
+
+class _CommunityAvatarListState extends State<CommunityAvatarList> {
+  final CommunityService _communityService = CommunityService();
+  List<Community> _trendingCommunities = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTrendingCommunities();
+  }
+
+  Future<void> _fetchTrendingCommunities() async {
+    try {
+      final List<Map<String, dynamic>> data = await _communityService
+          .discoverCommunities(limit: 10);
+      if (mounted) {
+        setState(() {
+          _trendingCommunities = data
+              .map((json) => Community.fromJson(json))
+              .toList();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching trending communities: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final avatars = [
-      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSai1mBrKQfxAr27kfPwyhZ49L0jymPguzKCL_FIh1K7PgiNlRDJuoZ547lFWpWjiN7zfJ7Vg&s=10",
-      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSdx0PHBRecFXceWASqeF31-wwycc7B0PmaGbU1FiAnaCWQcGt_zlpZQkPcKRXJ1EOk6rsFGw&s=10",
-      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_p_v1Q2-3z3y5r_4-2Z_D3-p_q-3z3y5r_4&s=10",
-      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT_p_v1Q2-3z3y5r_4-2Z_D3-p_q-3z3y5r_4&s=10",
-    ];
-    final names = ['Movie Geeks', 'Action Fans', 'Sci-Fi Hub', 'Drama Club'];
+    if (_isLoading) {
+      return const SizedBox(
+        height: 100,
+        child: Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+          ),
+        ),
+      );
+    }
+
+    if (_trendingCommunities.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return SizedBox(
-      height: 100, // Reduced from 140
+      height: 100,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(
-          horizontal: 16,
-        ), // Added horizontal padding
-        itemCount: avatars.length,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: _trendingCommunities.length,
         itemBuilder: (context, index) {
+          final community = _trendingCommunities[index];
           return Padding(
             padding: const EdgeInsets.only(right: 16),
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      colors: [Colors.green, Colors.blueAccent],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CommunityDetailScreen(
+                      showId: community.showId,
+                      showTitle: community.title,
+                      posterPath: community.posterPath,
+                      mediaType: community.mediaType,
                     ),
                   ),
-                  child: CircleAvatar(
-                    radius: 28, // Reduced from 36
-                    backgroundColor: Colors.grey[900],
-                    backgroundImage: NetworkImage(avatars[index]),
+                );
+              },
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [Colors.green, Colors.blueAccent],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: CircleAvatar(
+                      radius: 28,
+                      backgroundColor: Colors.grey[900],
+                      backgroundImage: community.posterPath != null
+                          ? CachedNetworkImageProvider(
+                              'https://image.tmdb.org/t/p/w200${community.posterPath}',
+                            )
+                          : null,
+                      child: community.posterPath == null
+                          ? const Icon(
+                              Icons.people,
+                              color: Colors.white,
+                              size: 24,
+                            )
+                          : null,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  names[index],
-                  style: const TextStyle(
-                    fontSize: 12, // Reduced from 13
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white,
+                  const SizedBox(height: 6),
+                  SizedBox(
+                    width: 60,
+                    child: Text(
+                      community.title,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },

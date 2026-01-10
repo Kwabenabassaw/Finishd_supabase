@@ -4,6 +4,8 @@ import 'package:finishd/Model/tvdetail.dart';
 import 'package:flutter/material.dart';
 import 'package:finishd/Model/trending.dart';
 import 'package:finishd/services/social_discovery_service.dart';
+import 'package:finishd/services/social_sync_service.dart';
+import 'package:finishd/models/friend_activity.dart';
 
 class MovieProvider extends ChangeNotifier {
   // -------------------- Movies & Shows --------------------
@@ -29,6 +31,17 @@ class MovieProvider extends ChangeNotifier {
   // Details
   MovieDetails? _movieDetail;
   TvShowDetails? _showDetail;
+
+  // Social Sync
+  final SocialSyncService _socialSyncService = SocialSyncService();
+
+  void initializeSocialSync() {
+    _socialSyncService.startSync();
+  }
+
+  Stream<List<FriendActivity>> getSocialStream(String itemId) {
+    return _socialSyncService.getActivitiesStream(itemId);
+  }
 
   // -------------------- Search Results --------------------
   List<Result> _selectedSearchResults = [];
@@ -191,7 +204,8 @@ class MovieProvider extends ChangeNotifier {
       voteCount: null,
       originalName: '',
       firstAirDate: null,
-      originCountry: [], profilePath: '',
+      originCountry: [],
+      profilePath: '',
     );
   }
 

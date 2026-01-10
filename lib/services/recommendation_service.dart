@@ -2,6 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:finishd/Model/movie_list_item.dart';
 import 'package:finishd/Model/recommendation_model.dart';
 import 'package:finishd/services/chat_service.dart';
+import 'package:finishd/db/app_database.dart';
+import 'package:sqflite/sqflite.dart';
+import 'dart:convert';
 
 class RecommendationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -25,17 +28,85 @@ class RecommendationService {
   }
 
   /// Get list of friend IDs who have already received this recommendation
+  /// Uses SQLite cache with 60-second TTL for performance
   Future<Set<String>> getAlreadyRecommendedFriends({
     required String fromUserId,
     required String movieId,
   }) async {
-    final query = await _firestore
-        .collection('recommendations')
-        .where('fromUserId', isEqualTo: fromUserId)
-        .where('movieId', isEqualTo: movieId)
-        .get();
+    final cacheKey = '${fromUserId}_$movieId';
+    final db = await AppDatabase.instance.database;
+    final now = DateTime.now().millisecondsSinceEpoch;
 
-    return query.docs.map((doc) => doc.data()['toUserId'] as String).toSet();
+    try {
+      // 1. Check SQLite cache first
+      final cached = await db.query(
+        'recommendation_cache',
+        where: 'cache_key = ?',
+        whereArgs: [cacheKey],
+        limit: 1,
+      );
+
+      if (cached.isNotEmpty) {
+        final timestamp = cached.first['timestamp'] as int;
+        final ageSeconds = (now - timestamp) / 1000;
+
+        // If cache is fresh (< 60 seconds), use it
+        if (ageSeconds < 60) {
+          final friendIdsJson = cached.first['friend_ids'] as String;
+          final List<dynamic> friendIdsList = json.decode(friendIdsJson);
+          print(
+            '[RecommendationCache] Cache HIT for $cacheKey (age: ${ageSeconds.toStringAsFixed(1)}s)',
+          );
+          return friendIdsList.cast<String>().toSet();
+        } else {
+          // Cache expired, delete it
+          await db.delete(
+            'recommendation_cache',
+            where: 'cache_key = ?',
+            whereArgs: [cacheKey],
+          );
+          print(
+            '[RecommendationCache] Cache EXPIRED for $cacheKey (age: ${ageSeconds.toStringAsFixed(1)}s)',
+          );
+        }
+      }
+
+      // 2. Cache miss or expired - fetch from Firestore
+      print(
+        '[RecommendationCache] Cache MISS for $cacheKey - fetching from Firestore',
+      );
+      final query = await _firestore
+          .collection('recommendations')
+          .where('fromUserId', isEqualTo: fromUserId)
+          .where('movieId', isEqualTo: movieId)
+          .get();
+
+      final friendIds = query.docs
+          .map((doc) => doc.data()['toUserId'] as String)
+          .toSet();
+
+      // 3. Store in cache
+      await db.insert('recommendation_cache', {
+        'cache_key': cacheKey,
+        'friend_ids': json.encode(friendIds.toList()),
+        'timestamp': now,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+
+      print(
+        '[RecommendationCache] Cached ${friendIds.length} friend IDs for $cacheKey',
+      );
+      return friendIds;
+    } catch (e) {
+      print('[RecommendationCache] Error: $e');
+      // Fallback to Firestore on cache error
+      final query = await _firestore
+          .collection('recommendations')
+          .where('fromUserId', isEqualTo: fromUserId)
+          .where('movieId', isEqualTo: movieId)
+          .get();
+
+      return query.docs.map((doc) => doc.data()['toUserId'] as String).toSet();
+    }
   }
 
   // Send a recommendation to multiple friends (skips already recommended)
@@ -85,6 +156,9 @@ class RecommendationService {
 
     await batch.commit();
 
+    // Invalidate cache after sending recommendations
+    await _invalidateCache(fromUserId, movie.id);
+
     // Also send a chat message to each friend
     for (String toUserId in newFriends) {
       try {
@@ -112,6 +186,24 @@ class RecommendationService {
       'skipped': skippedCount,
       'alreadyRecommended': alreadyRecommended.toList(),
     };
+  }
+
+  /// Invalidate cache for a specific user-movie combination
+  Future<void> _invalidateCache(String fromUserId, String movieId) async {
+    try {
+      final cacheKey = '${fromUserId}_$movieId';
+      final db = await AppDatabase.instance.database;
+
+      await db.delete(
+        'recommendation_cache',
+        where: 'cache_key = ?',
+        whereArgs: [cacheKey],
+      );
+
+      print('[RecommendationCache] Invalidated cache for $cacheKey');
+    } catch (e) {
+      print('[RecommendationCache] Error invalidating cache: $e');
+    }
   }
 
   // Get recommendations received by a user

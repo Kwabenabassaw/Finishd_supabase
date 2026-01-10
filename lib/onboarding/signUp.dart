@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:finishd/services/auth_service.dart';
+import 'package:finishd/provider/user_provider.dart';
 
 // Define the primary color (Green from the image)
 const Color primaryGreen = Color(0xFF1A8927);
@@ -55,12 +56,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
           );
 
       if (mounted) {
+        final authService = Provider.of<AuthService>(context, listen: false);
         // If new user, go to onboarding
         if (result['isNewUser'] == true) {
           Navigator.pushReplacementNamed(context, 'genre');
         } else {
           // Existing user - check if they completed onboarding
           if (result['onboardingCompleted'] == true) {
+            // Initialize UserProvider with following IDs
+            if (authService.currentUser != null) {
+              Provider.of<UserProvider>(
+                context,
+                listen: false,
+              ).fetchCurrentUser(authService.currentUser!.uid);
+            }
             // Onboarding complete, go to homepage
             Navigator.pushReplacementNamed(context, 'homepage');
           } else {
@@ -94,11 +103,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
       }
 
       if (mounted) {
+        final authService = Provider.of<AuthService>(context, listen: false);
         // Check if new user or if existing user hasn't completed onboarding
         if (result['isNewUser'] == true ||
             result['onboardingCompleted'] != true) {
           Navigator.pushReplacementNamed(context, 'genre');
         } else {
+          // Initialize UserProvider with following IDs
+          if (authService.currentUser != null) {
+            Provider.of<UserProvider>(
+              context,
+              listen: false,
+            ).fetchCurrentUser(authService.currentUser!.uid);
+          }
           // Existing user with completed onboarding
           Navigator.pushReplacementNamed(context, 'homepage');
         }
@@ -119,6 +136,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
     try {
       await Provider.of<AuthService>(context, listen: false).signInWithApple();
       if (mounted) {
+        final authService = Provider.of<AuthService>(context, listen: false);
+        // Initialize UserProvider with following IDs
+        if (authService.currentUser != null) {
+          Provider.of<UserProvider>(
+            context,
+            listen: false,
+          ).fetchCurrentUser(authService.currentUser!.uid);
+        }
         Navigator.pushReplacementNamed(context, 'homepage');
       }
     } catch (e) {
@@ -135,18 +160,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-
-      appBar: AppBar(
-        // Makes the AppBar clear with white background
-        elevation: 0,
-      ),
+    
       body: SingleChildScrollView(
-        
         padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 10.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
-        
             Image.asset('assets/icon2.png', fit: BoxFit.contain),
             Center(
               child: Container(
@@ -155,7 +174,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               ),
             ),
             const SizedBox(height: 30),
-         
+
             // 2. Title
             Text(
               'Join the Watch Party',
@@ -236,7 +255,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       if (!_isLoading) {
                         _register();
                       }
-                      
                     },
                     text: "Register",
                   ),
@@ -326,9 +344,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ),
           ],
         ),
-
       ),
-      
     );
   }
 }

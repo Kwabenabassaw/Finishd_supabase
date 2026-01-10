@@ -4,6 +4,8 @@ import 'package:finishd/Model/user_model.dart';
 import 'package:finishd/Widget/message_bubble.dart';
 import 'package:finishd/db/objectbox/chat_entities.dart';
 import 'package:finishd/provider/chat_provider.dart';
+import 'package:finishd/provider/community_provider.dart';
+import 'package:finishd/Community/post_detail_screen.dart';
 import 'package:finishd/services/storage_service.dart';
 import 'package:finishd/MovieDetails/MovieScreen.dart';
 import 'package:finishd/MovieDetails/Tvshowscreen.dart';
@@ -32,7 +34,7 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final String _currentUserId = FirebaseAuth.instance.currentUser!.uid;
+  String get _currentUserId => FirebaseAuth.instance.currentUser?.uid ?? '';
   bool _showEmojiPicker = false;
   bool _isUploadingMedia = false;
   final FocusNode _focusNode = FocusNode();
@@ -351,6 +353,62 @@ class _ChatScreenState extends State<ChatScreen> {
                         movieTitle: message.movieTitle,
                         moviePoster: message.moviePoster,
                         mediaType: message.mediaType,
+                        postId: message.postId,
+                        postContent: message.postContent,
+                        postAuthorName: message.postAuthorName,
+                        postShowTitle: message.postShowTitle,
+                        onPostTap: message.type == 'shared_post'
+                            ? () async {
+                                final postId = message.postId;
+                                final showId = message.showId;
+                                if (postId == null || showId == null) return;
+
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (_) => const Center(
+                                    child: CircularProgressIndicator(
+                                      color: Color(0xFF1A8927),
+                                    ),
+                                  ),
+                                );
+
+                                try {
+                                  final provider = context
+                                      .read<CommunityProvider>();
+                                  final post = await provider.getPost(postId);
+
+                                  if (!mounted) return;
+                                  Navigator.pop(context); // Close loading
+
+                                  if (post != null) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => PostDetailScreen(
+                                          post: post,
+                                          showId: showId,
+                                        ),
+                                      ),
+                                    );
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Post no longer available',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (!mounted) return;
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error: $e')),
+                                  );
+                                }
+                              }
+                            : null,
                         onImageTap: message.type == 'image'
                             ? () {
                                 Navigator.push(

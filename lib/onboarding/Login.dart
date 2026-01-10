@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:finishd/services/auth_service.dart';
+import 'package:finishd/provider/user_provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 // Define the primary color (Green from the image)
@@ -46,10 +47,18 @@ class _LoginState extends State<Login> {
           );
 
       if (mounted) {
+        final authService = Provider.of<AuthService>(context, listen: false);
         // If new user (auto-created), go to onboarding
         if (result['isNewUser'] == true) {
           Navigator.pushReplacementNamed(context, 'genre');
         } else {
+          // Initialize UserProvider with following IDs
+          if (authService.currentUser != null) {
+            Provider.of<UserProvider>(
+              context,
+              listen: false,
+            ).fetchCurrentUser(authService.currentUser!.uid);
+          }
           // Existing user, go to homepage
           Navigator.pushReplacementNamed(context, 'homepage');
         }
@@ -79,11 +88,19 @@ class _LoginState extends State<Login> {
       }
 
       if (mounted) {
+        final authService = Provider.of<AuthService>(context, listen: false);
         // Check if new user or if existing user hasn't completed onboarding
         if (result['isNewUser'] == true ||
             result['onboardingCompleted'] != true) {
           Navigator.pushReplacementNamed(context, 'genre');
         } else {
+          // Initialize UserProvider with following IDs
+          if (authService.currentUser != null) {
+            Provider.of<UserProvider>(
+              context,
+              listen: false,
+            ).fetchCurrentUser(authService.currentUser!.uid);
+          }
           // Existing user with completed onboarding
           Navigator.pushReplacementNamed(context, 'homepage');
         }
@@ -104,6 +121,14 @@ class _LoginState extends State<Login> {
     try {
       await Provider.of<AuthService>(context, listen: false).signInWithApple();
       if (mounted) {
+        final authService = Provider.of<AuthService>(context, listen: false);
+        // Initialize UserProvider with following IDs
+        if (authService.currentUser != null) {
+          Provider.of<UserProvider>(
+            context,
+            listen: false,
+          ).fetchCurrentUser(authService.currentUser!.uid);
+        }
         Navigator.pushReplacementNamed(context, 'homepage');
       }
     } catch (e) {
@@ -120,10 +145,6 @@ class _LoginState extends State<Login> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        // Makes the AppBar clear with white background
-        elevation: 0,
-      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 10.0),
         child: Column(
@@ -185,7 +206,6 @@ class _LoginState extends State<Login> {
             Column(
               spacing: 10,
               children: [
-             
                 PrimaryButton(
                   isLoading: _isLoading,
                   onTap: () {

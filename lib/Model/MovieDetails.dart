@@ -1,5 +1,7 @@
 import 'package:finishd/Model/tmdb_extras.dart';
 import 'package:finishd/Model/Watchprovider.dart';
+import 'package:finishd/Model/movie_list_item.dart';
+import 'package:finishd/Model/trending.dart';
 
 class MovieDetails {
   final bool adult;
@@ -29,6 +31,7 @@ class MovieDetails {
   final List<Video> videos;
   final List<Cast> cast;
   final WatchProvidersResponse? watchProviders;
+  final String? mediaType;
 
   MovieDetails({
     required this.adult,
@@ -58,7 +61,43 @@ class MovieDetails {
     this.videos = const [],
     this.cast = const [],
     this.watchProviders,
+    this.mediaType,
   });
+
+  /// Create a shallow MovieDetails object from a MovieListItem
+  factory MovieDetails.shallowFromListItem(MovieListItem item) {
+    return MovieDetails(
+      adult: false,
+      genres: [],
+      id: int.parse(item.id),
+      productionCompanies: [],
+      productionCountries: [],
+      spokenLanguages: [],
+      title: item.title,
+      posterPath: item.posterPath,
+      mediaType: 'movie', // Helper for detail screens if needed
+      releaseDate: '',
+      overview: '',
+    );
+  }
+
+  /// Create a shallow MovieDetails object from a MediaItem
+  factory MovieDetails.shallowFromMediaItem(MediaItem item) {
+    return MovieDetails(
+      adult: false,
+      genres: item.genreIds.map((id) => Genre(id: id, name: '')).toList(),
+      id: item.id,
+      productionCompanies: [],
+      productionCountries: [],
+      spokenLanguages: [],
+      title: item.title,
+      posterPath: item.posterPath,
+      backdropPath: item.backdropPath,
+      voteAverage: item.voteAverage,
+      releaseDate: item.releaseDate,
+      overview: item.overview,
+    );
+  }
 
   factory MovieDetails.fromJson(Map<String, dynamic> json) {
     var videosList = <Video>[];
@@ -119,6 +158,7 @@ class MovieDetails {
       videos: videosList,
       cast: castList,
       watchProviders: providers,
+      mediaType: json['media_type'] ?? 'movie',
     );
   }
 }

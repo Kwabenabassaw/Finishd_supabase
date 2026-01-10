@@ -1,8 +1,14 @@
+import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:flutter/material.dart';
 import 'package:finishd/Model/community_models.dart';
 import 'package:finishd/provider/community_provider.dart';
+import 'package:finishd/provider/user_provider.dart';
 import 'package:finishd/Widget/image_preview.dart';
+import 'package:finishd/Home/share_post_sheet.dart';
+import 'package:finishd/Widget/fullscreen_video_player.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:sizer/sizer.dart';
 
 /// Screen showing a single post with its comments
 class PostDetailScreen extends StatefulWidget {
@@ -20,8 +26,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   final FocusNode _commentFocus = FocusNode();
 
   bool _isSending = false;
+  bool _isSpoilerRevealed = false;
   String? _replyingToId;
   String? _replyingToName;
+
+  // Track which comment IDs have already been loaded to prevent infinite loop
+  final Set<String> _loadedCommentVoteIds = {};
 
   // Local vote state for immediate feedback if not fully relying on parent provider list
   // However, we should try to use the provider's source of truth
@@ -78,6 +88,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       context,
     ); // Listen to changes
 
+    // Get the current post from provider (updated with live score) or fallback to widget.post
+    final currentPost = provider.currentPosts.firstWhere(
+      (p) => p.id == widget.post.id,
+      orElse: () => widget.post,
+    );
+
     // Get current vote from provider
     final userVote = provider.currentUserVotes[widget.post.id] ?? 0;
 
@@ -100,7 +116,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.more_horiz_rounded),
-            onPressed: () {},
+            onPressed: () => _showPostOptions(context, provider),
           ),
         ],
       ),
@@ -118,6 +134,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     primaryGreen,
                     provider,
                     userVote,
+                    currentPost,
                   ),
 
                   // Comments header
@@ -193,6 +210,23 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         );
                       }
 
+                      // Load comment votes only for NEW comments (prevent infinite loop)
+                      if (comments.isNotEmpty) {
+                        final commentIds = comments
+                            .map((c) => c['id'] as String)
+                            .toList();
+                        // Only load votes for IDs we haven't loaded yet
+                        final newIds = commentIds
+                            .where((id) => !_loadedCommentVoteIds.contains(id))
+                            .toList();
+                        if (newIds.isNotEmpty) {
+                          _loadedCommentVoteIds.addAll(newIds);
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            provider.loadCommentVotes(newIds);
+                          });
+                        }
+                      }
+
                       return ListView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
@@ -232,6 +266,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     Color primaryGreen,
     CommunityProvider provider,
     int userVote,
+    CommunityPost currentPost,
   ) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -243,7 +278,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             color: Colors.black.withOpacity(
               theme.brightness == Brightness.dark ? 0.3 : 0.1,
             ),
-            blurRadius: 24,
+            blurRadius: 10,
             offset: const Offset(0, 10),
           ),
         ],
@@ -259,7 +294,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 CircleAvatar(
                   radius: 22,
                   backgroundImage: widget.post.authorAvatar != null
-                      ? NetworkImage(widget.post.authorAvatar!)
+                      ? NetworkImage(widget.post.authorAvatar.toString())
                       : null,
                   backgroundColor: primaryGreen.withOpacity(0.1),
                   child: widget.post.authorAvatar == null
@@ -317,8 +352,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             // Content
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
-              child: widget.post.isSpoiler
-                  ? _buildSpoilerContent(context, widget.post)
+              child: widget.post.isSpoiler && !_isSpoilerRevealed
+                  ? _buildSpoilerContent(context, widget.post, () {
+                      setState(() {
+                        _isSpoilerRevealed = true;
+                      });
+                    })
                   : Text(
                       widget.post.content,
                       style: theme.textTheme.bodyLarge?.copyWith(
@@ -330,7 +369,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             ),
 
             // Media
-            if (widget.post.mediaUrls.isNotEmpty)
+            if (widget.post.mediaUrls.isNotEmpty &&
+                (!widget.post.isSpoiler || _isSpoilerRevealed))
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: _buildMediaGallery(context, widget.post),
@@ -372,7 +412,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       children: [
                         IconButton(
                           icon: Icon(
-                            Icons.arrow_circle_up_rounded,
+                            FontAwesomeIcons.thumbsUp,
                             size: 26,
                             color: userVote == 1
                                 ? primaryGreen
@@ -387,10 +427,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           padding: const EdgeInsets.all(8),
                         ),
                         Text(
-                          '${widget.post.score}',
+                          '${currentPost.score}',
                           style: TextStyle(
-                            color: widget.post.score > 0
+                            color: currentPost.score > 0
                                 ? primaryGreen
+                                : currentPost.score < 0
+                                ? Colors.red
                                 : theme.hintColor,
                             fontWeight: FontWeight.w900,
                             fontSize: 15,
@@ -398,7 +440,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         ),
                         IconButton(
                           icon: Icon(
-                            Icons.arrow_circle_down_rounded,
+                            FontAwesomeIcons.thumbsDown,
                             size: 26,
                             color: userVote == -1
                                 ? Colors.red
@@ -418,11 +460,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   const Spacer(),
                   IconButton(
                     icon: Icon(
-                      Icons.share_rounded,
+                      FontAwesomeIcons.share,
                       color: theme.hintColor.withOpacity(0.6),
                       size: 20,
                     ),
-                    onPressed: () {},
+                    onPressed: () => SharePostSheet.show(context, currentPost),
                   ),
                 ],
               ),
@@ -448,18 +490,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
     return Container(
       margin: EdgeInsets.fromLTRB(isReply ? 56 : 16, 4, 16, 12),
-      decoration: BoxDecoration(
-        color: commentBg,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(
-              theme.brightness == Brightness.dark ? 0.2 : 0.05,
-            ),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: BoxDecoration(color: commentBg),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -533,7 +564,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     children: [
                       IconButton(
                         icon: Icon(
-                          Icons.keyboard_arrow_up_rounded,
+                          FontAwesomeIcons.thumbsUp,
                           size: 20,
                           color: userVote == 1
                               ? primaryGreen
@@ -559,7 +590,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       ),
                       IconButton(
                         icon: Icon(
-                          Icons.keyboard_arrow_down_rounded,
+                          FontAwesomeIcons.thumbsDown,
                           size: 20,
                           color: userVote == -1
                               ? Colors.red
@@ -655,7 +686,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     const Spacer(),
                     IconButton(
                       icon: Icon(
-                        Icons.close_rounded,
+                        FontAwesomeIcons.x,
                         size: 16,
                         color: theme.hintColor,
                       ),
@@ -699,7 +730,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 GestureDetector(
                   onTap: _isSending ? null : () => _submitComment(provider),
                   child: Container(
@@ -727,7 +758,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             ),
                           )
                         : const Icon(
-                            Icons.arrow_upward_rounded,
+                            FontAwesomeIcons.arrowRight,
                             color: Colors.white,
                             size: 24,
                           ),
@@ -814,7 +845,17 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           children: [
             GestureDetector(
               onTap: isVideo
-                  ? null
+                  ? () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => FullscreenVideoPlayer(
+                            videoUrl: url,
+                            caption: caption,
+                          ),
+                        ),
+                      );
+                    }
                   : () {
                       Navigator.push(
                         context,
@@ -878,11 +919,15 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         .replaceFirst(RegExp(r'\.(mp4|mov|avi|webm)$'), '.jpg');
   }
 
-  Widget _buildSpoilerContent(BuildContext context, CommunityPost post) {
+  Widget _buildSpoilerContent(
+    BuildContext context,
+    CommunityPost post,
+    VoidCallback onReveal,
+  ) {
     final theme = Theme.of(context);
 
     return InkWell(
-      onTap: () {},
+      onTap: onReveal,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(24),
@@ -903,6 +948,189 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showPostOptions(BuildContext context, CommunityProvider provider) {
+    final theme = Theme.of(context);
+    final isAuthor = widget.post.authorId == provider.currentUid;
+
+    // Ensure following list is loaded for accurate Follow/Unfollow status
+    if (provider.currentUid != null) {
+      Provider.of<UserProvider>(
+        context,
+        listen: false,
+      ).ensureFollowingLoaded(provider.currentUid!);
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 24),
+              decoration: BoxDecoration(
+                color: theme.dividerColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            if (isAuthor)
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.delete_outline_rounded,
+                    color: Colors.red,
+                  ),
+                ),
+                title: const Text(
+                  'Delete Post',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                subtitle: Text(
+                  'This action cannot be undone',
+                  style: TextStyle(
+                    color: theme.hintColor.withOpacity(0.6),
+                    fontSize: 12,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context); // Close bottom sheet
+                  _confirmDelete(context, provider);
+                },
+              )
+            else
+              ListTile(
+                leading: const Icon(Icons.report_gmailerrorred_rounded),
+                title: const Text('Report Post'),
+                onTap: () {
+                  Navigator.pop(context);
+                },
+              ),
+            ListTile(
+              leading: const Icon(Icons.share_rounded),
+              title: const Text('Share Post'),
+              onTap: () {
+                Navigator.pop(context);
+                SharePostSheet.show(context, widget.post);
+              },
+            ),
+            if (widget.post.authorId != provider.currentUid)
+              Consumer<UserProvider>(
+                builder: (context, userProvider, child) {
+                  final isFollowing = userProvider.isFollowing(
+                    widget.post.authorId,
+                  );
+
+                  return ListTile(
+                    leading: Icon(
+                      isFollowing
+                          ? Icons.person_remove_rounded
+                          : Icons.person_add_rounded,
+                    ),
+                    title: Text(isFollowing ? 'Unfollow' : 'Follow'),
+                    subtitle: Text(
+                      isFollowing
+                          ? 'Stop following ${widget.post.authorName}'
+                          : 'Follow ${widget.post.authorName}',
+                    ),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      try {
+                        if (isFollowing) {
+                          await userProvider.unfollowUser(widget.post.authorId);
+                        } else {
+                          await userProvider.followUser(widget.post.authorId);
+                        }
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                isFollowing
+                                    ? 'Unfollowed ${widget.post.authorName}'
+                                    : 'Following ${widget.post.authorName}',
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Failed to update follow status'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  );
+                },
+              ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, CommunityProvider provider) {
+    final theme = Theme.of(context);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Post?'),
+        content: const Text(
+          'Are you sure you want to delete this post? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: theme.hintColor)),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context); // Close dialog
+              final result = await provider.deletePost(
+                widget.post.id,
+                widget.showId,
+              );
+              if (result && mounted) {
+                Navigator.pop(context); // Go back to community feed
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Post deleted')));
+              } else if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Failed to delete post')),
+                );
+              }
+            },
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
       ),
     );
   }

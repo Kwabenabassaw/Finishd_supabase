@@ -26,6 +26,11 @@ import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:finishd/services/user_titles_service.dart';
 import 'package:finishd/Widget/rating_action_button.dart';
 import 'package:finishd/Widget/emotion_rating_slider.dart';
+import 'package:finishd/MovieDetails/widgets/ai_chat_sheet.dart';
+import 'package:finishd/MovieDetails/widgets/ai_floating_button.dart';
+import 'package:finishd/services/ratings_service.dart';
+import 'package:finishd/Model/movie_ratings_model.dart';
+import 'package:sizer/sizer.dart';
 
 // ... other imports ...
 
@@ -47,6 +52,8 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
   bool _showPreview = false;
   bool _showEmojiPicker = false;
   Timer? _previewTimer;
+  MovieRatings _ratings = MovieRatings.empty();
+  final RatingsService _ratingsService = RatingsService();
 
   @override
   void initState() {
@@ -59,6 +66,16 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
         );
     _syncFullDetails();
     _loadUserRating();
+    _loadRatings();
+  }
+
+  Future<void> _loadRatings() async {
+    final r = await _ratingsService.getRatings(_show.id);
+    if (mounted) {
+      setState(() {
+        _ratings = r;
+      });
+    }
   }
 
   Future<void> _loadUserRating() async {
@@ -146,13 +163,23 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
 
     return Scaffold(
       backgroundColor: themeBackground,
+      floatingActionButton: AiFloatingActionButton(
+        onPressed: () {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (context) => AiChatSheet(tvShow: _show, ratings: _ratings),
+          );
+        },
+      ),
       body: CustomScrollView(
         physics: Platform.isIOS
             ? const BouncingScrollPhysics()
             : const ClampingScrollPhysics(),
         slivers: <Widget>[
           SliverAppBar(
-            expandedHeight: 400.0,
+            expandedHeight: 45.h,
             pinned: true,
             stretch: true,
             backgroundColor: themeBackground,
@@ -246,7 +273,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
           ),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+              padding: EdgeInsets.fromLTRB(5.w, 1.h, 5.w, 2.h),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
@@ -254,31 +281,28 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                   Text(
                     _show.name,
                     style: TextStyle(
-                      fontSize: 32,
+                      fontSize: 24.sp,
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).textTheme.titleLarge?.color,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 1.h),
                   Row(
                     children: [
                       Text(
                         _show.firstAirDate.substring(0, 4),
-                        style: TextStyle(fontSize: 16),
+                        style: TextStyle(fontSize: 18.sp),
                       ),
-                      const SizedBox(width: 8),
-                      Text('•', style: TextStyle()),
-                      const SizedBox(width: 8),
-                      Text(_show.status, style: TextStyle(fontSize: 16)),
-                      const SizedBox(width: 8),
-                      Text('•', style: TextStyle()),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _show.genres.take(2).map((g) => g.name).join(', '),
-                          style: TextStyle(fontSize: 16),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                      SizedBox(width: 2.w),
+                      const Text('•'),
+                      SizedBox(width: 2.w),
+                      Text(_show.status, style: TextStyle(fontSize: 18.sp)),
+                      SizedBox(width: 2.w),
+                      const Text('•'),
+                      SizedBox(width: 2.w),
+                      Text(
+                        '${_show.numberOfSeasons} Seasons',
+                        style: TextStyle(fontSize: 18.sp),
                       ),
                     ],
                   ),
@@ -286,127 +310,135 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                   const SizedBox(height: 24),
 
                   // Action Buttons Row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () async {
-                            String? youtubeKey;
-                            if (_show.videos.isNotEmpty) {
-                              youtubeKey = _show.videos
-                                  .firstWhere(
-                                    (v) =>
-                                        v.site == 'YouTube' &&
-                                        v.type == 'Trailer',
-                                    orElse: () => _show.videos.first,
-                                  )
-                                  .key;
-                            } else {
-                              youtubeKey = await tvService.getTVShowTrailerKey(
-                                _show.id.toString(),
-                              );
-                            }
+                  // Action Buttons Row (Horizontally Scrollable)
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: MediaQuery.of(context).size.width * 0.45,
+                          child: ElevatedButton.icon(
+                            onPressed: () async {
+                              String? youtubeKey;
+                              if (_show.videos.isNotEmpty) {
+                                youtubeKey = _show.videos
+                                    .firstWhere(
+                                      (v) =>
+                                          v.site == 'YouTube' &&
+                                          v.type == 'Trailer',
+                                      orElse: () => _show.videos.first,
+                                    )
+                                    .key;
+                              } else {
+                                youtubeKey = await tvService
+                                    .getTVShowTrailerKey(_show.id.toString());
+                              }
 
-                            if (youtubeKey != null && mounted) {
-                              YouTubeTrailerPlayerDialog.show(
-                                context,
-                                youtubeKey,
+                              if (youtubeKey != null && mounted) {
+                                // Pause preview player to prevent resource conflict
+                                _previewTimer?.cancel();
+                                _previewController?.pause();
+                                setState(() => _showPreview = false);
+
+                                YouTubeTrailerPlayerDialog.show(
+                                  context,
+                                  youtubeKey,
+                                );
+                              } else if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Trailer not available'),
+                                  ),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.play_arrow_rounded),
+                            label: const Text('Play Trailer'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4ADE80),
+                              foregroundColor: Colors.black,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              textStyle: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        RatingActionButton(
+                          initialRating: _userRating,
+                          onTap: () {
+                            setState(() {
+                              _showEmojiPicker = !_showEmojiPicker;
+                            });
+                          },
+                          onRatingChanged: (rating) {
+                            // Handled inline via EmotionRatingSlider
+                          },
+                        ),
+                        SizedBox(width: 12),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.white.withOpacity(0.1)
+                                : Colors.black.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            icon: Icon(
+                              FontAwesomeIcons.share,
+                              color: Theme.of(context).iconTheme.color,
+                              size: 24,
+                            ),
+                            onPressed: () {
+                              final movieItem = MovieListItem(
+                                id: _show.id.toString(),
+                                title: _show.name,
+                                posterPath: _show.posterPath,
+                                mediaType: 'tv',
+                                addedAt: DateTime.now(),
                               );
-                            } else if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Trailer not available'),
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      FriendSelectionScreen(movie: movieItem),
                                 ),
                               );
-                            }
-                          },
-                          icon: const Icon(Icons.play_arrow_rounded),
-                          label: const Text('Play Trailer'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF4ADE80),
-                            foregroundColor: Colors.black,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.white.withOpacity(0.1)
+                                : Colors.black.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.add_rounded,
+                              color: Theme.of(context).iconTheme.color,
                             ),
-                            textStyle: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
+                            onPressed: () {
+                              final movieItem = MovieListItem(
+                                id: _show.id.toString(),
+                                title: _show.name,
+                                posterPath: _show.posterPath,
+                                mediaType: 'tv',
+                                addedAt: DateTime.now(),
+                              );
+                              showMovieActionDrawer(context, movieItem);
+                            },
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      RatingActionButton(
-                        initialRating: _userRating,
-                        onTap: () {
-                          setState(() {
-                            _showEmojiPicker = !_showEmojiPicker;
-                          });
-                        },
-                        onRatingChanged: (rating) {
-                          // Handled inline via EmotionRatingSlider
-                        },
-                      ),
-                      const SizedBox(width: 12),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? Colors.white.withOpacity(0.1)
-                              : Colors.black.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-
-                        child: IconButton(
-                          icon: Icon(
-                            FontAwesomeIcons.share,
-                            color: Theme.of(context).iconTheme.color,
-                            size: 24,
-                          ),
-                          onPressed: () {
-                            final movieItem = MovieListItem(
-                              id: _show.id.toString(),
-                              title: _show.name,
-                              posterPath: _show.posterPath,
-                              mediaType: 'tv',
-                              addedAt: DateTime.now(),
-                            );
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    FriendSelectionScreen(movie: movieItem),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? Colors.white.withOpacity(0.1)
-                              : Colors.black.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: IconButton(
-                          icon: Icon(
-                            Icons.add_rounded,
-                            color: Theme.of(context).iconTheme.color,
-                          ),
-                          onPressed: () {
-                            final movieItem = MovieListItem(
-                              id: _show.id.toString(),
-                              title: _show.name,
-                              posterPath: _show.posterPath,
-                              mediaType: 'tv',
-                              addedAt: DateTime.now(),
-                            );
-                            showMovieActionDrawer(context, movieItem);
-                          },
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
 
                   AnimatedSize(

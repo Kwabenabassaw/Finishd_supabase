@@ -1,7 +1,9 @@
 import 'package:finishd/Model/movie_item.dart';
 import 'package:finishd/Model/movie_list_item.dart';
+import 'package:finishd/Model/trending.dart';
 import 'package:finishd/MovieDetails/MovieScreen.dart';
 import 'package:finishd/Widget/movie_action_drawer.dart';
+import 'package:finishd/Widget/interactive_media_poster.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
@@ -125,19 +127,32 @@ class MoviePosterGrid extends StatelessWidget {
 
             children: [
               Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: CachedNetworkImage(
-                    imageUrl: getTmdbImageUrl(
-                      movie.posterPath,
-                    ), // Use TMDB image helper
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    placeholder: (context, url) =>
-                        Container(color: Colors.grey.shade300),
-                    errorWidget: (context, url, error) => Container(
-                      color: Colors.grey,
-                      child: const Icon(Icons.error, color: Colors.white),
+                child: InteractiveMediaPoster(
+                  item: MediaItem(
+                    id: movie.id,
+                    title: movie.title ?? 'Unknown',
+                    posterPath: movie.posterPath ?? '',
+                    mediaType: movie.mediaType ?? 'movie',
+                    overview: '',
+                    backdropPath: '',
+                    voteAverage: 0.0,
+                    releaseDate: '',
+                    genreIds: [],
+                    imageUrl: '',
+                  ),
+                  showSocialBadges: true,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: CachedNetworkImage(
+                      imageUrl: getTmdbImageUrl(movie.posterPath),
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      placeholder: (context, url) =>
+                          Container(color: Colors.grey.shade300),
+                      errorWidget: (context, url, error) => Container(
+                        color: Colors.grey,
+                        child: const Icon(Icons.error, color: Colors.white),
+                      ),
                     ),
                   ),
                 ),

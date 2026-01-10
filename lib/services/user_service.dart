@@ -68,8 +68,20 @@ class UserService {
           .collection(_followersCollection)
           .doc(currentUid);
 
+      // References to user documents for count updates
+      DocumentReference currentUserRef = _firestore
+          .collection(_usersCollection)
+          .doc(currentUid);
+      DocumentReference targetUserRef = _firestore
+          .collection(_usersCollection)
+          .doc(targetUid);
+
       batch.set(followingRef, {'followedAt': FieldValue.serverTimestamp()});
       batch.set(followerRef, {'followedAt': FieldValue.serverTimestamp()});
+
+      // Atomic count updates
+      batch.update(currentUserRef, {'followingCount': FieldValue.increment(1)});
+      batch.update(targetUserRef, {'followersCount': FieldValue.increment(1)});
 
       await batch.commit();
     } catch (e) {
@@ -97,8 +109,22 @@ class UserService {
           .collection(_followersCollection)
           .doc(currentUid);
 
+      // References to user documents for count updates
+      DocumentReference currentUserRef = _firestore
+          .collection(_usersCollection)
+          .doc(currentUid);
+      DocumentReference targetUserRef = _firestore
+          .collection(_usersCollection)
+          .doc(targetUid);
+
       batch.delete(followingRef);
       batch.delete(followerRef);
+
+      // Atomic count updates
+      batch.update(currentUserRef, {
+        'followingCount': FieldValue.increment(-1),
+      });
+      batch.update(targetUserRef, {'followersCount': FieldValue.increment(-1)});
 
       await batch.commit();
     } catch (e) {

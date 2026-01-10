@@ -1,114 +1,94 @@
-import 'dart:io';
+import 'package:app_links/app_links.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:finishd/provider/community_provider.dart';
+import 'package:finishd/Community/post_detail_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:finishd/Model/Watchprovider.dart';
 
 class DeepLinkService {
-  /// Maps TMDB Provider IDs to app URL schemes
-  static final Map<int, String> _providerSchemes = {
-    8: 'nflx://', // Netflix
-    9: 'primevideo://', // Amazon Prime
-    337: 'disneyplus://', // Disney+
-    384: 'hbomax://', // HBO Max (now Max)
-    15: 'hulu://', // Hulu
-    2: 'videos://', // Apple TV
-    531: 'paramountplus://', // Paramount+
-    386: 'peacocktv://', // Peacock
-    350: 'appletv://', // Apple TV+
-    1899: 'max://', // Max (new)
-  };
+  static final DeepLinkService _instance = DeepLinkService._internal();
+  factory DeepLinkService() => _instance;
+  DeepLinkService._internal();
 
-  /// Maps TMDB Provider IDs to their official website search/browse URLs
-  static final Map<int, String> _providerWebUrls = {
-    8: 'https://www.netflix.com/search?q=', // Netflix search
-    9: 'https://www.amazon.com/s?k=', // Prime Video search
-    337: 'https://www.disneyplus.com/search/', // Disney+ search
-    384: 'https://www.max.com/search?q=', // Max search
-    15: 'https://www.hulu.com/search?q=', // Hulu search
-    2: 'https://tv.apple.com/search?term=', // Apple TV search
-    531: 'https://www.paramountplus.com/search/', // Paramount+
-    386: 'https://www.peacocktv.com/search?q=', // Peacock
-    350: 'https://tv.apple.com/search?term=', // Apple TV+
-    1899: 'https://www.max.com/search?q=', // Max
-  };
+  final _appLinks = AppLinks();
+  late GlobalKey<NavigatorState> _navigatorKey;
 
-  /// Maps TMDB Provider IDs to their home page URLs (fallback)
-  static final Map<int, String> _providerHomeUrls = {
-    8: 'https://www.netflix.com',
-    9: 'https://www.primevideo.com',
-    337: 'https://www.disneyplus.com',
-    384: 'https://www.max.com',
-    15: 'https://www.hulu.com',
-    2: 'https://tv.apple.com',
-    531: 'https://www.paramountplus.com',
-    386: 'https://www.peacocktv.com',
-    350: 'https://tv.apple.com',
-    1899: 'https://www.max.com',
-  };
+  void initialize(GlobalKey<NavigatorState> navigatorKey) {
+    _navigatorKey = navigatorKey;
 
-  /// Tries to launch the streaming app or website.
+    // Handle the initial link when the app is opened from a terminated state
+    _appLinks.getInitialLink().then((uri) {
+      if (uri != null) {
+        // Small delay to ensure the navigator is ready and context is available
+        Future.delayed(
+          const Duration(milliseconds: 1500),
+          () => _handleUri(uri),
+        );
+      }
+    });
+
+    // Listen for deep links while the app is running (foreground or background)
+    _appLinks.uriLinkStream.listen((uri) {
+      _handleUri(uri);
+    });
+  }
+
+  void _handleUri(Uri uri) async {
+    debugPrint('Deep Link Received: $uri');
+
+    // Structure: https://finishd.app/post/{postId}
+    // pathSegments: ['post', 'POST_ID']
+    if (uri.pathSegments.length >= 2 && uri.pathSegments[0] == 'post') {
+      final postId = uri.pathSegments[1];
+      _navigateToPost(postId);
+    }
+  }
+
+  void _navigateToPost(String postId) async {
+    final context = _navigatorKey.currentContext;
+    if (context == null) return;
+
+    try {
+      final provider = Provider.of<CommunityProvider>(context, listen: false);
+
+      // Fetch post details from Firestore
+      final post = await provider.getPost(postId);
+
+      if (post != null && context.mounted) {
+        _navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (context) =>
+                PostDetailScreen(post: post, showId: post.showId),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error handling deep link: $e');
+    }
+  }
+
+  /// 🔥 Opens the streaming provider with the provided URL
   Future<void> launchProvider({
     required int providerId,
     required String providerName,
     required String title,
     String? directUrl,
   }) async {
-    // 0. If directUrl is provided, try to launch it immediately
-    if (directUrl != null && directUrl.isNotEmpty) {
-      final Uri directUri = Uri.parse(directUrl);
-      if (await canLaunchUrl(directUri)) {
-        await launchUrl(directUri, mode: LaunchMode.externalApplication);
-        return;
-      }
+    if (directUrl == null || directUrl.isEmpty) {
+      debugPrint('❌ No direct URL provided for $providerName');
+      return;
     }
 
-    // 1. Try to open the installed app (mobile only)
-    if (Platform.isAndroid || Platform.isIOS) {
-      final scheme = _providerSchemes[providerId];
-      if (scheme != null) {
-        final Uri appUri = Uri.parse(scheme);
-        if (await canLaunchUrl(appUri)) {
-          await launchUrl(appUri, mode: LaunchMode.externalApplication);
-          return;
-        }
+    final uri = Uri.parse(directUrl);
+
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        debugPrint('❌ Could not launch: $directUrl');
       }
+    } catch (e) {
+      debugPrint('❌ Error launching $providerName: $e');
     }
-
-    // 2. Try to open the platform's search page with the title
-    final searchUrl = _providerWebUrls[providerId];
-    if (searchUrl != null) {
-      final encodedTitle = Uri.encodeComponent(title);
-      final Uri searchUri = Uri.parse('$searchUrl$encodedTitle');
-      if (await canLaunchUrl(searchUri)) {
-        await launchUrl(searchUri, mode: LaunchMode.externalApplication);
-        return;
-      }
-    }
-
-    // 3. Fallback to the platform's home page
-    final homeUrl = _providerHomeUrls[providerId];
-    if (homeUrl != null) {
-      final Uri homeUri = Uri.parse(homeUrl);
-      if (await canLaunchUrl(homeUri)) {
-        await launchUrl(homeUri, mode: LaunchMode.externalApplication);
-        return;
-      }
-    }
-
-    print('Could not launch $providerName');
-  }
-
-  /// Static helper to be compatible with existing calls
-  static Future<void> openStreamingProvider(
-    WatchProvider provider,
-    String title,
-    String? webUrl, // Kept for backward compatibility but not used
-  ) async {
-    final service = DeepLinkService();
-    await service.launchProvider(
-      providerId: provider.providerId,
-      providerName: provider.providerName,
-      title: title,
-      directUrl: webUrl,
-    );
   }
 }

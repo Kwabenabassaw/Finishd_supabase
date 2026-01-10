@@ -1,8 +1,10 @@
+import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:finishd/provider/community_provider.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
+import 'package:giphy_get/giphy_get.dart';
 
 /// Screen for creating a new post in a community
 class CreatePostScreen extends StatefulWidget {
@@ -28,8 +30,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   final ImagePicker _imagePicker = ImagePicker();
 
   List<XFile> _selectedMedia = [];
+  List<String> _selectedGifUrls = [];
   bool _isSpoiler = false;
-  bool _isPosting = false;
   List<String> _hashtags = [];
 
   @override
@@ -60,6 +62,32 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     setState(() {
       _selectedMedia.removeAt(index);
     });
+  }
+
+  void _removeGif(int index) {
+    setState(() {
+      _selectedGifUrls.removeAt(index);
+    });
+  }
+
+  Future<void> _pickGif() async {
+    // Note: You'll need a Giphy API Key. Using a placeholder for now.
+    // In production, move this to a config file.
+    GiphyGif? gif = await GiphyGet.getGif(
+      context: context,
+      apiKey: "5H4NTxpI7v2iKKWp49vZou0zWCShnTpb", // Placeholder
+      lang: GiphyLanguage.english,
+      randomID: "test",
+      tabColor: const Color(0xFF1A8927),
+    );
+
+    if (gif != null && gif.images?.fixedWidth?.url != null) {
+      if (_selectedMedia.length + _selectedGifUrls.length < 4) {
+        setState(() {
+          _selectedGifUrls.add(gif.images!.fixedWidth!.url!);
+        });
+      }
+    }
   }
 
   void _extractHashtags(String text) {
@@ -96,10 +124,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             SizedBox(
               width: 16,
               height: 16,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white,
-              ),
+              child: LogoLoadingScreen(),
             ),
             SizedBox(width: 12),
             Text('Uploading your post...'),
@@ -125,6 +150,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         mediaFiles: List.from(_selectedMedia),
         hashtags: List.from(_hashtags),
         isSpoiler: _isSpoiler,
+        gifUrls: List.from(_selectedGifUrls),
       );
 
       if (postId != null) {
@@ -185,7 +211,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             padding: const EdgeInsets.only(right: 8),
             child: Consumer<CommunityProvider>(
               builder: (context, provider, child) {
-                final isUploading = provider.isUploadingMedia || _isPosting;
+                final isUploading = provider.isUploadingMedia;
                 return ElevatedButton(
                   onPressed: isUploading ? null : _createPost,
                   style: ElevatedButton.styleFrom(
@@ -229,9 +255,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                   Icon(Icons.group, color: primaryGreen, size: 16),
                   const SizedBox(width: 8),
                   Text(
-                    'Posting to: /${widget.mediaType == 'tv' ? 'Shows' : 'Movies'}',
+                    'Posting to: /${widget.mediaType == 'tv' ? 'Shows' : 'Movies'} ${widget.showTitle}',
                     style: TextStyle(color: primaryGreen),
                   ),
+
                   Icon(Icons.expand_more, color: primaryGreen),
                 ],
               ),
@@ -256,15 +283,21 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
+
                         child: TextField(
                           controller: _contentController,
+                        
                           maxLines: null,
                           style: theme.textTheme.bodyLarge,
                           decoration: InputDecoration(
+                            
+                          contentPadding: EdgeInsets.all(10),
+
                             hintText:
                                 'Share your thoughts or start a discussion...',
                             hintStyle: TextStyle(color: theme.hintColor),
                             border: InputBorder.none,
+
                           ),
                           onChanged: _extractHashtags,
                         ),
@@ -275,51 +308,31 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                   const SizedBox(height: 16),
 
                   // Selected media preview
-                  if (_selectedMedia.isNotEmpty)
+                  if (_selectedMedia.isNotEmpty || _selectedGifUrls.isNotEmpty)
                     SizedBox(
                       height: 180,
-                      child: ListView.builder(
+                      child: ListView(
                         scrollDirection: Axis.horizontal,
-                        itemCount: _selectedMedia.length,
-                        itemBuilder: (context, index) {
-                          return Stack(
-                            children: [
-                              Container(
-                                width: 160,
-                                margin: const EdgeInsets.only(right: 12),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Image.file(
-                                    File(_selectedMedia[index].path),
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                top: 8,
-                                right: 20,
-                                child: GestureDetector(
-                                  onTap: () => _removeMedia(index),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withOpacity(0.6),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.close,
-                                      color: Colors.white,
-                                      size: 16,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          );
-                        },
+                        children: [
+                          ..._selectedMedia.asMap().entries.map((entry) {
+                            int index = entry.key;
+                            XFile file = entry.value;
+                            return _buildMediaPreview(
+                              context,
+                              Image.file(File(file.path), fit: BoxFit.cover),
+                              () => _removeMedia(index),
+                            );
+                          }),
+                          ..._selectedGifUrls.asMap().entries.map((entry) {
+                            int index = entry.key;
+                            String url = entry.value;
+                            return _buildMediaPreview(
+                              context,
+                              Image.network(url, fit: BoxFit.cover),
+                              () => _removeGif(index),
+                            );
+                          }),
+                        ],
                       ),
                     ),
 
@@ -362,7 +375,12 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                   _pickImage,
                   primaryGreen,
                 ),
-                _buildToolbarButton(Icons.gif_box, 'GIF', () {}, primaryGreen),
+                _buildToolbarButton(
+                  Icons.gif_box,
+                  'GIF',
+                  _pickGif,
+                  primaryGreen,
+                ),
                 _buildToolbarButton(
                   Icons.videocam,
                   'Video',
@@ -375,22 +393,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                   color: theme.dividerColor,
                   margin: const EdgeInsets.symmetric(horizontal: 8),
                 ),
-                _buildToolbarButton(Icons.tag, 'Tag', () {}, primaryGreen),
-                _buildToolbarButton(
-                  Icons.location_on,
-                  'Location',
-                  () {},
-                  primaryGreen,
-                ),
+             
+              
                 const Spacer(),
-                Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: theme.hintColor, width: 2),
-                  ),
-                ),
+               
               ],
             ),
           ),
@@ -412,6 +418,44 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         tooltip: tooltip,
         onPressed: onTap,
       ),
+    );
+  }
+
+  Widget _buildMediaPreview(
+    BuildContext context,
+    Widget image,
+    VoidCallback onRemove,
+  ) {
+    return Stack(
+      children: [
+        Container(
+          width: 160,
+          margin: const EdgeInsets.only(right: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white10),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: image,
+          ),
+        ),
+        Positioned(
+          top: 8,
+          right: 20,
+          child: GestureDetector(
+            onTap: onRemove,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.6),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.close, color: Colors.white, size: 16),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

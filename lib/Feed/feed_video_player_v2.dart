@@ -247,7 +247,7 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
     return YoutubePlayerBuilder(
       player: YoutubePlayer(
         controller: _youtubeController!,
-        showVideoProgressIndicator: false,
+        showVideoProgressIndicator: true,
         bottomActions: const [],
         topActions: const [],
       ),

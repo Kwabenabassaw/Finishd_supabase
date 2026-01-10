@@ -59,6 +59,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
     super.initState();
 
     movieApi.loadGenres();
+
+    // Initialize social sync
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      debugPrint(
+        'ExploreScreen: Initializing social sync from Discover tab...',
+      );
+      Provider.of<MovieProvider>(context, listen: false).initializeSocialSync();
+    });
+
     fetchData();
   }
 
@@ -335,6 +344,29 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       ),
                     const SizedBox(height: 16),
 
+                    // Streaming Services Section
+                    if (_userPreferences != null &&
+                        _userPreferences!.streamingProviders.isNotEmpty) ...[
+                      _buildStreamingServicesSection(),
+                      const SizedBox(height: 12),
+                    ],
+
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        "Trending Communities",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    CommunityAvatarList(),
+
+                    const SizedBox(height: 16),
+
                     // Social Section: Friends Are Watching
                     if (provider.friendsWatching.isNotEmpty)
                       Padding(
@@ -378,30 +410,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
                           onSeeAllTap: null,
                         ),
                       ),
-
-                    // Streaming Services Section
-                    if (_userPreferences != null &&
-                        _userPreferences!.streamingProviders.isNotEmpty) ...[
-                      _buildStreamingServicesSection(),
-                      const SizedBox(height: 12),
-                    ],
-
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        "Featured Communities",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    CommunityAvatarList(),
-
-                    const SizedBox(height: 12), // Tightened gap
 
                     MovieSection(
                       title: "Discover",

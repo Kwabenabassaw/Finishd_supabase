@@ -22,130 +22,6 @@ export 'package:objectbox/objectbox.dart'; // so that callers only have to impor
 
 final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
-      id: const obx_int.IdUid(1, 2305464559775899733),
-      name: 'CachedFeedItem',
-      lastPropertyId: const obx_int.IdUid(31, 7780718996706113705),
-      flags: 0,
-      properties: <obx_int.ModelProperty>[
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(1, 2030110448348204875),
-            name: 'localId',
-            type: 6,
-            flags: 1),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(2, 6265441929106783762),
-            name: 'id',
-            type: 9,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(3, 292365231786896847),
-            name: 'tmdbId',
-            type: 6,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(4, 1965774991035548976),
-            name: 'mediaType',
-            type: 9,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(5, 1994003507970201802),
-            name: 'title',
-            type: 9,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(6, 3201059551979247326),
-            name: 'overview',
-            type: 9,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(9, 4301067571903412515),
-            name: 'youtubeKey',
-            type: 9,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(12, 4234103317627870858),
-            name: 'source',
-            type: 9,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(14, 7119203931168175594),
-            name: 'feedType',
-            type: 9,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(15, 956065914174313094),
-            name: 'position',
-            type: 6,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(17, 1472262738250591875),
-            name: 'cachedAt',
-            type: 10,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(20, 6966689232468569380),
-            name: 'genresJson',
-            type: 9,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(21, 6541873968033022058),
-            name: 'genres',
-            type: 30,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(22, 195713887359034703),
-            name: 'poster',
-            type: 9,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(23, 1484071192511307047),
-            name: 'backdrop',
-            type: 9,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(24, 4817454813962239214),
-            name: 'releaseDate',
-            type: 9,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(25, 1769285649005596844),
-            name: 'popularity',
-            type: 8,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(26, 1210924337403377674),
-            name: 'voteAverage',
-            type: 8,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(27, 2241293413637272079),
-            name: 'videoType',
-            type: 9,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(28, 6615221941200064135),
-            name: 'version',
-            type: 9,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(29, 2062157947869744104),
-            name: 'type',
-            type: 9,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(30, 4269811279036171550),
-            name: 'fallbackThumbnail',
-            type: 9,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(31, 7780718996706113705),
-            name: 'fallbackChannel',
-            type: 9,
-            flags: 0)
-      ],
-      relations: <obx_int.ModelRelation>[],
-      backlinks: <obx_int.ModelBacklink>[]),
-  obx_int.ModelEntity(
       id: const obx_int.IdUid(3, 7229925374468275782),
       name: 'SeenItem',
       lastPropertyId: const obx_int.IdUid(7, 3933606902895287817),
@@ -470,46 +346,6 @@ final _entities = <obx_int.ModelEntity>[
       relations: <obx_int.ModelRelation>[],
       backlinks: <obx_int.ModelBacklink>[]),
   obx_int.ModelEntity(
-      id: const obx_int.IdUid(8, 195582632628087964),
-      name: 'FeedPointer',
-      lastPropertyId: const obx_int.IdUid(6, 7201811634293036176),
-      flags: 0,
-      properties: <obx_int.ModelProperty>[
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(1, 5270207633331972996),
-            name: 'localId',
-            type: 6,
-            flags: 1),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(2, 746354880702542573),
-            name: 'feedType',
-            type: 9,
-            flags: 2080,
-            indexId: const obx_int.IdUid(7, 6431288059572128110)),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(3, 8084142039131415366),
-            name: 'version',
-            type: 9,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(4, 6133302295962675270),
-            name: 'itemCount',
-            type: 6,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(5, 3779814504332354261),
-            name: 'checkedAt',
-            type: 10,
-            flags: 0),
-        obx_int.ModelProperty(
-            id: const obx_int.IdUid(6, 7201811634293036176),
-            name: 'expiresAt',
-            type: 10,
-            flags: 0)
-      ],
-      relations: <obx_int.ModelRelation>[],
-      backlinks: <obx_int.ModelBacklink>[]),
-  obx_int.ModelEntity(
       id: const obx_int.IdUid(9, 3951725673702315505),
       name: 'FeedItemMeta',
       lastPropertyId: const obx_int.IdUid(4, 6966818340164713914),
@@ -580,7 +416,11 @@ obx_int.ModelDefinition getObjectBoxModel() {
       lastIndexId: const obx_int.IdUid(8, 3252746451004809340),
       lastRelationId: const obx_int.IdUid(0, 0),
       lastSequenceId: const obx_int.IdUid(0, 0),
-      retiredEntityUids: const [6259640920451398742],
+      retiredEntityUids: const [
+        6259640920451398742,
+        2305464559775899733,
+        195582632628087964
+      ],
       retiredIndexUids: const [5050873118745731097],
       retiredPropertyUids: const [
         4136116018475878467,
@@ -596,7 +436,36 @@ obx_int.ModelDefinition getObjectBoxModel() {
         8523805696224982320,
         5278573601173417051,
         8214048009090720490,
-        7996873072210705209
+        7996873072210705209,
+        2030110448348204875,
+        6265441929106783762,
+        292365231786896847,
+        1965774991035548976,
+        1994003507970201802,
+        3201059551979247326,
+        4301067571903412515,
+        4234103317627870858,
+        7119203931168175594,
+        956065914174313094,
+        1472262738250591875,
+        6966689232468569380,
+        6541873968033022058,
+        195713887359034703,
+        1484071192511307047,
+        4817454813962239214,
+        1769285649005596844,
+        1210924337403377674,
+        2241293413637272079,
+        6615221941200064135,
+        2062157947869744104,
+        4269811279036171550,
+        7780718996706113705,
+        5270207633331972996,
+        746354880702542573,
+        8084142039131415366,
+        6133302295962675270,
+        3779814504332354261,
+        7201811634293036176
       ],
       retiredRelationUids: const [],
       modelVersion: 5,
@@ -604,161 +473,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
       version: 1);
 
   final bindings = <Type, obx_int.EntityDefinition>{
-    CachedFeedItem: obx_int.EntityDefinition<CachedFeedItem>(
-        model: _entities[0],
-        toOneRelations: (CachedFeedItem object) => [],
-        toManyRelations: (CachedFeedItem object) => {},
-        getId: (CachedFeedItem object) => object.localId,
-        setId: (CachedFeedItem object, int id) {
-          object.localId = id;
-        },
-        objectToFB: (CachedFeedItem object, fb.Builder fbb) {
-          final idOffset = fbb.writeString(object.id);
-          final mediaTypeOffset = object.mediaType == null
-              ? null
-              : fbb.writeString(object.mediaType!);
-          final titleOffset = fbb.writeString(object.title);
-          final overviewOffset = object.overview == null
-              ? null
-              : fbb.writeString(object.overview!);
-          final youtubeKeyOffset = object.youtubeKey == null
-              ? null
-              : fbb.writeString(object.youtubeKey!);
-          final sourceOffset = fbb.writeString(object.source);
-          final feedTypeOffset = fbb.writeString(object.feedType);
-          final genresJsonOffset = object.genresJson == null
-              ? null
-              : fbb.writeString(object.genresJson!);
-          final genresOffset = fbb.writeList(
-              object.genres.map(fbb.writeString).toList(growable: false));
-          final posterOffset =
-              object.poster == null ? null : fbb.writeString(object.poster!);
-          final backdropOffset = object.backdrop == null
-              ? null
-              : fbb.writeString(object.backdrop!);
-          final releaseDateOffset = object.releaseDate == null
-              ? null
-              : fbb.writeString(object.releaseDate!);
-          final videoTypeOffset = object.videoType == null
-              ? null
-              : fbb.writeString(object.videoType!);
-          final versionOffset = fbb.writeString(object.version);
-          final typeOffset =
-              object.type == null ? null : fbb.writeString(object.type!);
-          final fallbackThumbnailOffset = object.fallbackThumbnail == null
-              ? null
-              : fbb.writeString(object.fallbackThumbnail!);
-          final fallbackChannelOffset = object.fallbackChannel == null
-              ? null
-              : fbb.writeString(object.fallbackChannel!);
-          fbb.startTable(32);
-          fbb.addInt64(0, object.localId);
-          fbb.addOffset(1, idOffset);
-          fbb.addInt64(2, object.tmdbId);
-          fbb.addOffset(3, mediaTypeOffset);
-          fbb.addOffset(4, titleOffset);
-          fbb.addOffset(5, overviewOffset);
-          fbb.addOffset(8, youtubeKeyOffset);
-          fbb.addOffset(11, sourceOffset);
-          fbb.addOffset(13, feedTypeOffset);
-          fbb.addInt64(14, object.position);
-          fbb.addInt64(16, object.cachedAt.millisecondsSinceEpoch);
-          fbb.addOffset(19, genresJsonOffset);
-          fbb.addOffset(20, genresOffset);
-          fbb.addOffset(21, posterOffset);
-          fbb.addOffset(22, backdropOffset);
-          fbb.addOffset(23, releaseDateOffset);
-          fbb.addFloat64(24, object.popularity);
-          fbb.addFloat64(25, object.voteAverage);
-          fbb.addOffset(26, videoTypeOffset);
-          fbb.addOffset(27, versionOffset);
-          fbb.addOffset(28, typeOffset);
-          fbb.addOffset(29, fallbackThumbnailOffset);
-          fbb.addOffset(30, fallbackChannelOffset);
-          fbb.finish(fbb.endTable());
-          return object.localId;
-        },
-        objectFromFB: (obx.Store store, ByteData fbData) {
-          final buffer = fb.BufferContext(fbData);
-          final rootOffset = buffer.derefObject(0);
-          final idParam = const fb.StringReader(asciiOptimization: true)
-              .vTableGet(buffer, rootOffset, 6, '');
-          final typeParam = const fb.StringReader(asciiOptimization: true)
-              .vTableGetNullable(buffer, rootOffset, 60);
-          final tmdbIdParam =
-              const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 8);
-          final mediaTypeParam = const fb.StringReader(asciiOptimization: true)
-              .vTableGetNullable(buffer, rootOffset, 10);
-          final titleParam = const fb.StringReader(asciiOptimization: true)
-              .vTableGet(buffer, rootOffset, 12, '');
-          final overviewParam = const fb.StringReader(asciiOptimization: true)
-              .vTableGetNullable(buffer, rootOffset, 14);
-          final posterParam = const fb.StringReader(asciiOptimization: true)
-              .vTableGetNullable(buffer, rootOffset, 46);
-          final backdropParam = const fb.StringReader(asciiOptimization: true)
-              .vTableGetNullable(buffer, rootOffset, 48);
-          final releaseDateParam =
-              const fb.StringReader(asciiOptimization: true)
-                  .vTableGetNullable(buffer, rootOffset, 50);
-          final popularityParam = const fb.Float64Reader()
-              .vTableGetNullable(buffer, rootOffset, 52);
-          final voteAverageParam = const fb.Float64Reader()
-              .vTableGetNullable(buffer, rootOffset, 54);
-          final fallbackThumbnailParam =
-              const fb.StringReader(asciiOptimization: true)
-                  .vTableGetNullable(buffer, rootOffset, 62);
-          final fallbackChannelParam =
-              const fb.StringReader(asciiOptimization: true)
-                  .vTableGetNullable(buffer, rootOffset, 64);
-          final youtubeKeyParam = const fb.StringReader(asciiOptimization: true)
-              .vTableGetNullable(buffer, rootOffset, 20);
-          final videoTypeParam = const fb.StringReader(asciiOptimization: true)
-              .vTableGetNullable(buffer, rootOffset, 56);
-          final sourceParam = const fb.StringReader(asciiOptimization: true)
-              .vTableGet(buffer, rootOffset, 26, '');
-          final feedTypeParam = const fb.StringReader(asciiOptimization: true)
-              .vTableGet(buffer, rootOffset, 30, '');
-          final positionParam =
-              const fb.Int64Reader().vTableGet(buffer, rootOffset, 32, 0);
-          final versionParam = const fb.StringReader(asciiOptimization: true)
-              .vTableGet(buffer, rootOffset, 58, '');
-          final cachedAtParam = DateTime.fromMillisecondsSinceEpoch(
-              const fb.Int64Reader().vTableGet(buffer, rootOffset, 36, 0));
-          final genresJsonParam = const fb.StringReader(asciiOptimization: true)
-              .vTableGetNullable(buffer, rootOffset, 42);
-          final object = CachedFeedItem(
-              id: idParam,
-              type: typeParam,
-              tmdbId: tmdbIdParam,
-              mediaType: mediaTypeParam,
-              title: titleParam,
-              overview: overviewParam,
-              poster: posterParam,
-              backdrop: backdropParam,
-              releaseDate: releaseDateParam,
-              popularity: popularityParam,
-              voteAverage: voteAverageParam,
-              fallbackThumbnail: fallbackThumbnailParam,
-              fallbackChannel: fallbackChannelParam,
-              youtubeKey: youtubeKeyParam,
-              videoType: videoTypeParam,
-              source: sourceParam,
-              feedType: feedTypeParam,
-              position: positionParam,
-              version: versionParam,
-              cachedAt: cachedAtParam,
-              genresJson: genresJsonParam)
-            ..localId =
-                const fb.Int64Reader().vTableGet(buffer, rootOffset, 4, 0)
-            ..genres = const fb.ListReader<String>(
-                    fb.StringReader(asciiOptimization: true),
-                    lazy: false)
-                .vTableGet(buffer, rootOffset, 44, []);
-
-          return object;
-        }),
     SeenItem: obx_int.EntityDefinition<SeenItem>(
-        model: _entities[1],
+        model: _entities[0],
         toOneRelations: (SeenItem object) => [],
         toManyRelations: (SeenItem object) => {},
         getId: (SeenItem object) => object.localId,
@@ -806,7 +522,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           return object;
         }),
     LocalConversation: obx_int.EntityDefinition<LocalConversation>(
-        model: _entities[2],
+        model: _entities[1],
         toOneRelations: (LocalConversation object) => [],
         toManyRelations: (LocalConversation object) => {},
         getId: (LocalConversation object) => object.localId,
@@ -911,7 +627,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           return object;
         }),
     LocalMessage: obx_int.EntityDefinition<LocalMessage>(
-        model: _entities[3],
+        model: _entities[2],
         toOneRelations: (LocalMessage object) => [],
         toManyRelations: (LocalMessage object) => {},
         getId: (LocalMessage object) => object.localId,
@@ -1054,7 +770,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           return object;
         }),
     LocalParticipant: obx_int.EntityDefinition<LocalParticipant>(
-        model: _entities[4],
+        model: _entities[3],
         toOneRelations: (LocalParticipant object) => [],
         toManyRelations: (LocalParticipant object) => {},
         getId: (LocalParticipant object) => object.localId,
@@ -1116,7 +832,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           return object;
         }),
     PendingMessageQueue: obx_int.EntityDefinition<PendingMessageQueue>(
-        model: _entities[5],
+        model: _entities[4],
         toOneRelations: (PendingMessageQueue object) => [],
         toManyRelations: (PendingMessageQueue object) => {},
         getId: (PendingMessageQueue object) => object.localId,
@@ -1157,56 +873,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
 
           return object;
         }),
-    FeedPointer: obx_int.EntityDefinition<FeedPointer>(
-        model: _entities[6],
-        toOneRelations: (FeedPointer object) => [],
-        toManyRelations: (FeedPointer object) => {},
-        getId: (FeedPointer object) => object.localId,
-        setId: (FeedPointer object, int id) {
-          object.localId = id;
-        },
-        objectToFB: (FeedPointer object, fb.Builder fbb) {
-          final feedTypeOffset = fbb.writeString(object.feedType);
-          final versionOffset = fbb.writeString(object.version);
-          fbb.startTable(7);
-          fbb.addInt64(0, object.localId);
-          fbb.addOffset(1, feedTypeOffset);
-          fbb.addOffset(2, versionOffset);
-          fbb.addInt64(3, object.itemCount);
-          fbb.addInt64(4, object.checkedAt.millisecondsSinceEpoch);
-          fbb.addInt64(5, object.expiresAt?.millisecondsSinceEpoch);
-          fbb.finish(fbb.endTable());
-          return object.localId;
-        },
-        objectFromFB: (obx.Store store, ByteData fbData) {
-          final buffer = fb.BufferContext(fbData);
-          final rootOffset = buffer.derefObject(0);
-          final expiresAtValue =
-              const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 14);
-          final feedTypeParam = const fb.StringReader(asciiOptimization: true)
-              .vTableGet(buffer, rootOffset, 6, '');
-          final versionParam = const fb.StringReader(asciiOptimization: true)
-              .vTableGet(buffer, rootOffset, 8, '');
-          final itemCountParam =
-              const fb.Int64Reader().vTableGet(buffer, rootOffset, 10, 0);
-          final checkedAtParam = DateTime.fromMillisecondsSinceEpoch(
-              const fb.Int64Reader().vTableGet(buffer, rootOffset, 12, 0));
-          final expiresAtParam = expiresAtValue == null
-              ? null
-              : DateTime.fromMillisecondsSinceEpoch(expiresAtValue);
-          final object = FeedPointer(
-              feedType: feedTypeParam,
-              version: versionParam,
-              itemCount: itemCountParam,
-              checkedAt: checkedAtParam,
-              expiresAt: expiresAtParam)
-            ..localId =
-                const fb.Int64Reader().vTableGet(buffer, rootOffset, 4, 0);
-
-          return object;
-        }),
     FeedItemMeta: obx_int.EntityDefinition<FeedItemMeta>(
-        model: _entities[7],
+        model: _entities[5],
         toOneRelations: (FeedItemMeta object) => [],
         toManyRelations: (FeedItemMeta object) => {},
         getId: (FeedItemMeta object) => object.localId,
@@ -1246,378 +914,256 @@ obx_int.ModelDefinition getObjectBoxModel() {
   return obx_int.ModelDefinition(model, bindings);
 }
 
-/// [CachedFeedItem] entity fields to define ObjectBox queries.
-class CachedFeedItem_ {
-  /// see [CachedFeedItem.localId]
-  static final localId =
-      obx.QueryIntegerProperty<CachedFeedItem>(_entities[0].properties[0]);
-
-  /// see [CachedFeedItem.id]
-  static final id =
-      obx.QueryStringProperty<CachedFeedItem>(_entities[0].properties[1]);
-
-  /// see [CachedFeedItem.tmdbId]
-  static final tmdbId =
-      obx.QueryIntegerProperty<CachedFeedItem>(_entities[0].properties[2]);
-
-  /// see [CachedFeedItem.mediaType]
-  static final mediaType =
-      obx.QueryStringProperty<CachedFeedItem>(_entities[0].properties[3]);
-
-  /// see [CachedFeedItem.title]
-  static final title =
-      obx.QueryStringProperty<CachedFeedItem>(_entities[0].properties[4]);
-
-  /// see [CachedFeedItem.overview]
-  static final overview =
-      obx.QueryStringProperty<CachedFeedItem>(_entities[0].properties[5]);
-
-  /// see [CachedFeedItem.youtubeKey]
-  static final youtubeKey =
-      obx.QueryStringProperty<CachedFeedItem>(_entities[0].properties[6]);
-
-  /// see [CachedFeedItem.source]
-  static final source =
-      obx.QueryStringProperty<CachedFeedItem>(_entities[0].properties[7]);
-
-  /// see [CachedFeedItem.feedType]
-  static final feedType =
-      obx.QueryStringProperty<CachedFeedItem>(_entities[0].properties[8]);
-
-  /// see [CachedFeedItem.position]
-  static final position =
-      obx.QueryIntegerProperty<CachedFeedItem>(_entities[0].properties[9]);
-
-  /// see [CachedFeedItem.cachedAt]
-  static final cachedAt =
-      obx.QueryDateProperty<CachedFeedItem>(_entities[0].properties[10]);
-
-  /// see [CachedFeedItem.genresJson]
-  static final genresJson =
-      obx.QueryStringProperty<CachedFeedItem>(_entities[0].properties[11]);
-
-  /// see [CachedFeedItem.genres]
-  static final genres = obx.QueryStringVectorProperty<CachedFeedItem>(
-      _entities[0].properties[12]);
-
-  /// see [CachedFeedItem.poster]
-  static final poster =
-      obx.QueryStringProperty<CachedFeedItem>(_entities[0].properties[13]);
-
-  /// see [CachedFeedItem.backdrop]
-  static final backdrop =
-      obx.QueryStringProperty<CachedFeedItem>(_entities[0].properties[14]);
-
-  /// see [CachedFeedItem.releaseDate]
-  static final releaseDate =
-      obx.QueryStringProperty<CachedFeedItem>(_entities[0].properties[15]);
-
-  /// see [CachedFeedItem.popularity]
-  static final popularity =
-      obx.QueryDoubleProperty<CachedFeedItem>(_entities[0].properties[16]);
-
-  /// see [CachedFeedItem.voteAverage]
-  static final voteAverage =
-      obx.QueryDoubleProperty<CachedFeedItem>(_entities[0].properties[17]);
-
-  /// see [CachedFeedItem.videoType]
-  static final videoType =
-      obx.QueryStringProperty<CachedFeedItem>(_entities[0].properties[18]);
-
-  /// see [CachedFeedItem.version]
-  static final version =
-      obx.QueryStringProperty<CachedFeedItem>(_entities[0].properties[19]);
-
-  /// see [CachedFeedItem.type]
-  static final type =
-      obx.QueryStringProperty<CachedFeedItem>(_entities[0].properties[20]);
-
-  /// see [CachedFeedItem.fallbackThumbnail]
-  static final fallbackThumbnail =
-      obx.QueryStringProperty<CachedFeedItem>(_entities[0].properties[21]);
-
-  /// see [CachedFeedItem.fallbackChannel]
-  static final fallbackChannel =
-      obx.QueryStringProperty<CachedFeedItem>(_entities[0].properties[22]);
-}
-
 /// [SeenItem] entity fields to define ObjectBox queries.
 class SeenItem_ {
   /// see [SeenItem.localId]
   static final localId =
-      obx.QueryIntegerProperty<SeenItem>(_entities[1].properties[0]);
+      obx.QueryIntegerProperty<SeenItem>(_entities[0].properties[0]);
 
   /// see [SeenItem.itemId]
   static final itemId =
-      obx.QueryStringProperty<SeenItem>(_entities[1].properties[1]);
+      obx.QueryStringProperty<SeenItem>(_entities[0].properties[1]);
 
   /// see [SeenItem.seenAt]
   static final seenAt =
-      obx.QueryDateProperty<SeenItem>(_entities[1].properties[2]);
+      obx.QueryDateProperty<SeenItem>(_entities[0].properties[2]);
 
   /// see [SeenItem.suppressed]
   static final suppressed =
-      obx.QueryBooleanProperty<SeenItem>(_entities[1].properties[3]);
+      obx.QueryBooleanProperty<SeenItem>(_entities[0].properties[3]);
 
   /// see [SeenItem.lastSeenAt]
   static final lastSeenAt =
-      obx.QueryDateProperty<SeenItem>(_entities[1].properties[4]);
+      obx.QueryDateProperty<SeenItem>(_entities[0].properties[4]);
 
   /// see [SeenItem.viewDurationMs]
   static final viewDurationMs =
-      obx.QueryIntegerProperty<SeenItem>(_entities[1].properties[5]);
+      obx.QueryIntegerProperty<SeenItem>(_entities[0].properties[5]);
 
   /// see [SeenItem.liked]
   static final liked =
-      obx.QueryBooleanProperty<SeenItem>(_entities[1].properties[6]);
+      obx.QueryBooleanProperty<SeenItem>(_entities[0].properties[6]);
 }
 
 /// [LocalConversation] entity fields to define ObjectBox queries.
 class LocalConversation_ {
   /// see [LocalConversation.localId]
   static final localId =
-      obx.QueryIntegerProperty<LocalConversation>(_entities[2].properties[0]);
+      obx.QueryIntegerProperty<LocalConversation>(_entities[1].properties[0]);
 
   /// see [LocalConversation.firestoreId]
   static final firestoreId =
-      obx.QueryStringProperty<LocalConversation>(_entities[2].properties[1]);
+      obx.QueryStringProperty<LocalConversation>(_entities[1].properties[1]);
 
   /// see [LocalConversation.participantsJson]
   static final participantsJson =
-      obx.QueryStringProperty<LocalConversation>(_entities[2].properties[2]);
+      obx.QueryStringProperty<LocalConversation>(_entities[1].properties[2]);
 
   /// see [LocalConversation.lastMessageText]
   static final lastMessageText =
-      obx.QueryStringProperty<LocalConversation>(_entities[2].properties[3]);
+      obx.QueryStringProperty<LocalConversation>(_entities[1].properties[3]);
 
   /// see [LocalConversation.lastMessageType]
   static final lastMessageType =
-      obx.QueryStringProperty<LocalConversation>(_entities[2].properties[4]);
+      obx.QueryStringProperty<LocalConversation>(_entities[1].properties[4]);
 
   /// see [LocalConversation.lastMessageSenderId]
   static final lastMessageSenderId =
-      obx.QueryStringProperty<LocalConversation>(_entities[2].properties[5]);
+      obx.QueryStringProperty<LocalConversation>(_entities[1].properties[5]);
 
   /// see [LocalConversation.lastMessageAt]
   static final lastMessageAt =
-      obx.QueryDateProperty<LocalConversation>(_entities[2].properties[6]);
+      obx.QueryDateProperty<LocalConversation>(_entities[1].properties[6]);
 
   /// see [LocalConversation.lastSyncedAt]
   static final lastSyncedAt =
-      obx.QueryDateProperty<LocalConversation>(_entities[2].properties[7]);
+      obx.QueryDateProperty<LocalConversation>(_entities[1].properties[7]);
 
   /// see [LocalConversation.unreadCount]
   static final unreadCount =
-      obx.QueryIntegerProperty<LocalConversation>(_entities[2].properties[8]);
+      obx.QueryIntegerProperty<LocalConversation>(_entities[1].properties[8]);
 
   /// see [LocalConversation.isGroup]
   static final isGroup =
-      obx.QueryBooleanProperty<LocalConversation>(_entities[2].properties[9]);
+      obx.QueryBooleanProperty<LocalConversation>(_entities[1].properties[9]);
 
   /// see [LocalConversation.groupName]
   static final groupName =
-      obx.QueryStringProperty<LocalConversation>(_entities[2].properties[10]);
+      obx.QueryStringProperty<LocalConversation>(_entities[1].properties[10]);
 
   /// see [LocalConversation.groupImageUrl]
   static final groupImageUrl =
-      obx.QueryStringProperty<LocalConversation>(_entities[2].properties[11]);
+      obx.QueryStringProperty<LocalConversation>(_entities[1].properties[11]);
 
   /// see [LocalConversation.createdAt]
   static final createdAt =
-      obx.QueryDateProperty<LocalConversation>(_entities[2].properties[12]);
+      obx.QueryDateProperty<LocalConversation>(_entities[1].properties[12]);
 
   /// see [LocalConversation.participants]
   static final participants = obx.QueryStringVectorProperty<LocalConversation>(
-      _entities[2].properties[13]);
+      _entities[1].properties[13]);
 }
 
 /// [LocalMessage] entity fields to define ObjectBox queries.
 class LocalMessage_ {
   /// see [LocalMessage.localId]
   static final localId =
-      obx.QueryIntegerProperty<LocalMessage>(_entities[3].properties[0]);
+      obx.QueryIntegerProperty<LocalMessage>(_entities[2].properties[0]);
 
   /// see [LocalMessage.firestoreId]
   static final firestoreId =
-      obx.QueryStringProperty<LocalMessage>(_entities[3].properties[1]);
+      obx.QueryStringProperty<LocalMessage>(_entities[2].properties[1]);
 
   /// see [LocalMessage.conversationId]
   static final conversationId =
-      obx.QueryStringProperty<LocalMessage>(_entities[3].properties[2]);
+      obx.QueryStringProperty<LocalMessage>(_entities[2].properties[2]);
 
   /// see [LocalMessage.senderId]
   static final senderId =
-      obx.QueryStringProperty<LocalMessage>(_entities[3].properties[3]);
+      obx.QueryStringProperty<LocalMessage>(_entities[2].properties[3]);
 
   /// see [LocalMessage.receiverId]
   static final receiverId =
-      obx.QueryStringProperty<LocalMessage>(_entities[3].properties[4]);
+      obx.QueryStringProperty<LocalMessage>(_entities[2].properties[4]);
 
   /// see [LocalMessage.content]
   static final content =
-      obx.QueryStringProperty<LocalMessage>(_entities[3].properties[5]);
+      obx.QueryStringProperty<LocalMessage>(_entities[2].properties[5]);
 
   /// see [LocalMessage.type]
   static final type =
-      obx.QueryStringProperty<LocalMessage>(_entities[3].properties[6]);
+      obx.QueryStringProperty<LocalMessage>(_entities[2].properties[6]);
 
   /// see [LocalMessage.mediaUrl]
   static final mediaUrl =
-      obx.QueryStringProperty<LocalMessage>(_entities[3].properties[7]);
+      obx.QueryStringProperty<LocalMessage>(_entities[2].properties[7]);
 
   /// see [LocalMessage.movieId]
   static final movieId =
-      obx.QueryStringProperty<LocalMessage>(_entities[3].properties[8]);
+      obx.QueryStringProperty<LocalMessage>(_entities[2].properties[8]);
 
   /// see [LocalMessage.movieTitle]
   static final movieTitle =
-      obx.QueryStringProperty<LocalMessage>(_entities[3].properties[9]);
+      obx.QueryStringProperty<LocalMessage>(_entities[2].properties[9]);
 
   /// see [LocalMessage.moviePoster]
   static final moviePoster =
-      obx.QueryStringProperty<LocalMessage>(_entities[3].properties[10]);
+      obx.QueryStringProperty<LocalMessage>(_entities[2].properties[10]);
 
   /// see [LocalMessage.mediaType]
   static final mediaType =
-      obx.QueryStringProperty<LocalMessage>(_entities[3].properties[11]);
+      obx.QueryStringProperty<LocalMessage>(_entities[2].properties[11]);
 
   /// see [LocalMessage.videoId]
   static final videoId =
-      obx.QueryStringProperty<LocalMessage>(_entities[3].properties[12]);
+      obx.QueryStringProperty<LocalMessage>(_entities[2].properties[12]);
 
   /// see [LocalMessage.videoTitle]
   static final videoTitle =
-      obx.QueryStringProperty<LocalMessage>(_entities[3].properties[13]);
+      obx.QueryStringProperty<LocalMessage>(_entities[2].properties[13]);
 
   /// see [LocalMessage.videoThumbnail]
   static final videoThumbnail =
-      obx.QueryStringProperty<LocalMessage>(_entities[3].properties[14]);
+      obx.QueryStringProperty<LocalMessage>(_entities[2].properties[14]);
 
   /// see [LocalMessage.videoChannel]
   static final videoChannel =
-      obx.QueryStringProperty<LocalMessage>(_entities[3].properties[15]);
+      obx.QueryStringProperty<LocalMessage>(_entities[2].properties[15]);
 
   /// see [LocalMessage.createdAt]
   static final createdAt =
-      obx.QueryDateProperty<LocalMessage>(_entities[3].properties[16]);
+      obx.QueryDateProperty<LocalMessage>(_entities[2].properties[16]);
 
   /// see [LocalMessage.status]
   static final status =
-      obx.QueryIntegerProperty<LocalMessage>(_entities[3].properties[17]);
+      obx.QueryIntegerProperty<LocalMessage>(_entities[2].properties[17]);
 
   /// see [LocalMessage.retryCount]
   static final retryCount =
-      obx.QueryIntegerProperty<LocalMessage>(_entities[3].properties[18]);
+      obx.QueryIntegerProperty<LocalMessage>(_entities[2].properties[18]);
 
   /// see [LocalMessage.isPending]
   static final isPending =
-      obx.QueryBooleanProperty<LocalMessage>(_entities[3].properties[19]);
+      obx.QueryBooleanProperty<LocalMessage>(_entities[2].properties[19]);
 
   /// see [LocalMessage.isRead]
   static final isRead =
-      obx.QueryBooleanProperty<LocalMessage>(_entities[3].properties[20]);
+      obx.QueryBooleanProperty<LocalMessage>(_entities[2].properties[20]);
 }
 
 /// [LocalParticipant] entity fields to define ObjectBox queries.
 class LocalParticipant_ {
   /// see [LocalParticipant.localId]
   static final localId =
-      obx.QueryIntegerProperty<LocalParticipant>(_entities[4].properties[0]);
+      obx.QueryIntegerProperty<LocalParticipant>(_entities[3].properties[0]);
 
   /// see [LocalParticipant.conversationId]
   static final conversationId =
-      obx.QueryStringProperty<LocalParticipant>(_entities[4].properties[1]);
+      obx.QueryStringProperty<LocalParticipant>(_entities[3].properties[1]);
 
   /// see [LocalParticipant.uid]
   static final uid =
-      obx.QueryStringProperty<LocalParticipant>(_entities[4].properties[2]);
+      obx.QueryStringProperty<LocalParticipant>(_entities[3].properties[2]);
 
   /// see [LocalParticipant.username]
   static final username =
-      obx.QueryStringProperty<LocalParticipant>(_entities[4].properties[3]);
+      obx.QueryStringProperty<LocalParticipant>(_entities[3].properties[3]);
 
   /// see [LocalParticipant.profileImage]
   static final profileImage =
-      obx.QueryStringProperty<LocalParticipant>(_entities[4].properties[4]);
+      obx.QueryStringProperty<LocalParticipant>(_entities[3].properties[4]);
 
   /// see [LocalParticipant.lastSeenAt]
   static final lastSeenAt =
-      obx.QueryDateProperty<LocalParticipant>(_entities[4].properties[5]);
+      obx.QueryDateProperty<LocalParticipant>(_entities[3].properties[5]);
 
   /// see [LocalParticipant.isTyping]
   static final isTyping =
-      obx.QueryBooleanProperty<LocalParticipant>(_entities[4].properties[6]);
+      obx.QueryBooleanProperty<LocalParticipant>(_entities[3].properties[6]);
 
   /// see [LocalParticipant.isOnline]
   static final isOnline =
-      obx.QueryBooleanProperty<LocalParticipant>(_entities[4].properties[7]);
+      obx.QueryBooleanProperty<LocalParticipant>(_entities[3].properties[7]);
 }
 
 /// [PendingMessageQueue] entity fields to define ObjectBox queries.
 class PendingMessageQueue_ {
   /// see [PendingMessageQueue.localId]
   static final localId =
-      obx.QueryIntegerProperty<PendingMessageQueue>(_entities[5].properties[0]);
+      obx.QueryIntegerProperty<PendingMessageQueue>(_entities[4].properties[0]);
 
   /// see [PendingMessageQueue.messageLocalId]
   static final messageLocalId =
-      obx.QueryIntegerProperty<PendingMessageQueue>(_entities[5].properties[1]);
+      obx.QueryIntegerProperty<PendingMessageQueue>(_entities[4].properties[1]);
 
   /// see [PendingMessageQueue.queuedAt]
   static final queuedAt =
-      obx.QueryDateProperty<PendingMessageQueue>(_entities[5].properties[2]);
+      obx.QueryDateProperty<PendingMessageQueue>(_entities[4].properties[2]);
 
   /// see [PendingMessageQueue.retryCount]
   static final retryCount =
-      obx.QueryIntegerProperty<PendingMessageQueue>(_entities[5].properties[3]);
+      obx.QueryIntegerProperty<PendingMessageQueue>(_entities[4].properties[3]);
 
   /// see [PendingMessageQueue.lastError]
   static final lastError =
-      obx.QueryStringProperty<PendingMessageQueue>(_entities[5].properties[4]);
-}
-
-/// [FeedPointer] entity fields to define ObjectBox queries.
-class FeedPointer_ {
-  /// see [FeedPointer.localId]
-  static final localId =
-      obx.QueryIntegerProperty<FeedPointer>(_entities[6].properties[0]);
-
-  /// see [FeedPointer.feedType]
-  static final feedType =
-      obx.QueryStringProperty<FeedPointer>(_entities[6].properties[1]);
-
-  /// see [FeedPointer.version]
-  static final version =
-      obx.QueryStringProperty<FeedPointer>(_entities[6].properties[2]);
-
-  /// see [FeedPointer.itemCount]
-  static final itemCount =
-      obx.QueryIntegerProperty<FeedPointer>(_entities[6].properties[3]);
-
-  /// see [FeedPointer.checkedAt]
-  static final checkedAt =
-      obx.QueryDateProperty<FeedPointer>(_entities[6].properties[4]);
-
-  /// see [FeedPointer.expiresAt]
-  static final expiresAt =
-      obx.QueryDateProperty<FeedPointer>(_entities[6].properties[5]);
+      obx.QueryStringProperty<PendingMessageQueue>(_entities[4].properties[4]);
 }
 
 /// [FeedItemMeta] entity fields to define ObjectBox queries.
 class FeedItemMeta_ {
   /// see [FeedItemMeta.localId]
   static final localId =
-      obx.QueryIntegerProperty<FeedItemMeta>(_entities[7].properties[0]);
+      obx.QueryIntegerProperty<FeedItemMeta>(_entities[5].properties[0]);
 
   /// see [FeedItemMeta.id]
   static final id =
-      obx.QueryStringProperty<FeedItemMeta>(_entities[7].properties[1]);
+      obx.QueryStringProperty<FeedItemMeta>(_entities[5].properties[1]);
 
   /// see [FeedItemMeta.publishedAt]
   static final publishedAt =
-      obx.QueryDateProperty<FeedItemMeta>(_entities[7].properties[2]);
+      obx.QueryDateProperty<FeedItemMeta>(_entities[5].properties[2]);
 
   /// see [FeedItemMeta.baseScore]
   static final baseScore =
-      obx.QueryDoubleProperty<FeedItemMeta>(_entities[7].properties[3]);
+      obx.QueryDoubleProperty<FeedItemMeta>(_entities[5].properties[3]);
 }

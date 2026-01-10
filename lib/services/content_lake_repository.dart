@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:objectbox/objectbox.dart';
 import '../db/objectbox/feed_entities.dart';
 import '../db/objectbox/objectbox_store.dart';
 import '../objectbox.g.dart';
 import 'api_client.dart';
+import 'movie_list_service.dart';
+import 'user_preferences_service.dart';
 
 /// Content Lake Repository - Offline-first data layer for Supabase-based feeds.
 ///
@@ -19,9 +22,15 @@ import 'api_client.dart';
 class ContentLakeRepository {
   final ApiClient _apiClient = ApiClient();
 
-  late final Box<CachedFeedItem> _feedBox;
-  late final Box<FeedPointer> _pointerBox;
+  // No boxes for feed items or pointers anymore - we use in-memory cache
   late final Box<SeenItem> _seenBox;
+
+  // In-memory cache for feed items and pointers
+  final Map<String, List<CachedFeedItem>> _memoryCache = {};
+  final Map<String, FeedPointer> _pointerCache = {};
+
+  // Stream controller to broadcast feed updates to listeners
+  final _feedUpdateController = StreamController<String>.broadcast();
 
   bool _initialized = false;
   Timer? _pollTimer;
@@ -44,6 +53,18 @@ class ContentLakeRepository {
   // =========================================================================
   SessionProfile sessionProfile = SessionProfile();
 
+  // User's preferred genres (loaded from Firestore, cached locally)
+  List<String> _userGenres = [
+    'action',
+    'scifi',
+    'drama',
+  ]; // Defaults until loaded
+  List<String> get userGenres => _userGenres;
+
+  // List-derived genres with weights (from finished/favorites/watchlist)
+  // Key = genre name (lowercase), Value = weight (higher = stronger signal)
+  Map<String, double> _listDerivedGenres = {};
+
   void updateSessionProfile({String? dominantGenre}) {
     if (dominantGenre != null) {
       sessionProfile.dominantGenre = dominantGenre;
@@ -64,12 +85,101 @@ class ContentLakeRepository {
     if (_initialized) return;
 
     final store = ObjectBoxStore.instance.store;
-    _feedBox = store.box<CachedFeedItem>();
-    _pointerBox = store.box<FeedPointer>();
+    // We only keep the seen items in the local database
     _seenBox = store.box<SeenItem>();
     _initialized = true;
 
-    print('[ContentLakeRepo] Initialized');
+    print('[ContentLakeRepo] Initialized (In-Memory Feed)');
+  }
+
+  /// Load user's preferred genres from Firestore.
+  /// Call this during provider initialization.
+  Future<void> loadUserGenres() async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) {
+        print('[ContentLakeRepo] No user logged in, using default genres');
+        return;
+      }
+
+      final prefsService = UserPreferencesService();
+      final prefs = await prefsService.getUserPreferences(userId);
+
+      if (prefs != null && prefs.selectedGenres.isNotEmpty) {
+        // Convert to lowercase for matching with feed item genres
+        _userGenres = prefs.selectedGenres.map((g) => g.toLowerCase()).toList();
+        print('[ContentLakeRepo] ✅ Loaded user genres: $_userGenres');
+      } else {
+        print('[ContentLakeRepo] No user preferences, using defaults');
+      }
+    } catch (e) {
+      print('[ContentLakeRepo] Error loading user genres: $e');
+      // Keep defaults on error
+    }
+  }
+
+  /// Load genres derived from user's lists (finished, favorites, watchlist).
+  /// Call this during provider initialization.
+  Future<void> loadListDerivedGenres() async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) {
+        print('[ContentLakeRepo] No user logged in, skipping list genres');
+        return;
+      }
+
+      final movieListService = MovieListService();
+
+      // Fetch items from each list with different weights
+      // Finished = highest signal (user completed)
+      // Favorites = strong signal (explicit preference)
+      // Watchlist = intent signal (wants to watch)
+      final finished = await movieListService.getMoviesFromList(
+        userId,
+        'finished',
+      );
+      final favorites = await movieListService.getMoviesFromList(
+        userId,
+        'favorites',
+      );
+      final watchlist = await movieListService.getMoviesFromList(
+        userId,
+        'watchlist',
+      );
+
+      final genreWeights = <String, double>{};
+
+      // Helper to add genre with weight
+      void addGenre(String genreStr, double weight) {
+        if (genreStr.isEmpty) return;
+        // Handle comma-separated genres
+        final genres = genreStr.split(',').map((g) => g.trim().toLowerCase());
+        for (final genre in genres) {
+          if (genre.isNotEmpty) {
+            genreWeights[genre] = (genreWeights[genre] ?? 0) + weight;
+          }
+        }
+      }
+
+      // Weight: Finished = 1.4, Favorites = 1.3, Watchlist = 1.15
+      for (final item in finished) {
+        addGenre(item.genre, 1.4);
+      }
+      for (final item in favorites) {
+        addGenre(item.genre, 1.3);
+      }
+      for (final item in watchlist) {
+        addGenre(item.genre, 1.15);
+      }
+
+      _listDerivedGenres = genreWeights;
+      print(
+        '[ContentLakeRepo] ✅ Loaded list-derived genres: $_listDerivedGenres',
+      );
+    } catch (e) {
+      print('[ContentLakeRepo] Error loading list genres: $e');
+      // Keep empty on error
+    }
   }
 
   // =========================================================================
@@ -82,39 +192,22 @@ class ContentLakeRepository {
   Stream<List<CachedFeedItem>> watchFeed(String feedType) async* {
     if (!_initialized) initialize();
 
-    if (feedType == 'for_you') {
-      // "For You" is a virtual feed that depends on EVERYTHING.
-      // We yield the initial build, then yield again whenever ANY part of the feedBox changes.
-      yield getVisibleFeed(feedType);
+    // Initial emission
+    yield getVisibleFeed(feedType);
 
-      yield* _feedBox.query().build().stream().map(
-        (_) => getVisibleFeed(feedType),
-      );
-    } else {
-      final query = _feedBox
-          .query(CachedFeedItem_.feedType.equals(feedType))
-          .order(CachedFeedItem_.position)
-          .build();
-
-      // Initial emission
-      yield getVisibleFeed(feedType);
-
-      // Watch for changes in the database for this specific type
-      yield* query.stream().map((_) => getVisibleFeed(feedType));
-    }
+    // Watch for changes in the in-memory cache for this specific type
+    yield* _feedUpdateController.stream
+        .where((type) => type == feedType || feedType == 'for_you')
+        .map((_) => getVisibleFeed(feedType));
   }
 
   /// Get current cached items (synchronous, for immediate display).
   List<CachedFeedItem> getCachedFeed(String feedType) {
     if (!_initialized) initialize();
 
-    final items = _feedBox
-        .query(CachedFeedItem_.feedType.equals(feedType))
-        .order(CachedFeedItem_.position)
-        .build()
-        .find();
+    final items = _memoryCache[feedType] ?? [];
     print(
-      '[ContentLakeRepo] 📦 getCachedFeed($feedType): ${items.length} items',
+      '[ContentLakeRepo] 📦 getCachedFeed($feedType): ${items.length} items (In-Memory)',
     );
     return items;
   }
@@ -124,7 +217,7 @@ class ContentLakeRepository {
     return getCachedFeed(feedType).isNotEmpty;
   }
 
-  /// Get visible feed (excludes suppressed items).
+  /// Get visible feed (excludes suppressed items and items without youtubeKey).
   List<CachedFeedItem> getVisibleFeed(String feedType) {
     if (!_initialized) initialize();
 
@@ -133,9 +226,12 @@ class ContentLakeRepository {
     }
 
     final suppressed = _getSuppressedIds();
-    return getCachedFeed(
-      feedType,
-    ).where((i) => !suppressed.contains(i.id)).toList();
+    return getCachedFeed(feedType)
+        .where((i) => !suppressed.contains(i.id))
+        .where(
+          (i) => i.youtubeKey != null && i.youtubeKey!.isNotEmpty,
+        ) // Bug fix: filter out unplayable items
+        .toList();
   }
 
   /// Start background sync for a feed type.
@@ -175,7 +271,7 @@ class ContentLakeRepository {
     if (!_initialized) initialize();
 
     // Clear local pointer to force fetch
-    _pointerBox.query(FeedPointer_.feedType.equals(feedType)).build().remove();
+    _pointerCache.remove(feedType);
 
     await _syncFeed(feedType);
   }
@@ -184,11 +280,7 @@ class ContentLakeRepository {
   String? getCurrentVersion(String feedType) {
     if (!_initialized) initialize();
 
-    final pointer = _pointerBox
-        .query(FeedPointer_.feedType.equals(feedType))
-        .build()
-        .findFirst();
-    return pointer?.version;
+    return _pointerCache[feedType]?.version;
   }
 
   // =========================================================================
@@ -211,14 +303,22 @@ class ContentLakeRepository {
         return;
       }
 
-      final serverPointer = jsonDecode(pointerRes.body) as Map<String, dynamic>;
-      final serverVersion = serverPointer['version'] as String;
+      // Bug fix: wrap JSON parsing in try-catch
+      late final Map<String, dynamic> serverPointer;
+      try {
+        serverPointer = jsonDecode(pointerRes.body) as Map<String, dynamic>;
+      } catch (e) {
+        print('[ContentLakeRepo] Invalid pointer JSON: $e');
+        return;
+      }
+      final serverVersion = serverPointer['version'] as String? ?? '';
+      if (serverVersion.isEmpty) {
+        print('[ContentLakeRepo] Missing version in pointer');
+        return;
+      }
 
       // 2. Compare with local pointer
-      final localPointer = _pointerBox
-          .query(FeedPointer_.feedType.equals(feedType))
-          .build()
-          .findFirst();
+      final localPointer = _pointerCache[feedType];
 
       if (localPointer?.version == serverVersion) {
         print('[ContentLakeRepo] Already up to date ($serverVersion)');
@@ -246,7 +346,14 @@ Action: Downloading feed...
         return;
       }
 
-      final feedData = jsonDecode(feedRes.body) as Map<String, dynamic>;
+      // Bug fix: wrap JSON parsing in try-catch
+      late final Map<String, dynamic> feedData;
+      try {
+        feedData = jsonDecode(feedRes.body) as Map<String, dynamic>;
+      } catch (e) {
+        print('[ContentLakeRepo] Invalid feed JSON: $e');
+        return;
+      }
       final itemsList = feedData['items'] as List? ?? [];
 
       final items = itemsList.asMap().entries.map((entry) {
@@ -279,11 +386,8 @@ Action: Downloading feed...
     List<CachedFeedItem> items,
     Map<String, dynamic> pointerData,
   ) async {
-    // Clear old items for this feed type
-    _feedBox.query(CachedFeedItem_.feedType.equals(feedType)).build().remove();
-
-    // Insert new items
-    _feedBox.putMany(items);
+    // Update memory items
+    _memoryCache[feedType] = items;
 
     // Parse expiry time
     DateTime? expiresAt;
@@ -295,20 +399,20 @@ Action: Downloading feed...
       }
     }
 
-    // Update pointer
-    _pointerBox.query(FeedPointer_.feedType.equals(feedType)).build().remove();
-    _pointerBox.put(
-      FeedPointer(
-        feedType: feedType,
-        version: version,
-        itemCount: items.length,
-        checkedAt: DateTime.now(),
-        expiresAt: expiresAt,
-      ),
+    // Update memory pointer
+    _pointerCache[feedType] = FeedPointer(
+      feedType: feedType,
+      version: version,
+      itemCount: items.length,
+      checkedAt: DateTime.now(),
+      expiresAt: expiresAt,
     );
 
+    // Notify listeners that this feed has updated
+    _feedUpdateController.add(feedType);
+
     print('''
-[ContentLakeRepo] 💾 OBJECTBOX UPDATED
+[ContentLakeRepo] 💾 MEMORY CACHE UPDATED
 ------------------------------------------
 Feed Type: $feedType
 Version:   $version
@@ -442,10 +546,11 @@ Expires:   $expiresAt
   // =========================================================================
 
   /// Build "For You" feed with weighted scoring and session awareness.
-  List<CachedFeedItem> buildForYouFeed({
-    List<String> userGenres = const ['action', 'scifi', 'drama'],
-  }) {
+  List<CachedFeedItem> buildForYouFeed() {
     if (!_initialized) initialize();
+
+    // Use cached user genres (loaded via loadUserGenres)
+    final genres = _userGenres;
 
     final allItems = <CachedFeedItem>[];
     final trending = getCachedFeed('trending');
@@ -453,7 +558,7 @@ Expires:   $expiresAt
 
     // Add items from preferred genres
     final genreItems = <CachedFeedItem>[];
-    for (final genre in userGenres) {
+    for (final genre in genres) {
       genreItems.addAll(getCachedFeed(genre));
     }
 
@@ -462,13 +567,18 @@ Expires:   $expiresAt
     allItems.addAll(latest);
     allItems.addAll(genreItems);
 
-    // Dedup by ID
+    // Dedup by ID and filter out unplayable items
     final seenIds = <String>{};
-    final uniqueItems = allItems.where((i) => seenIds.add(i.id)).toList();
+    final uniqueItems = allItems
+        .where((i) => seenIds.add(i.id))
+        .where(
+          (i) => i.youtubeKey != null && i.youtubeKey!.isNotEmpty,
+        ) // Bug fix: filter out unplayable
+        .toList();
 
     // 1. Calculate Scores
     final scoredItems = uniqueItems.map((item) {
-      final score = _calculateScore(item, userGenres);
+      final score = _calculateScore(item, genres);
       return _ScoredItem(item, score);
     }).toList();
 
@@ -497,11 +607,12 @@ Expires:   $expiresAt
   double _calculateScore(CachedFeedItem item, List<String> userGenres) {
     // 1. Base Score (Try to find persistent meta, fallback to popularity/position)
     final store = ObjectBoxStore.instance.store;
-    final meta = store
+    final metaQuery = store
         .box<FeedItemMeta>()
         .query(FeedItemMeta_.id.equals(item.id))
-        .build()
-        .findFirst();
+        .build();
+    final meta = metaQuery.findFirst();
+    metaQuery.close(); // Bug fix: close query to prevent memory leak
 
     double baseScore = meta?.baseScore ?? 0.5;
 
@@ -550,7 +661,7 @@ Expires:   $expiresAt
     double bias = 1.0;
     final itemGenres = item.genres;
 
-    // User Genre Bias
+    // User Genre Bias (from onboarding)
     bool hasUserGenre = itemGenres.any(
       (g) => userGenres.contains(g.toLowerCase()),
     );
@@ -571,6 +682,19 @@ Expires:   $expiresAt
       }
     }
 
+    // 6. List-Derived Genre Bias (from finished/favorites/watchlist)
+    // Items matching genres from user's lists get boosted
+    if (_listDerivedGenres.isNotEmpty) {
+      for (final genre in itemGenres) {
+        final weight = _listDerivedGenres[genre.toLowerCase()];
+        if (weight != null && weight > 0) {
+          // Apply the weight, capped at 1.5x to avoid runaway boosts
+          bias *= (1.0 + (weight * 0.1)).clamp(1.0, 1.5);
+          break; // Only apply once per item
+        }
+      }
+    }
+
     return baseScore *
         freshnessMultiplier *
         suppressionMultiplier *
@@ -585,14 +709,15 @@ Expires:   $expiresAt
   /// Clear all cached feed data.
   void clearAll() {
     if (!_initialized) return;
-    _feedBox.removeAll();
-    _pointerBox.removeAll();
+    _memoryCache.clear();
+    _pointerCache.clear();
     _seenBox.removeAll();
-    print('[ContentLakeRepo] Cleared all cached data');
+    print('[ContentLakeRepo] Cleared all memory and seen data');
   }
 
   void dispose() {
     _pollTimer?.cancel();
+    _feedUpdateController.close();
   }
 }
 

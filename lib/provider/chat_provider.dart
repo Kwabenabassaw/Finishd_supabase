@@ -13,7 +13,7 @@ import 'package:finishd/Model/user_model.dart';
 class ChatProvider with ChangeNotifier {
   final ChatSyncService _syncService = ChatSyncService.instance;
   final UserService _userService = UserService();
-  final String _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+  String get _currentUserId => FirebaseAuth.instance.currentUser?.uid ?? '';
 
   // Conversations
   List<LocalConversation> _conversations = [];
@@ -42,6 +42,21 @@ class ChatProvider with ChangeNotifier {
 
   void initialize() {
     _subscribeToConversations();
+
+    // Listen to user changes to re-sync
+    FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (user != null) {
+        print(
+          '👤 [ChatProvider] User signed in: ${user.uid}, syncing chats...',
+        );
+        _subscribeToConversations();
+        refreshConversations();
+      } else {
+        _conversations = [];
+        _messages = [];
+        notifyListeners();
+      }
+    });
   }
 
   @override
@@ -235,5 +250,32 @@ class ChatProvider with ChangeNotifier {
     await _syncService.syncConversation(chatId);
 
     return chatId;
+  }
+
+  /// Share a community post.
+  Future<void> sendPostLink({
+    required String conversationId,
+    required String receiverId,
+    required String postId,
+    required String postContent,
+    required String authorName,
+    required String showTitle,
+    required int showId,
+  }) async {
+    _isSending = true;
+    notifyListeners();
+
+    await _syncService.sendPostLink(
+      conversationId: conversationId,
+      receiverId: receiverId,
+      postId: postId,
+      postContent: postContent,
+      authorName: authorName,
+      showTitle: showTitle,
+      showId: showId,
+    );
+
+    _isSending = false;
+    notifyListeners();
   }
 }

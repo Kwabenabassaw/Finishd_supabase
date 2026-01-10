@@ -14,6 +14,8 @@ import 'package:finishd/provider/user_provider.dart';
 import 'package:finishd/provider/theme_provider.dart';
 import 'package:finishd/provider/community_provider.dart';
 import 'package:finishd/provider/actor_provider.dart';
+import 'package:finishd/provider/ai_assistant_provider.dart';
+import 'package:sizer/sizer.dart';
 import 'dart:io' show Platform;
 
 import 'package:finishd/provider/app_navigation_provider.dart';
@@ -37,9 +39,16 @@ import 'package:finishd/firebase_options.dart';
 import 'package:finishd/services/auth_service.dart';
 import 'package:finishd/services/push_notification_service.dart';
 import 'package:finishd/theme/app_theme.dart';
+import 'package:finishd/theme/app_colors.dart';
 import 'package:finishd/db/objectbox/objectbox_store.dart'; // ObjectBox Init
 import 'package:finishd/services/chat_sync_service.dart'; // Offline-first chat
 import 'package:finishd/provider/chat_provider.dart'; // Chat state management
+import 'package:finishd/services/deep_link_service.dart';
+import 'package:finishd/services/seen_sync_service.dart'; // Video deduplication sync
+
+// GLOBAL ROUTE OBSERVER
+final RouteObserver<ModalRoute<void>> routeObserver =
+    RouteObserver<ModalRoute<void>>();
 
 void main() async {
   try {
@@ -54,12 +63,18 @@ void main() async {
     // Initialize ChatSyncService (after ObjectBox is ready)
     await ChatSyncService.instance.initialize();
 
+    // Initialize SeenSyncService for video deduplication (sync on login)
+    SeenSyncService.instance.syncOnLogin();
+
     final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
     // Start push notifications in the background so they don't block the UI
     PushNotificationService().initialize(navigatorKey).catchError((e) {
       debugPrint('Push Notification initialization error: $e');
     });
+
+    // Initialize Deep Link Handling
+    DeepLinkService().initialize(navigatorKey);
 
     runApp(
       MultiProvider(
@@ -75,6 +90,7 @@ void main() async {
             create: (_) => YoutubeFeedProvider()..initialize(),
           ),
           ChangeNotifierProvider(create: (_) => ChatProvider()..initialize()),
+          ChangeNotifierProvider(create: (_) => AiAssistantProvider()),
           Provider<AuthService>(create: (_) => AuthService()),
         ],
         child: MyApp(navigatorKey: navigatorKey),
@@ -107,31 +123,35 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, _) {
-        return MaterialApp(
-          navigatorKey: navigatorKey,
-          debugShowCheckedModeBanner: false,
-          title: 'Finishd',
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          themeMode: themeProvider.themeMode,
-
-          initialRoute: '/',
-          routes: {
-            '/': (context) => const SplashScreen(),
-            '/home': (context) => LandingScreen(),
-            '/signup': (context) => SignUpScreen(),
-            '/login': (context) => Login(),
-            'genre': (context) => GenreSelectionScreen(),
-            'showSelect': (context) => ShowSelectionScreen(),
-            'streaming': (context) => ServiceSelectionScreen(),
-            'welcome': (context) => CompletionScreen(),
-            'homepage': (context) => HomePage(),
-            'Search_discover': (context) => SearchScreen(),
-            'settings': (context) => SettingsScreen(),
-            'homesearch': (context) => SearchScreenHome(),
-            'notification': (context) => NotificationScreen(),
-            'comment': (context) => CommentsScreen(),
-            'friends': (context) => FriendsScreen(),
+        return Sizer(
+          builder: (context, orientation, deviceType) {
+            return MaterialApp(
+              navigatorKey: navigatorKey,
+              debugShowCheckedModeBanner: false,
+              title: 'Finishd',
+              theme: AppTheme.lightTheme,
+              darkTheme: AppTheme.darkTheme,
+              themeMode: themeProvider.themeMode,
+              navigatorObservers: [routeObserver],
+              initialRoute: '/',
+              routes: {
+                '/': (context) => const SplashScreen(),
+                '/home': (context) => LandingScreen(),
+                '/signup': (context) => SignUpScreen(),
+                '/login': (context) => Login(),
+                'genre': (context) => GenreSelectionScreen(),
+                'showSelect': (context) => ShowSelectionScreen(),
+                'streaming': (context) => ServiceSelectionScreen(),
+                'welcome': (context) => CompletionScreen(),
+                'homepage': (context) => HomePage(),
+                'Search_discover': (context) => SearchScreen(),
+                'settings': (context) => SettingsScreen(),
+                'homesearch': (context) => SearchScreenHome(),
+                'notification': (context) => NotificationScreen(),
+                'comment': (context) => CommentsScreen(),
+                'friends': (context) => FriendsScreen(),
+              },
+            );
           },
         );
       },
@@ -184,13 +204,22 @@ class _HomePageState extends State<HomePage> {
         iconSize: 24,
         enableFeedback: true,
 
-        unselectedItemColor: const Color.fromARGB(255, 1, 118, 32),
+        // 🔥 Dynamic unselected color based on backgrounds
+        unselectedItemColor: selectedIndex == 0
+            ? Colors.white54
+            : Theme.of(context).brightness == Brightness.dark
+            ? Colors.white54
+            : Colors.black45,
 
-        // 🔥 Make transparent on Home tab
-        backgroundColor: selectedIndex == 0 ? Colors.transparent : null,
+        selectedItemColor: AppColors.primary,
 
-        // ⚡ Remove shadow when transparent
-        elevation: selectedIndex == 4 ? 8 : 8,
+        // 🔥 Dynamic background: Black for Home Feed, Theme Surface for others
+        backgroundColor: selectedIndex == 0
+            ? Colors.black
+            : Theme.of(context).cardColor,
+
+        // ⚡ Standard elevation
+        elevation: 8,
 
         items: [
           if (Platform.isAndroid) ...[

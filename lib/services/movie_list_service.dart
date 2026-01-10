@@ -1,10 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:finishd/Model/movie_list_item.dart';
+import 'package:finishd/services/social_database_helper.dart';
+import 'dart:async';
 
-/// Service to manage user's movie lists in Firestore
+/// Service to manage user's movie lists in Firestore + SQLite cache
 /// Collections: users/{uid}/watching, watchlist, finished, favorites
 class MovieListService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final SocialDatabaseHelper _dbHelper = SocialDatabaseHelper();
 
   // Collection names
   static const String _watchingCollection = 'watching';
@@ -18,7 +21,10 @@ class MovieListService {
       // Remove from other lists (except favorites)
       await _removeFromOtherLists(uid, movie.id, _watchingCollection);
 
-      // Add to watching
+      // Write to SQLite first (instant UI update)
+      await _dbHelper.insertListItem(_watchingCollection, movie);
+
+      // Then write to Firestore
       await _firestore
           .collection('users')
           .doc(uid)
@@ -27,7 +33,7 @@ class MovieListService {
           .set(movie.toJson());
     } catch (e) {
       print('Error adding to watching: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -37,7 +43,10 @@ class MovieListService {
       // Remove from other lists (except favorites)
       await _removeFromOtherLists(uid, movie.id, _watchlistCollection);
 
-      // Add to watchlist
+      // Write to SQLite first
+      await _dbHelper.insertListItem(_watchlistCollection, movie);
+
+      // Then write to Firestore
       await _firestore
           .collection('users')
           .doc(uid)
@@ -46,7 +55,7 @@ class MovieListService {
           .set(movie.toJson());
     } catch (e) {
       print('Error adding to watchlist: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -56,7 +65,10 @@ class MovieListService {
       // Remove from other lists (except favorites)
       await _removeFromOtherLists(uid, movie.id, _finishedCollection);
 
-      // Add to finished
+      // Write to SQLite first
+      await _dbHelper.insertListItem(_finishedCollection, movie);
+
+      // Then write to Firestore
       await _firestore
           .collection('users')
           .doc(uid)
@@ -65,7 +77,7 @@ class MovieListService {
           .set(movie.toJson());
     } catch (e) {
       print('Error adding to finished: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -82,15 +94,17 @@ class MovieListService {
       final doc = await docRef.get();
 
       if (doc.exists) {
-        // Remove from favorites
+        // Remove from favorites (SQLite first)
+        await _dbHelper.removeListItem(_favoritesCollection, movie.id);
         await docRef.delete();
       } else {
-        // Add to favorites
+        // Add to favorites (SQLite first)
+        await _dbHelper.insertListItem(_favoritesCollection, movie);
         await docRef.set(movie.toJson());
       }
     } catch (e) {
       print('Error toggling favorite: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -101,6 +115,10 @@ class MovieListService {
     String listType,
   ) async {
     try {
+      // Remove from SQLite first
+      await _dbHelper.removeListItem(listType, movieId);
+
+      // Then remove from Firestore
       await _firestore
           .collection('users')
           .doc(uid)
@@ -109,7 +127,7 @@ class MovieListService {
           .delete();
     } catch (e) {
       print('Error removing from $listType: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -186,7 +204,7 @@ class MovieListService {
     }
   }
 
-  /// Get all movies from a specific list
+  /// Get all movies from a specific list (from Firestore - legacy)
   Future<List<MovieListItem>> getMoviesFromList(
     String uid,
     String listType,
@@ -208,6 +226,11 @@ class MovieListService {
     }
   }
 
+  /// Get all movies from a specific list (LOCAL-FIRST from SQLite)
+  Future<List<MovieListItem>> getMoviesFromListLocal(String listType) async {
+    return await _dbHelper.getListItems(listType);
+  }
+
   /// Remove movie from all lists except the specified one and favorites
   Future<void> _removeFromOtherLists(
     String uid,
@@ -223,6 +246,9 @@ class MovieListService {
     for (final list in listsToCheck) {
       if (list != keepList) {
         try {
+          // Remove from SQLite
+          await _dbHelper.removeListItem(list, movieId);
+          // Remove from Firestore
           await _firestore
               .collection('users')
               .doc(uid)
@@ -251,6 +277,32 @@ class MovieListService {
           return snapshot.docs
               .map((doc) => MovieListItem.fromDocument(doc))
               .toList();
+        });
+  }
+
+  /// Listen to a list and sync changes to SQLite + notify UI
+  /// Returns a StreamSubscription that should be cancelled when done
+  StreamSubscription<QuerySnapshot> listenToList(
+    String uid,
+    String listType,
+    Function(List<MovieListItem>) onUpdate,
+  ) {
+    return _firestore
+        .collection('users')
+        .doc(uid)
+        .collection(listType)
+        .orderBy('addedAt', descending: true)
+        .snapshots()
+        .listen((snapshot) async {
+          final items = snapshot.docs
+              .map((doc) => MovieListItem.fromDocument(doc))
+              .toList();
+
+          // Sync to SQLite
+          await _dbHelper.syncList(listType, items);
+
+          // Notify UI
+          onUpdate(items);
         });
   }
 }

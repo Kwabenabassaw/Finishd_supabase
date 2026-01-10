@@ -13,11 +13,15 @@ class UserProvider with ChangeNotifier {
 
   UserModel? _currentUser;
   UserPreferences? _userPreferences;
+  Set<String> _followingIds = {};
   bool _isLoading = false;
+  bool _followingLoaded = false;
 
   UserModel? get currentUser => _currentUser;
   UserPreferences? get userPreferences => _userPreferences;
+  Set<String> get followingIds => _followingIds;
   bool get isLoading => _isLoading;
+  bool get followingLoaded => _followingLoaded;
 
   // Fetch current user data
   Future<void> fetchCurrentUser(String uid) async {
@@ -27,6 +31,10 @@ class UserProvider with ChangeNotifier {
     try {
       _currentUser = await _userService.getUser(uid);
       _userPreferences = await _preferencesService.getUserPreferences(uid);
+      // Fetch following IDs as well
+      final list = await _userService.getFollowing(uid);
+      _followingIds = list.toSet();
+      _followingLoaded = true;
     } catch (e) {
       print('Error fetching current user: $e');
     } finally {
@@ -80,7 +88,9 @@ class UserProvider with ChangeNotifier {
 
   // Follow user
   Future<void> followUser(String targetUid) async {
-    if (_currentUser == null) return;
+    if (_currentUser == null) {
+      throw Exception('User not logged in. Please log in to follow users.');
+    }
 
     try {
       await _userService.followUser(_currentUser!.uid, targetUid);
@@ -88,6 +98,7 @@ class UserProvider with ChangeNotifier {
       _currentUser = _currentUser!.copyWith(
         followingCount: _currentUser!.followingCount + 1,
       );
+      _followingIds.add(targetUid);
       notifyListeners();
     } catch (e) {
       print('Error following user: $e');
@@ -97,7 +108,9 @@ class UserProvider with ChangeNotifier {
 
   // Unfollow user
   Future<void> unfollowUser(String targetUid) async {
-    if (_currentUser == null) return;
+    if (_currentUser == null) {
+      throw Exception('User not logged in. Please log in to unfollow users.');
+    }
 
     try {
       await _userService.unfollowUser(_currentUser!.uid, targetUid);
@@ -105,10 +118,29 @@ class UserProvider with ChangeNotifier {
       _currentUser = _currentUser!.copyWith(
         followingCount: _currentUser!.followingCount - 1,
       );
+      _followingIds.remove(targetUid);
       notifyListeners();
     } catch (e) {
       print('Error unfollowing user: $e');
       throw e;
+    }
+  }
+
+  // Check if following a user (local check)
+  bool isFollowing(String targetUid) {
+    return _followingIds.contains(targetUid);
+  }
+
+  // Ensure following IDs are loaded
+  Future<void> ensureFollowingLoaded(String uid) async {
+    if (_followingLoaded) return;
+    try {
+      final list = await _userService.getFollowing(uid);
+      _followingIds = list.toSet();
+      _followingLoaded = true;
+      notifyListeners();
+    } catch (e) {
+      print('Error ensuring following loaded: $e');
     }
   }
 }

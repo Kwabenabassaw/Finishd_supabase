@@ -31,18 +31,15 @@ class ShareToFriendsSheet extends StatefulWidget {
   }) {
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
-  
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        minChildSize: 0.5,
-        maxChildSize: 0.9,
-        builder: (context, scrollController) => ShareToFriendsSheet(
-          videoId: videoId,
-          videoTitle: videoTitle,
-          videoThumbnail: videoThumbnail,
-          videoChannel: videoChannel,
-        ),
+      isScrollControlled: false,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => ShareToFriendsSheet(
+        videoId: videoId,
+        videoTitle: videoTitle,
+        videoThumbnail: videoThumbnail,
+        videoChannel: videoChannel,
       ),
     );
   }
@@ -165,7 +162,6 @@ class _ShareToFriendsSheetState extends State<ShareToFriendsSheet> {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-       
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
@@ -175,10 +171,7 @@ class _ShareToFriendsSheetState extends State<ShareToFriendsSheet> {
             width: 40,
             height: 4,
             margin: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(
-             
-              borderRadius: BorderRadius.circular(2),
-            ),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(2)),
           ),
           // Header with title and send button
           Padding(
@@ -234,11 +227,7 @@ class _ShareToFriendsSheetState extends State<ShareToFriendsSheet> {
           Container(
             margin: const EdgeInsets.all(16),
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-             
-              borderRadius: BorderRadius.circular(12),
-            
-            ),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
             child: Row(
               children: [
                 // Thumbnail
@@ -251,16 +240,12 @@ class _ShareToFriendsSheetState extends State<ShareToFriendsSheet> {
                     width: 80,
                     height: 50,
                     fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(
-                      width: 80,
-                      height: 50,
-                    
-                    ),
+                    placeholder: (_, __) => Container(width: 80, height: 50),
                     errorWidget: (_, __, ___) => Container(
                       width: 80,
                       height: 50,
-                     
-                      child: const Icon(Icons.movie,),
+
+                      child: const Icon(Icons.movie),
                     ),
                   ),
                 ),
@@ -285,10 +270,7 @@ class _ShareToFriendsSheetState extends State<ShareToFriendsSheet> {
                           widget.videoChannel,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                           
-                            fontSize: 12,
-                          ),
+                          style: TextStyle(fontSize: 12),
                         ),
                       ],
                     ],
@@ -304,10 +286,10 @@ class _ShareToFriendsSheetState extends State<ShareToFriendsSheet> {
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Search friends...',
-           
+
                 prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
                 filled: true,
-                
+
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -347,18 +329,14 @@ class _ShareToFriendsSheetState extends State<ShareToFriendsSheet> {
             _searchController.text.isNotEmpty
                 ? 'No friends found'
                 : 'No friends yet',
-            style: TextStyle(
-              fontSize: 16,
-            
-              fontWeight: FontWeight.w500,
-            ),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 4),
           Text(
             _searchController.text.isNotEmpty
                 ? 'Try a different search'
                 : 'Add friends to share videos!',
-            style: TextStyle(fontSize: 14, ),
+            style: TextStyle(fontSize: 14),
           ),
         ],
       ),
@@ -383,7 +361,7 @@ class _ShareToFriendsSheetState extends State<ShareToFriendsSheet> {
         children: [
           CircleAvatar(
             radius: 24,
-          
+
             backgroundImage: user.profileImage.isNotEmpty
                 ? CachedNetworkImageProvider(user.profileImage)
                 : null,
@@ -392,10 +370,7 @@ class _ShareToFriendsSheetState extends State<ShareToFriendsSheet> {
                     user.username.isNotEmpty
                         ? user.username[0].toUpperCase()
                         : '?',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                     
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   )
                 : null,
           ),
@@ -411,7 +386,7 @@ class _ShareToFriendsSheetState extends State<ShareToFriendsSheet> {
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 2),
                 ),
-                child: const Icon(Icons.check, size: 12,),
+                child: const Icon(Icons.check, size: 12),
               ),
             ),
         ],
@@ -423,7 +398,7 @@ class _ShareToFriendsSheetState extends State<ShareToFriendsSheet> {
       subtitle: user.firstName.isNotEmpty
           ? Text(
               '${user.firstName} ${user.lastName}',
-              style: TextStyle( fontSize: 13),
+              style: TextStyle(fontSize: 13),
             )
           : null,
       trailing: AnimatedContainer(

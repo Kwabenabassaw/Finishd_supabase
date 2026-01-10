@@ -97,7 +97,7 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
               ),
             ),
 
-            // 5. Action Buttons (Bottom Right) - Static
+            // 5. Action Buttons (Bottom Right) - Now Reactive
             Positioned(
               bottom: 0,
               right: 0,
@@ -106,9 +106,13 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
                 left: false,
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 20.0, right: 10.0),
-                  child: _ActionButtons(
-                    video: video,
-                    isActive: provider.currentIndex == widget.index,
+                  // Use Selector to reactively update isActive
+                  child: Selector<YoutubeFeedProvider, bool>(
+                    selector: (_, provider) =>
+                        provider.currentIndex == widget.index,
+                    builder: (context, isActive, _) {
+                      return _ActionButtons(video: video, isActive: isActive);
+                    },
                   ),
                 ),
               ),
@@ -197,41 +201,127 @@ class _VideoPlayerLayer extends StatelessWidget {
     bool isCurrent,
     String videoId,
   ) {
+    // Detect if this is a Short (Vertical native)
+    final isShort = video.videoType == 'short';
+
+    // Shorts are already 9:16.
+    // Since JS injection hides the UI, we don't need to zoom/crop anymore.
+    final scale = 1.0;
+
+    // Aspect Ratio: 9/16 for full screen vertical
+    final aspectRatio = 9 / 16;
+
     return Stack(
       children: [
         // 1. Cropped Video Player
         Positioned.fill(
           child: ClipRect(
             child: OverflowBox(
-              // Scale the player 15% larger than the screen to hide branding edges
-              maxWidth: MediaQuery.of(context).size.width * 1.15,
-              maxHeight: MediaQuery.of(context).size.height * 1.15,
+              // Dynamic scaling based on content type
+              minWidth: MediaQuery.of(context).size.width * scale,
+              minHeight: MediaQuery.of(context).size.height * scale,
+              maxWidth: MediaQuery.of(context).size.width * scale,
+              maxHeight: MediaQuery.of(context).size.height * scale,
+              alignment: Alignment.center,
               child: AbsorbPointer(
                 absorbing: true,
                 child: YoutubePlayer(
+                  aspectRatio: aspectRatio,
+                  showVideoProgressIndicator: true,
+                  progressColors: const ProgressBarColors(
+                    playedColor: Colors.greenAccent,
+                    handleColor: Colors.greenAccent,
+                  ),
                   controller: controller,
-                  showVideoProgressIndicator: false,
                   thumbnail: const SizedBox.shrink(),
                   onEnded: (_) => controller.play(),
+                  onReady: () {
+                    // NOTE: JavaScript injection is not supported by youtube_player_flutter package
+                    // UI customization is handled by YoutubePlayerFlags instead:
+                    // - hideControls: true
+                    // - hideThumbnail: true
+                    // - controlsVisibleAtStart: false
+                    // These flags are set in youtube_feed_provider.dart:_createController()
+                    debugPrint(
+                      '[YTVideoItem] ✅ Player ready for: ${video.videoId}',
+                    );
+                  },
                 ),
               ),
             ),
           ),
         ),
 
+        // 1.5. Thumbnail Mask (Hides "Ghost Button" before first play)
+        Positioned.fill(
+          child: ValueListenableBuilder<YoutubePlayerValue>(
+            valueListenable: controller,
+            builder: (context, value, child) {
+              final shouldShow =
+                  !value.isReady ||
+                  value.playerState == PlayerState.cued ||
+                  value.playerState == PlayerState.unknown;
+              return AnimatedOpacity(
+                opacity: shouldShow ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+                child: IgnorePointer(
+                  child: CachedNetworkImage(
+                    imageUrl: video.thumbnailUrl,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+
+        // 2. Shorts Badge (if applicable)
+        if (isShort)
+          Positioned(
+            top: 60,
+            right: 16,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.red.withAlpha(230), // fixed withOpacity
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FaIcon(
+                    FontAwesomeIcons.youtube,
+                    color: Colors.white,
+                    size: 12,
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    'Shorts',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
         // 2. Top Shield (Covers titles/pre-roll UI)
         Positioned(
           top: 0,
           left: 0,
           right: 0,
-          height: 60,
+          height: 190,
           child: Container(
             decoration: const BoxDecoration(
               color: Colors.black,
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Colors.black, Colors.transparent],
+                colors: [Colors.black, Color.fromARGB(0, 5, 1, 1)],
               ),
             ),
           ),
@@ -242,7 +332,7 @@ class _VideoPlayerLayer extends StatelessWidget {
           bottom: 0,
           left: 0,
           right: 0,
-          height: 40,
+          height: 140,
           child: Container(
             decoration: const BoxDecoration(
               color: Colors.black,

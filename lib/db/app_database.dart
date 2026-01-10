@@ -19,7 +19,7 @@ class AppDatabase {
 
     return await openDatabase(
       path,
-      version: 4, // Upgraded to 4 for Streaming Availability cache
+      version: 5, // Upgraded to 5 for Recommendation cache
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -85,6 +85,15 @@ class AppDatabase {
         timestamp INTEGER NOT NULL
       )
     ''');
+
+    // 7. Recommendation Cache (v5)
+    await db.execute('''
+      CREATE TABLE recommendation_cache (
+        cache_key TEXT PRIMARY KEY,
+        friend_ids TEXT NOT NULL,
+        timestamp INTEGER NOT NULL
+      )
+    ''');
   }
 
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -118,6 +127,17 @@ class AppDatabase {
         CREATE TABLE IF NOT EXISTS streaming_cache (
           id TEXT PRIMARY KEY,
           json TEXT NOT NULL,
+          timestamp INTEGER NOT NULL
+        )
+      ''');
+    }
+
+    if (oldVersion < 5) {
+      // Add recommendation_cache table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS recommendation_cache (
+          cache_key TEXT PRIMARY KEY,
+          friend_ids TEXT NOT NULL,
           timestamp INTEGER NOT NULL
         )
       ''');
