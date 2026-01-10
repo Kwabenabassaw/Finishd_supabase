@@ -65,6 +65,7 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
         hideControls: true,
         controlsVisibleAtStart: false,
         enableCaption: false,
+        
       ),
     );
 
