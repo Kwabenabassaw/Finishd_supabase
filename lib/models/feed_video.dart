@@ -19,6 +19,10 @@ class FeedVideo {
   final Map<String, dynamic>? fallback; // {thumbnail, channel}
   final Map<String, dynamic>? availability;
   final DateTime? lastEnriched;
+  final String? imageUrl; // Full image URL for image content
+
+  /// Check if this is an image content item (not a video)
+  bool get isImage => type == 'image';
 
   FeedVideo({
     required this.videoId,
@@ -36,6 +40,7 @@ class FeedVideo {
     this.fallback,
     this.availability,
     this.lastEnriched,
+    this.imageUrl,
   });
 
   /// Factory to create from CachedFeedItem (ObjectBox)
@@ -65,15 +70,17 @@ class FeedVideo {
   /// Factory to create from FeedItem (Legacy compat)
   factory FeedVideo.fromFeedItem(FeedItem item) {
     return FeedVideo(
-      videoId: item.youtubeKey ?? '',
+      videoId: item.youtubeKey ?? item.id,
       title: item.videoName ?? item.title,
-      thumbnailUrl: item.bestThumbnailUrl,
+      thumbnailUrl: item.imageUrl ?? item.bestThumbnailUrl,
       channelName: item.channelTitle ?? '',
       description: item.description ?? item.overview ?? '',
       recommendationReason: item.reason,
       relatedItemId: item.tmdbId?.toString() ?? item.relatedTmdbId?.toString(),
       relatedItemType: item.mediaType,
       feedType: item.feedType,
+      type: item.type, // Pass through content type (video/image)
+      imageUrl: item.imageUrl,
     );
   }
 

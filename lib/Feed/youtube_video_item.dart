@@ -13,6 +13,7 @@ import 'dart:ui';
 import '../Widget/reactions/reaction_button.dart';
 import '../Widget/comments/comment_button.dart';
 import 'package:flutter/services.dart';
+import 'image_feed_item.dart';
 
 class YoutubeVideoItem extends StatefulWidget {
   final int index;
@@ -61,6 +62,16 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
     }
 
     final video = provider.videos[widget.index];
+
+    // If this is an image content item (not a video), render ImageFeedItem
+    if (video.isImage) {
+      final isActive = provider.currentIndex == widget.index;
+      return ImageFeedItem(
+        item: video,
+        isActive: isActive,
+        index: widget.index,
+      );
+    }
 
     return Container(
       color: Colors.black,

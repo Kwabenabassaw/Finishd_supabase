@@ -50,7 +50,8 @@ class MovieDetailsScreen extends StatefulWidget {
   State<MovieDetailsScreen> createState() => _MovieDetailsScreenState();
 }
 
-class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
+class _MovieDetailsScreenState extends State<MovieDetailsScreen>
+    with WidgetsBindingObserver {
   final TmdbSyncService _syncService = TmdbSyncService();
   final UserTitlesService _userTitlesService = UserTitlesService();
   late MovieDetails _movie;
@@ -60,6 +61,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
   bool _showPreview = false;
   bool _showEmojiPicker = false;
   Timer? _previewTimer;
+  bool _previewCompleted = false;
   MovieRatings _ratings = MovieRatings.empty();
   final RatingsService _ratingsService = RatingsService();
 
@@ -67,6 +69,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
   void initState() {
     super.initState();
     _movie = widget.movie;
+    WidgetsBinding.instance.addObserver(this);
     _recommendationsStream = RecommendationService()
         .getMyRecommendationsForMovie(
           FirebaseAuth.instance.currentUser?.uid ?? '',
@@ -139,15 +142,17 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                   mounted) {
                 setState(() => _showPreview = true);
 
-                // ⏱️ Stop preview after 10 seconds
+                // ⏱️ Stop preview after 10 seconds and dispose
                 _previewTimer = Timer(const Duration(seconds: 10), () {
                   if (mounted) {
+                    _previewCompleted = true;
                     setState(() {
                       _showPreview = false;
                     });
-                    // Slightly delay pausing to allow fade animation to complete
+                    // Dispose after fade animation completes
                     Future.delayed(const Duration(milliseconds: 800), () {
-                      _previewController?.pause();
+                      _previewController?.dispose();
+                      _previewController = null;
                     });
                   }
                 });
@@ -158,7 +163,18 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // If preview already completed, don't let it restart
+    if (_previewCompleted && _previewController != null) {
+      _previewController?.dispose();
+      _previewController = null;
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _previewTimer?.cancel();
     _previewController?.dispose();
     super.dispose();
@@ -289,14 +305,14 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                     children: [
                       Text(
                         _movie.releaseDate?.substring(0, 4) ?? '',
-                        style: TextStyle(fontSize: 12.sp),
+                        style: TextStyle(fontSize: 15.sp),
                       ),
                       SizedBox(width: 2.w),
                       const Text('•'),
                       SizedBox(width: 2.w),
                       Text(
                         '${_movie.runtime} min',
-                        style: TextStyle(fontSize: 12.sp),
+                        style: TextStyle(fontSize: 15.sp),
                       ),
                       SizedBox(width: 2.w),
                       const Text('•'),
@@ -304,7 +320,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                       Expanded(
                         child: Text(
                           _movie.genres.take(2).map((g) => g.name).join(', '),
-                          style: TextStyle(fontSize: 12.sp),
+                          style: TextStyle(fontSize: 15.sp),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -337,9 +353,10 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen> {
                             }
 
                             if (youtubeKey != null && mounted) {
-                              // Pause preview player to prevent resource conflict
+                              // Dispose preview player to free resources
                               _previewTimer?.cancel();
-                              _previewController?.pause();
+                              _previewController?.dispose();
+                              _previewController = null;
                               setState(() => _showPreview = false);
 
                               YouTubeTrailerPlayerDialog.show(

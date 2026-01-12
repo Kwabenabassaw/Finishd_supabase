@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:finishd/models/feed_item.dart';
 import 'package:finishd/services/api_client.dart';
+import 'package:finishd/services/youtube_video_manager.dart';
 import 'package:finishd/Feed/feed_video_player_v2.dart';
 
 /// New HomeScreen using TMDB-based feed
@@ -13,9 +14,11 @@ class HomeScreenV2 extends StatefulWidget {
   State<HomeScreenV2> createState() => _HomeScreenV2State();
 }
 
-class _HomeScreenV2State extends State<HomeScreenV2> with WidgetsBindingObserver {
+class _HomeScreenV2State extends State<HomeScreenV2>
+    with WidgetsBindingObserver {
   final PageController _pageController = PageController();
   final ApiClient _apiClient = ApiClient();
+  final YouTubeVideoManager _videoManager = YouTubeVideoManager();
 
   final List<FeedItem> _feedItems = [];
   bool _isLoading = false;
@@ -36,12 +39,23 @@ class _HomeScreenV2State extends State<HomeScreenV2> with WidgetsBindingObserver
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _pageController.dispose();
+    _videoManager.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.paused) {
+      _videoManager.pauseAll();
+    } else if (state == AppLifecycleState.resumed) {
+      _videoManager.resumeCurrent();
+    }
   }
 
   Future<void> _loadFeed({bool refresh = false, int page = 1}) async {
     if (_isLoading && page == 1) return;
-    
+
     if (page == 1) {
       setState(() {
         _isLoading = true;
@@ -52,28 +66,30 @@ class _HomeScreenV2State extends State<HomeScreenV2> with WidgetsBindingObserver
 
     try {
       print('📡 Loading TMDB-based feed (Page $page)...');
-      
+
       var items = await _apiClient.getPersonalizedFeedV2(
         refresh: refresh,
         limit: 50,
         page: page,
       );
-      
+
       print('📥 Personalized feed response: ${items.length} items');
-      
+
       // Fallback to global feed if personalized is empty
       if (items.isEmpty) {
         print('⚠️ Personalized feed empty, trying global feed...');
         items = await _apiClient.getGlobalFeed(limit: 50);
         print('📥 Global feed response: ${items.length} items');
       }
-      
+
       // Debug: log first item if available
       if (items.isNotEmpty) {
         final first = items.first;
-        print('🎬 First item: ${first.title} (${first.type}) - hasVideo: ${first.hasYouTubeVideo}');
+        print(
+          '🎬 First item: ${first.title} (${first.type}) - hasVideo: ${first.hasYouTubeVideo}',
+        );
       }
-      
+
       if (mounted) {
         setState(() {
           if (refresh || page == 1) {
@@ -82,25 +98,36 @@ class _HomeScreenV2State extends State<HomeScreenV2> with WidgetsBindingObserver
           } else {
             // Deduplicate when appending
             final existingIds = _feedItems.map((i) => i.id).toSet();
-            final uniqueItems = items.where((i) => !existingIds.contains(i.id)).toList();
-            
+            final uniqueItems = items
+                .where((i) => !existingIds.contains(i.id))
+                .toList();
+
             if (uniqueItems.isNotEmpty) {
               _feedItems.addAll(uniqueItems);
-              print('✅ Appended ${uniqueItems.length} unique items (skipped ${items.length - uniqueItems.length} duplicates)');
+              print(
+                '✅ Appended ${uniqueItems.length} unique items (skipped ${items.length - uniqueItems.length} duplicates)',
+              );
             } else {
               print('⚠️ All items from this page were duplicates.');
             }
           }
-          
+
           _isLoading = false;
           _isLoadingMore = false;
         });
-        
+
         print('✅ Loaded ${items.length} feed items');
-        
+
+        // Initialize video manager for first page
+        if ((refresh || page == 1) && _feedItems.isNotEmpty) {
+          _videoManager.setCurrentIndex(0, _feedItems);
+        }
+
         // Log content breakdown
         final tmdbCount = items.where((i) => i.source == 'tmdb').length;
-        final youtubeCount = items.where((i) => i.source == 'youtube_cached').length;
+        final youtubeCount = items
+            .where((i) => i.source == 'youtube_cached')
+            .length;
         print('📊 TMDB: $tmdbCount | YouTube BTS: $youtubeCount');
       }
     } catch (e) {
@@ -120,24 +147,29 @@ class _HomeScreenV2State extends State<HomeScreenV2> with WidgetsBindingObserver
       _currentIndex = index;
     });
 
+    // Update video manager for preloading
+    _videoManager.setCurrentIndex(index, _feedItems);
+
     // Load more when near the end (prevents duplicate calls)
     // Increased threshold to ensure it triggers before actually hitting the wall
     if (index >= _feedItems.length - 3 && !_isLoading && !_isLoadingMore) {
-      print('📜 Reached index $index (total ${_feedItems.length}), triggering load more...');
+      print(
+        '📜 Reached index $index (total ${_feedItems.length}), triggering load more...',
+      );
       _loadMore();
     }
   }
 
   Future<void> _loadMore() async {
     if (_isLoadingMore) return;
-    
+
     setState(() => _isLoadingMore = true);
-    
+
     final nextPage = _currentPage + 1;
     print('🔄 triggered load more for page $nextPage');
-    
+
     await _loadFeed(page: nextPage);
-    
+
     if (mounted) {
       setState(() => _currentPage = nextPage);
     }
@@ -149,10 +181,7 @@ class _HomeScreenV2State extends State<HomeScreenV2> with WidgetsBindingObserver
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: _buildBody(),
-    );
+    return Scaffold(backgroundColor: Colors.black, body: _buildBody());
   }
 
   Widget _buildBody() {
@@ -183,6 +212,7 @@ class _HomeScreenV2State extends State<HomeScreenV2> with WidgetsBindingObserver
                 item: _feedItems[index],
                 index: index,
                 isActive: index == _currentIndex,
+                videoManager: _videoManager,
               );
             },
           ),
@@ -194,15 +224,11 @@ class _HomeScreenV2State extends State<HomeScreenV2> with WidgetsBindingObserver
         // Stats Overlay (debug)
         // Stats Overlay (debug)
         if (true) // Set to false in production
-          Positioned(
-            bottom: 20,
-            left: 16,
-            child: _buildStatsOverlay(),
-          ),
-          
+          Positioned(bottom: 20, left: 16, child: _buildStatsOverlay()),
+
         // Debug/Refresh Button (User Request)
         Positioned(
-          top: 160,  // Below Mute button (which is at 100)
+          top: 160, // Below Mute button (which is at 100)
           right: 16,
           child: Container(
             decoration: BoxDecoration(
@@ -231,15 +257,23 @@ class _HomeScreenV2State extends State<HomeScreenV2> with WidgetsBindingObserver
             padding: EdgeInsets.all(16.0),
             child: Text(
               "🛠️ Debug & Refresh Tools",
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           ListTile(
             leading: const Icon(Icons.download, color: Colors.blue),
-            title: Text("Load Next Page (Page ${_currentPage + 1})", 
-              style: const TextStyle(color: Colors.white)),
-            subtitle: const Text("Force manual pagination query", 
-              style: TextStyle(color: Colors.white54)),
+            title: Text(
+              "Load Next Page (Page ${_currentPage + 1})",
+              style: const TextStyle(color: Colors.white),
+            ),
+            subtitle: const Text(
+              "Force manual pagination query",
+              style: TextStyle(color: Colors.white54),
+            ),
             onTap: () {
               Navigator.pop(context);
               _loadMore();
@@ -247,10 +281,14 @@ class _HomeScreenV2State extends State<HomeScreenV2> with WidgetsBindingObserver
           ),
           ListTile(
             leading: const Icon(Icons.refresh, color: Colors.green),
-            title: const Text("Force Full Refresh", 
-              style: TextStyle(color: Colors.white)),
-            subtitle: const Text("Clear local cache and fetch Page 1", 
-              style: TextStyle(color: Colors.white54)),
+            title: const Text(
+              "Force Full Refresh",
+              style: TextStyle(color: Colors.white),
+            ),
+            subtitle: const Text(
+              "Clear local cache and fetch Page 1",
+              style: TextStyle(color: Colors.white54),
+            ),
             onTap: () {
               Navigator.pop(context);
               _onRefresh();
@@ -258,19 +296,29 @@ class _HomeScreenV2State extends State<HomeScreenV2> with WidgetsBindingObserver
           ),
           ListTile(
             leading: const Icon(Icons.cloud_sync, color: Colors.orange),
-            title: const Text("Trigger Backend Cron Job", 
-              style: TextStyle(color: Colors.white)),
-            subtitle: const Text("Tell server to fetch fresh content from TMDB/YouTube", 
-              style: TextStyle(color: Colors.white54)),
+            title: const Text(
+              "Trigger Backend Cron Job",
+              style: TextStyle(color: Colors.white),
+            ),
+            subtitle: const Text(
+              "Tell server to fetch fresh content from TMDB/YouTube",
+              style: TextStyle(color: Colors.white54),
+            ),
             onTap: () async {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Triggering backend job..."))
+                const SnackBar(content: Text("Triggering backend job...")),
               );
               final success = await _apiClient.triggerBackendRefresh();
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(success ? "✅ Backend job started!" : "❌ Failed to start job"))
+                  SnackBar(
+                    content: Text(
+                      success
+                          ? "✅ Backend job started!"
+                          : "❌ Failed to start job",
+                    ),
+                  ),
                 );
               }
             },
@@ -293,13 +341,20 @@ class _HomeScreenV2State extends State<HomeScreenV2> with WidgetsBindingObserver
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               IconButton(
-                icon: const Icon(Icons.notifications_none, color: Colors.white, size: 28),
+                icon: const Icon(
+                  Icons.notifications_none,
+                  color: Colors.white,
+                  size: 28,
+                ),
                 onPressed: () => Navigator.pushNamed(context, 'notification'),
               ),
-              
+
               // Feed type indicator
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20),
@@ -307,11 +362,7 @@ class _HomeScreenV2State extends State<HomeScreenV2> with WidgetsBindingObserver
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      _getCurrentItemIcon(),
-                      color: Colors.white,
-                      size: 16,
-                    ),
+                    Icon(_getCurrentItemIcon(), color: Colors.white, size: 16),
                     const SizedBox(width: 4),
                     Text(
                       'For You',
@@ -324,7 +375,7 @@ class _HomeScreenV2State extends State<HomeScreenV2> with WidgetsBindingObserver
                   ],
                 ),
               ),
-              
+
               IconButton(
                 icon: const Icon(Icons.search, color: Colors.white, size: 28),
                 onPressed: () => Navigator.pushNamed(context, 'homesearch'),
@@ -340,7 +391,7 @@ class _HomeScreenV2State extends State<HomeScreenV2> with WidgetsBindingObserver
     if (_feedItems.isEmpty || _currentIndex >= _feedItems.length) {
       return Icons.movie;
     }
-    
+
     final item = _feedItems[_currentIndex];
     if (item.isBTS) return Icons.videocam;
     if (item.isInterview) return Icons.mic;
@@ -349,8 +400,10 @@ class _HomeScreenV2State extends State<HomeScreenV2> with WidgetsBindingObserver
 
   Widget _buildStatsOverlay() {
     final tmdbCount = _feedItems.where((i) => i.source == 'tmdb').length;
-    final youtubeCount = _feedItems.where((i) => i.source == 'youtube_cached').length;
-    
+    final youtubeCount = _feedItems
+        .where((i) => i.source == 'youtube_cached')
+        .length;
+
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
@@ -363,7 +416,11 @@ class _HomeScreenV2State extends State<HomeScreenV2> with WidgetsBindingObserver
         children: [
           Text(
             '📊 Feed Stats',
-            style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 4),
           Row(
@@ -372,10 +429,16 @@ class _HomeScreenV2State extends State<HomeScreenV2> with WidgetsBindingObserver
               Container(
                 width: 8,
                 height: 8,
-                decoration: BoxDecoration(color: Colors.blue, shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                  color: Colors.blue,
+                  shape: BoxShape.circle,
+                ),
               ),
               const SizedBox(width: 4),
-              Text('TMDB: $tmdbCount', style: TextStyle(color: Colors.white70, fontSize: 10)),
+              Text(
+                'TMDB: $tmdbCount',
+                style: TextStyle(color: Colors.white70, fontSize: 10),
+              ),
             ],
           ),
           const SizedBox(height: 2),
@@ -385,10 +448,16 @@ class _HomeScreenV2State extends State<HomeScreenV2> with WidgetsBindingObserver
               Container(
                 width: 8,
                 height: 8,
-                decoration: BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
               ),
               const SizedBox(width: 4),
-              Text('YouTube: $youtubeCount', style: TextStyle(color: Colors.white70, fontSize: 10)),
+              Text(
+                'YouTube: $youtubeCount',
+                style: TextStyle(color: Colors.white70, fontSize: 10),
+              ),
             ],
           ),
         ],
@@ -423,7 +492,11 @@ class _HomeScreenV2State extends State<HomeScreenV2> with WidgetsBindingObserver
             const SizedBox(height: 16),
             Text(
               'Failed to load feed',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
@@ -452,7 +525,11 @@ class _HomeScreenV2State extends State<HomeScreenV2> with WidgetsBindingObserver
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.movie_creation_outlined, color: Colors.white54, size: 64),
+          const Icon(
+            Icons.movie_creation_outlined,
+            color: Colors.white54,
+            size: 64,
+          ),
           const SizedBox(height: 16),
           Text(
             'No content available',

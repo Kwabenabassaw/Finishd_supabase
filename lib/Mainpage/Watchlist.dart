@@ -51,7 +51,7 @@ class _WatchlistState extends State<Watchlist>
   Widget build(BuildContext context) {
     if (_currentUserId.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: const Text("Watchlist"), centerTitle: true),
+        appBar: AppBar(title: const Text("Saved"), centerTitle: true),
         body: const Center(child: Text("Please log in to view your watchlist")),
       );
     }

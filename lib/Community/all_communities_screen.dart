@@ -38,12 +38,10 @@ class _AllCommunitiesScreenState extends State<AllCommunitiesScreen> {
 
   Future<void> _loadFavoriteShowIds() async {
     final dbHelper = SocialDatabaseHelper();
-    final db = await dbHelper.database;
-    final result = await db.query('favorite_posts');
-    final showIds = result.map((row) => row['showId'] as int).toSet();
+    final favoriteIds = await dbHelper.getFavoriteCommunityIds();
     if (mounted) {
       setState(() {
-        _favoriteShowIds = showIds;
+        _favoriteShowIds = favoriteIds;
       });
     }
   }

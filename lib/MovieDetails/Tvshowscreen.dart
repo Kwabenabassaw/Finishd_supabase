@@ -42,7 +42,8 @@ class ShowDetailsScreen extends StatefulWidget {
   State<ShowDetailsScreen> createState() => _ShowDetailsScreenState();
 }
 
-class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
+class _ShowDetailsScreenState extends State<ShowDetailsScreen>
+    with WidgetsBindingObserver {
   final TmdbSyncService _syncService = TmdbSyncService();
   final UserTitlesService _userTitlesService = UserTitlesService();
   late TvShowDetails _show;
@@ -52,6 +53,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
   bool _showPreview = false;
   bool _showEmojiPicker = false;
   Timer? _previewTimer;
+  bool _previewCompleted = false;
   MovieRatings _ratings = MovieRatings.empty();
   final RatingsService _ratingsService = RatingsService();
 
@@ -59,6 +61,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
   void initState() {
     super.initState();
     _show = widget.movie;
+    WidgetsBinding.instance.addObserver(this);
     _recommendationsStream = RecommendationService()
         .getMyRecommendationsForMovie(
           FirebaseAuth.instance.currentUser?.uid ?? '',
@@ -131,15 +134,17 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                   mounted) {
                 setState(() => _showPreview = true);
 
-                // ⏱️ Stop preview after 10 seconds
+                // ⏱️ Stop preview after 10 seconds and dispose
                 _previewTimer = Timer(const Duration(seconds: 10), () {
                   if (mounted) {
+                    _previewCompleted = true;
                     setState(() {
                       _showPreview = false;
                     });
-                    // Slightly delay pausing to allow fade animation to complete
+                    // Dispose after fade animation completes
                     Future.delayed(const Duration(milliseconds: 800), () {
-                      _previewController?.pause();
+                      _previewController?.dispose();
+                      _previewController = null;
                     });
                   }
                 });
@@ -150,7 +155,18 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // If preview already completed, don't let it restart
+    if (_previewCompleted && _previewController != null) {
+      _previewController?.dispose();
+      _previewController = null;
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _previewTimer?.cancel();
     _previewController?.dispose();
     super.dispose();
@@ -187,9 +203,10 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
               icon: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.4),
+                  color: Colors.black.withOpacity(0.9),
                   shape: BoxShape.circle,
                 ),
+          
                 child: Icon(
                   Platform.isIOS ? Icons.arrow_back_ios_new : Icons.arrow_back,
                   color: Colors.white,
@@ -203,7 +220,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                 icon: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.4),
+                    color: Colors.black.withOpacity(0.9),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -291,18 +308,18 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                     children: [
                       Text(
                         _show.firstAirDate.substring(0, 4),
-                        style: TextStyle(fontSize: 18.sp),
+                        style: TextStyle(fontSize: 15.sp),
                       ),
                       SizedBox(width: 2.w),
                       const Text('•'),
                       SizedBox(width: 2.w),
-                      Text(_show.status, style: TextStyle(fontSize: 18.sp)),
+                      Text(_show.status, style: TextStyle(fontSize: 15.sp)),
                       SizedBox(width: 2.w),
                       const Text('•'),
                       SizedBox(width: 2.w),
                       Text(
                         '${_show.numberOfSeasons} Seasons',
-                        style: TextStyle(fontSize: 18.sp),
+                        style: TextStyle(fontSize: 15.sp),
                       ),
                     ],
                   ),
@@ -335,9 +352,10 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                               }
 
                               if (youtubeKey != null && mounted) {
-                                // Pause preview player to prevent resource conflict
+                                // Dispose preview player to free resources
                                 _previewTimer?.cancel();
-                                _previewController?.pause();
+                                _previewController?.dispose();
+                                _previewController = null;
                                 setState(() => _showPreview = false);
 
                                 YouTubeTrailerPlayerDialog.show(
@@ -368,7 +386,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                             ),
                           ),
                         ),
-                        SizedBox(width: 12),
+                        SizedBox(width: 10),
                         RatingActionButton(
                           initialRating: _userRating,
                           onTap: () {
@@ -380,7 +398,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                             // Handled inline via EmotionRatingSlider
                           },
                         ),
-                        SizedBox(width: 12),
+                        SizedBox(width: 10),
                         Container(
                           decoration: BoxDecoration(
                             color: isDark
@@ -412,7 +430,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen> {
                             },
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 10),
                         Container(
                           decoration: BoxDecoration(
                             color: isDark

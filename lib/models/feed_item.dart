@@ -24,6 +24,9 @@ class FeedItem {
   final String? videoType;
   final String? thumbnailUrl;
 
+  // Image content (for mixed feed)
+  final String? imageUrl; // Full image URL for image content type
+
   // Metadata
   final String? releaseDate;
   final double? voteAverage;
@@ -58,6 +61,7 @@ class FeedItem {
     this.videoName,
     this.videoType,
     this.thumbnailUrl,
+    this.imageUrl,
     this.releaseDate,
     this.voteAverage,
     this.popularity,
@@ -88,6 +92,7 @@ class FeedItem {
       videoName: json['videoName'],
       videoType: json['videoType'],
       thumbnailUrl: json['thumbnailUrl'],
+      imageUrl: json['imageUrl'],
       releaseDate: json['releaseDate'],
       voteAverage: (json['voteAverage'] as num?)?.toDouble(),
       popularity: (json['popularity'] as num?)?.toDouble(),
@@ -120,6 +125,7 @@ class FeedItem {
       'videoName': videoName,
       'videoType': videoType,
       'thumbnailUrl': thumbnailUrl,
+      'imageUrl': imageUrl,
       'releaseDate': releaseDate,
       'voteAverage': voteAverage,
       'popularity': popularity,
@@ -150,6 +156,9 @@ class FeedItem {
 
   /// Check if this is a trailer
   bool get isTrailer => type == 'trailer' || type == 'teaser';
+
+  /// Check if this is an image content item
+  bool get isImage => type == 'image';
 
   /// Check if this item has a YouTube video
   bool get hasYouTubeVideo => youtubeKey != null && youtubeKey!.isNotEmpty;

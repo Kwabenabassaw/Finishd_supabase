@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:visibility_detector/visibility_detector.dart';
@@ -6,6 +7,7 @@ import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 import '../models/feed_item.dart';
 import '../Home/shareSceen.dart';
+import '../services/youtube_video_manager.dart';
 
 /// Video player for the TMDB-based feed
 /// Handles both TMDB trailers and YouTube BTS/Interview content
@@ -14,6 +16,7 @@ class FeedVideoPlayerV2 extends StatefulWidget {
   final int index;
   final bool isActive;
   final VoidCallback? onNext;
+  final YouTubeVideoManager? videoManager;
 
   const FeedVideoPlayerV2({
     Key? key,
@@ -21,6 +24,7 @@ class FeedVideoPlayerV2 extends StatefulWidget {
     required this.index,
     this.isActive = false,
     this.onNext,
+    this.videoManager,
   }) : super(key: key);
 
   @override
@@ -28,34 +32,55 @@ class FeedVideoPlayerV2 extends StatefulWidget {
 }
 
 class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
-  YoutubePlayerController? _youtubeController;
+  YoutubePlayerController? _localController; // Only used if no manager
   bool _isReady = false;
   bool _isMuted = false;
+
+  /// Get the active controller (from manager or local)
+  YoutubePlayerController? get _youtubeController {
+    if (widget.videoManager != null) {
+      return widget.videoManager!.getController(widget.index);
+    }
+    return _localController;
+  }
 
   @override
   void initState() {
     super.initState();
-    _initializePlayer();
+    // Only create local controller if no manager provided
+    if (widget.videoManager == null) {
+      _initializeLocalPlayer();
+    }
   }
 
   @override
   void didUpdateWidget(FeedVideoPlayerV2 oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // Handle active state changes
-    if (widget.isActive != oldWidget.isActive) {
-      if (widget.isActive) {
-        _youtubeController?.play();
-      } else {
-        _youtubeController?.pause();
+    // Handle active state changes for local controller only
+    if (widget.videoManager == null) {
+      if (widget.isActive != oldWidget.isActive) {
+        if (widget.isActive) {
+          _localController?.play();
+        } else {
+          _localController?.pause();
+        }
+      }
+    }
+
+    // Check if controller is ready (for manager-provided controllers)
+    if (widget.videoManager != null) {
+      final controller = _youtubeController;
+      if (controller != null && controller.value.isReady && !_isReady) {
+        setState(() => _isReady = true);
       }
     }
   }
 
-  void _initializePlayer() {
+  void _initializeLocalPlayer() {
     if (!widget.item.hasYouTubeVideo) return;
 
-    _youtubeController = YoutubePlayerController(
+    _localController = YoutubePlayerController(
       initialVideoId: widget.item.youtubeKey!,
       flags: YoutubePlayerFlags(
         autoPlay: widget.isActive,
@@ -68,8 +93,8 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
       ),
     );
 
-    _youtubeController!.addListener(() {
-      if (_youtubeController!.value.isReady && !_isReady) {
+    _localController!.addListener(() {
+      if (_localController!.value.isReady && !_isReady) {
         setState(() => _isReady = true);
       }
     });
@@ -77,30 +102,38 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
 
   @override
   void dispose() {
-    _youtubeController?.dispose();
+    // Only dispose local controller; manager handles its own
+    _localController?.dispose();
     super.dispose();
   }
 
   void _toggleMute() {
-    if (_youtubeController == null) return;
+    if (widget.videoManager != null) {
+      widget.videoManager!.toggleMute();
+      setState(() => _isMuted = widget.videoManager!.isMuted);
+      return;
+    }
+
+    if (_localController == null) return;
 
     setState(() {
       _isMuted = !_isMuted;
       if (_isMuted) {
-        _youtubeController!.mute();
+        _localController!.mute();
       } else {
-        _youtubeController!.unMute();
+        _localController!.unMute();
       }
     });
   }
 
   void _togglePlayPause() {
-    if (_youtubeController == null) return;
+    final controller = _youtubeController;
+    if (controller == null) return;
 
-    if (_youtubeController!.value.isPlaying) {
-      _youtubeController!.pause();
+    if (controller.value.isPlaying) {
+      controller.pause();
     } else {
-      _youtubeController!.play();
+      controller.play();
     }
     setState(() {});
   }
@@ -243,15 +276,53 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
   }
 
   Widget _buildVideoPlayer() {
-    return YoutubePlayerBuilder(
-      player: YoutubePlayer(
-        controller: _youtubeController!,
-        showVideoProgressIndicator: true,
-        bottomActions: const [],
-        topActions: const [],
-      ),
-      builder: (context, player) {
-        return Center(child: player);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Calculate video dimensions for 16:9 aspect ratio
+        final screenWidth = constraints.maxWidth;
+        final screenHeight = constraints.maxHeight;
+        final videoHeight = screenWidth * 9 / 16; // 16:9 aspect ratio
+        final topPadding = (screenHeight - videoHeight) / 2;
+
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            // Blurred poster background (visible in letterbox areas)
+            ImageFiltered(
+              imageFilter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+              child: CachedNetworkImage(
+                imageUrl:
+                    widget.item.fullPosterUrl ?? widget.item.bestThumbnailUrl,
+                fit: BoxFit.cover,
+                placeholder: (_, __) => Container(color: Colors.black),
+                errorWidget: (_, __, ___) => Container(color: Colors.black),
+              ),
+            ),
+            // Dark overlay for better contrast
+            Container(color: Colors.black.withOpacity(0.5)),
+            // Video player with fixed dimensions (not using AspectRatio)
+            Positioned(
+              top: topPadding > 0 ? topPadding : 0,
+              left: 0,
+              right: 0,
+              child: SizedBox(
+                width: screenWidth,
+                height: videoHeight,
+                child: YoutubePlayerBuilder(
+                  player: YoutubePlayer(
+                    controller: _youtubeController!,
+                    showVideoProgressIndicator: true,
+                    bottomActions: const [],
+                    topActions: const [],
+                  ),
+                  builder: (context, player) {
+                    return ClipRect(child: player);
+                  },
+                ),
+              ),
+            ),
+          ],
+        );
       },
     );
   }
