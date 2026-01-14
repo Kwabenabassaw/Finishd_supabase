@@ -323,7 +323,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         ),
                         const SizedBox(height: 10),
 
-                        // Stats Row - Now using counts from user document
+                        // Stats Row - Using counts from state (properly loaded)
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
@@ -333,7 +333,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                             ),
                             _buildStatColumn(
                               "Followers",
-                              user.followersCount,
+                              _followersCount,
+                              isLoading: _isLoadingCounts,
                               onTap: () {
                                 Navigator.push(
                                   context,
@@ -349,7 +350,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                             ),
                             _buildStatColumn(
                               "Following",
-                              user.followingCount,
+                              _followingCount,
+                              isLoading: _isLoadingCounts,
                               onTap: () {
                                 Navigator.push(
                                   context,

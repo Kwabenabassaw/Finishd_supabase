@@ -5,6 +5,7 @@ import 'package:finishd/provider/community_provider.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
 import 'package:giphy_get/giphy_get.dart';
+import 'package:sizer/sizer.dart';
 
 /// Screen for creating a new post in a community
 class CreatePostScreen extends StatefulWidget {
@@ -225,10 +226,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
+                          child: LogoLoadingScreen(),
                         )
                       : const Text('Post'),
                 );
@@ -256,7 +254,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                   const SizedBox(width: 8),
                   Text(
                     'Posting to: /${widget.mediaType == 'tv' ? 'Shows' : 'Movies'} ${widget.showTitle}',
-                    style: TextStyle(color: primaryGreen),
+                    style: TextStyle(color: primaryGreen, fontSize: 14.sp),
+                    overflow: TextOverflow.ellipsis,
                   ),
 
                   Icon(Icons.expand_more, color: primaryGreen),

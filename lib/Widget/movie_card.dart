@@ -67,25 +67,30 @@ class GenericMovieCard<T> extends StatelessWidget {
                           ),
                         ],
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: CachedNetworkImage(
-                          imageUrl: posterBuilder(item),
-                          fit: BoxFit.cover,
-                          height: imgHeight,
-                          width: cardWidth,
-                          placeholder: (context, url) => Container(
-                            color: Colors.grey[900],
+                      child: Hero(
+                        tag: item is MediaItem
+                            ? 'poster_${(item as MediaItem).id}'
+                            : 'poster_${item.hashCode}',
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: CachedNetworkImage(
+                            imageUrl: posterBuilder(item),
+                            fit: BoxFit.cover,
                             height: imgHeight,
                             width: cardWidth,
-                          ),
-                          errorWidget: (context, url, error) => Container(
-                            color: Colors.grey[850],
-                            height: imgHeight,
-                            width: cardWidth,
-                            child: const Icon(
-                              Icons.broken_image_rounded,
-                              color: Colors.white24,
+                            placeholder: (context, url) => Container(
+                              color: Colors.grey[900],
+                              height: imgHeight,
+                              width: cardWidth,
+                            ),
+                            errorWidget: (context, url, error) => Container(
+                              color: Colors.grey[850],
+                              height: imgHeight,
+                              width: cardWidth,
+                              child: const Icon(
+                                Icons.broken_image_rounded,
+                                color: Colors.white24,
+                              ),
                             ),
                           ),
                         ),

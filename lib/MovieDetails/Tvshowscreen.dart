@@ -157,6 +157,16 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
+
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _previewController?.pause();
+    } else if (state == AppLifecycleState.resumed) {
+      if (_showPreview && !_previewCompleted) {
+        _previewController?.play();
+      }
+    }
+
     // If preview already completed, don't let it restart
     if (_previewCompleted && _previewController != null) {
       _previewController?.dispose();
@@ -206,7 +216,7 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen>
                   color: Colors.black.withOpacity(0.9),
                   shape: BoxShape.circle,
                 ),
-          
+
                 child: Icon(
                   Platform.isIOS ? Icons.arrow_back_ios_new : Icons.arrow_back,
                   color: Colors.white,

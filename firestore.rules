@@ -19,7 +19,11 @@ service cloud.firestore {
     // Users collection
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow update: if isOwner(userId);
+      // Allow users to update their own profile OR update follower/following counts
+      allow update: if isOwner(userId) 
+        || (isAuthenticated() 
+            && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['followersCount', 'followingCount']));
       allow create: if isAuthenticated() && isOwner(userId);
       
       // My Communities Subcollection
@@ -28,13 +32,14 @@ service cloud.firestore {
       }
 
       // Followers / Following
+      // Allow authenticated users to create/delete follower relationships
       match /followers/{followerId} {
         allow read: if isAuthenticated();
-        allow write: if isOwner(followerId);
+        allow create, delete: if isAuthenticated();
       }
       match /following/{followingId} {
         allow read: if isAuthenticated();
-        allow write: if isOwner(userId);
+        allow create, delete: if isAuthenticated();
       }
 
       // Movie Lists
@@ -80,7 +85,7 @@ service cloud.firestore {
       // Members subcollection
       match /members/{memberId} {
         allow read: if true;
-        allow create, delete: if request.auth != null && request.auth.uid == memberId;
+        allow write: if request.auth != null && request.auth.uid == memberId;
       }
     }
     

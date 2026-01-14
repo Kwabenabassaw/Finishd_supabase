@@ -363,7 +363,10 @@ class _CommentSheetState extends State<CommentSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey[600]),
+          Transform.flip(
+            flipX: true,
+            child: Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey[600]),
+          ),
           const SizedBox(height: 16),
           Text(
             'No comments yet',

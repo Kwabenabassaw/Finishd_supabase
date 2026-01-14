@@ -46,10 +46,21 @@ class _HomeScreenV2State extends State<HomeScreenV2>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.paused) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      debugPrint('[HomeScreenV2] 📱 App Paused/Inactive - PAUSING ALL');
       _videoManager.pauseAll();
     } else if (state == AppLifecycleState.resumed) {
-      _videoManager.resumeCurrent();
+      debugPrint('[HomeScreenV2] 📱 App Resumed - Checking visibility');
+      // Only resume if this screen is actually visible
+      final isTopRoute = ModalRoute.of(context)?.isCurrent ?? true;
+      if (isTopRoute) {
+        debugPrint('[HomeScreenV2] 🚀 Top route - RESUMING');
+        _videoManager.resumeCurrent();
+      } else {
+        debugPrint('[HomeScreenV2] 🧊 Not top route - STAYING PAUSED');
+        _videoManager.pauseAll();
+      }
     }
   }
 

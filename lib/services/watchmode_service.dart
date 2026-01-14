@@ -57,16 +57,20 @@ class WatchmodeService {
   /// Priority order for streaming types (subscription first, then free, then rent/buy)
   static const List<String> _typePriority = ['sub', 'free', 'rent', 'buy'];
 
-  /// Fallback logo URLs for known Watchmode source IDs (using TMDB provider logos)
+  /// Cache for dynamically fetched source logos from /sources endpoint
+  static Map<int, String>? _dynamicSourceLogos;
+  static bool _isFetchingLogos = false;
+
+  /// Expanded fallback logo URLs for known Watchmode source IDs (using TMDB provider logos)
   static const Map<int, String> _sourceLogos = {
-    // Major streaming services
+    // Major streaming subscription services
     203:
         'https://image.tmdb.org/t/p/original/pbpMk2JmcoNnQwx5JGpXngfoWtp.jpg', // Netflix
     26: 'https://image.tmdb.org/t/p/original/dQeAar5H991VYporEjUspolDarG.jpg', // Prime Video
     372:
         'https://image.tmdb.org/t/p/original/7rwgEs15tFwyR9NPQ5vpzxTj19Q.jpg', // Disney+
     387:
-        'https://image.tmdb.org/t/p/original/6Q3ZYUNA9Hsgj6iWnVsw2gR5V6z.jpg', // Max
+        'https://image.tmdb.org/t/p/original/6Q3ZYUNA9Hsgj6iWnVsw2gR5V6z.jpg', // Max (HBO Max)
     157:
         'https://image.tmdb.org/t/p/original/zxrVdFjIjLqkfnwyghnfywTn3Lh.jpg', // Hulu
     371:
@@ -79,19 +83,31 @@ class WatchmodeService {
         'https://image.tmdb.org/t/p/original/eWp5LdR4p4uKL0wACBBXapDV2lB.jpg', // Starz
     318:
         'https://image.tmdb.org/t/p/original/Ajqyt5aNxNGjmF9uOfxArGrdf3X.jpg', // Showtime
-    // Free streaming
+    // Free streaming services
     241:
         'https://image.tmdb.org/t/p/original/w0qJQm1HiXlylUNBqkM0GNGaVoo.jpg', // Tubi
     300:
         'https://image.tmdb.org/t/p/original/t6N57S17sdXRXmZDAkaGP0NHNG0.jpg', // Pluto TV
-    // Live TV / Cable
+    442:
+        'https://image.tmdb.org/t/p/original/1WEpKpLhT8ehdyJHn4R9hYoUXgz.jpg', // Plex
+    457:
+        'https://image.tmdb.org/t/p/original/fWqVPYArdFwBc6vYqoyQB6XUl85.jpg', // The Roku Channel
+    398:
+        'https://image.tmdb.org/t/p/original/xL9SUR63qrEjFZAhtsipskeAMR7.jpg', // Crackle
+    123:
+        'https://image.tmdb.org/t/p/original/ifhbNuuVnlwYy5oXA5VIb2YR8AZ.jpg', // Vudu Free
+    459:
+        'https://image.tmdb.org/t/p/original/zPGbhPAMVLOGhrANEFEzwOqRlKM.jpg', // Freevee (IMDb TV)
+    // Live TV / Cable streaming
     373:
         'https://image.tmdb.org/t/p/original/iklTy1RwaJGEYGz73nKs6HGTIFQ.jpg', // fuboTV
     215:
         'https://image.tmdb.org/t/p/original/gJ3yVMWouaVj6iHd59TISJ1TlM5.jpg', // CBS
     376:
         'https://image.tmdb.org/t/p/original/bxdNcDbk1ohVeOMmM3eusAAiTLw.jpg', // Spectrum
-    // Rent/Buy
+    395:
+        'https://image.tmdb.org/t/p/original/m6LhykG1WxLgPq4K3p3bLj5wG4Y.jpg', // DIRECTV
+    // Rent/Buy services
     307:
         'https://image.tmdb.org/t/p/original/peURlLlr8jggOwK53fJ5wdQl05y.jpg', // Vudu
     349:
@@ -99,7 +115,12 @@ class WatchmodeService {
     352:
         'https://image.tmdb.org/t/p/original/5NyLm42TmCqCMOZFvH4fcoSNKEW.jpg', // Google Play
     24: 'https://image.tmdb.org/t/p/original/seGSXajazLMCKGB5ber90VuGPpT.jpg', // Amazon Video
-    // Additional services
+    192:
+        'https://image.tmdb.org/t/p/original/pZ9TSk3wlRYwiwwRxTsQJ7t2but.jpg', // YouTube
+    350:
+        'https://image.tmdb.org/t/p/original/1W87E41jmwpnYswfTL4c4gYKJfP.jpg', // Redbox
+    68: 'https://image.tmdb.org/t/p/original/paq2o2dIfQnxcERsVoq7Ys8KYz8.jpg', // Microsoft Store
+    // Specialty/Niche streaming
     392:
         'https://image.tmdb.org/t/p/original/hNO3eCEnewPxzGLsFJT2sL0D2N4.jpg', // Crunchyroll
     386:
@@ -108,13 +129,94 @@ class WatchmodeService {
         'https://image.tmdb.org/t/p/original/aGIS8maihUm60A3moKYD9gfYHYT.jpg', // BritBox
     437:
         'https://image.tmdb.org/t/p/original/67Ee4E6qOkQGHeUTArdJ1qRxzR2.jpg', // CuriosityStream
+    378:
+        'https://image.tmdb.org/t/p/original/rVKCtTkuCjgek0qY8pwEyoxHUxu.jpg', // MUBI
+    430:
+        'https://image.tmdb.org/t/p/original/bmU37kpSMcXD5mLTqd8poJSreWj.jpg', // Shudder
+    385:
+        'https://image.tmdb.org/t/p/original/hR9vWd8hWEVQKD6eOnBneKRFEW3.jpg', // Discovery+
+    455:
+        'https://image.tmdb.org/t/p/original/9ghgSC0MA082EL6HLCW3GalykFD.jpg', // MGM+
+    363:
+        'https://image.tmdb.org/t/p/original/maJGYuJJEq9WtZqSFl4W6OAe8gn.jpg', // Kanopy
+    432:
+        'https://image.tmdb.org/t/p/original/krjE7bNiL2UsqBiQzMQPNy23Mg5.jpg', // Criterion Channel
+    377:
+        'https://image.tmdb.org/t/p/original/3E0RkIEQrrGYazs63NMsn3XONT6.jpg', // Sundance Now
+    397:
+        'https://image.tmdb.org/t/p/original/qBDBQlxRcJwqxp9IURQ0Z6sXxAF.jpg', // Acorn TV
+    450:
+        'https://image.tmdb.org/t/p/original/yT8wLFH72klyAs1v9xOmjNLe60N.jpg', // Hallmark Movies
+    445:
+        'https://image.tmdb.org/t/p/original/2joD3S2goOB6lmepX35A8dmaqgM.jpg', // HIDIVE (Anime)
+    526:
+        'https://image.tmdb.org/t/p/original/j5EiyYEqP2dKOdSYOByfKmYtNmF.jpg', // Fandango at Home
   };
 
-  /// Get logo URL for a source, with fallback
+  /// Fetch all source logos from the /sources endpoint once and cache them
+  static Future<void> _fetchSourceLogos() async {
+    if (_dynamicSourceLogos != null || _isFetchingLogos) return;
+    _isFetchingLogos = true;
+
+    try {
+      final url = Uri.parse('$_baseUrl/sources/?apiKey=$_apiKey&regions=US');
+      print('📥 Fetching all Watchmode sources for logo cache...');
+      final response = await http.get(url).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        _dynamicSourceLogos = {};
+
+        for (var source in data) {
+          final id = source['id'] as int? ?? 0;
+          final logo = source['logo_100px']?.toString() ?? '';
+          if (id > 0 && logo.isNotEmpty) {
+            _dynamicSourceLogos![id] = logo;
+          }
+        }
+        print('✅ Cached ${_dynamicSourceLogos!.length} source logos from API');
+      } else {
+        print('❌ Failed to fetch sources: ${response.statusCode}');
+        _dynamicSourceLogos = {}; // Set empty to prevent retries
+      }
+    } catch (e) {
+      print('🚨 Error fetching source logos: $e');
+      _dynamicSourceLogos = {}; // Set empty to prevent retries
+    } finally {
+      _isFetchingLogos = false;
+    }
+  }
+
+  /// Get logo URL for a source, checking dynamic cache, API response, then fallback
+  static Future<String> _getLogoUrlAsync(
+    int sourceId,
+    String? apiLogoUrl,
+  ) async {
+    // 1. Use API-provided logo if available and non-empty
+    if (apiLogoUrl != null && apiLogoUrl.isNotEmpty) {
+      return apiLogoUrl;
+    }
+
+    // 2. Check dynamically fetched logos cache
+    if (_dynamicSourceLogos != null &&
+        _dynamicSourceLogos!.containsKey(sourceId)) {
+      return _dynamicSourceLogos![sourceId]!;
+    }
+
+    // 3. Fall back to hardcoded logos
+    return _sourceLogos[sourceId] ?? '';
+  }
+
+  /// Synchronous version for backward compatibility (uses cache only)
   static String _getLogoUrl(int sourceId, String? apiLogoUrl) {
     // Use API-provided logo if available
     if (apiLogoUrl != null && apiLogoUrl.isNotEmpty) {
       return apiLogoUrl;
+    }
+    // Check dynamically fetched logos
+    if (_dynamicSourceLogos != null &&
+        _dynamicSourceLogos!.containsKey(sourceId)) {
+      return _dynamicSourceLogos![sourceId]!;
     }
     // Fall back to our hardcoded logos
     return _sourceLogos[sourceId] ?? '';
@@ -237,6 +339,9 @@ class WatchmodeService {
     String tmdbId,
     String mediaType,
   ) async {
+    // 0. Pre-fetch source logos if not already cached
+    await _fetchSourceLogos();
+
     // 1. Check cache first
     final cached = await _getCachedProviders(tmdbId);
     if (cached != null) {

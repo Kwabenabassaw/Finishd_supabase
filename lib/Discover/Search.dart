@@ -1,10 +1,9 @@
 import 'dart:io' show Platform;
 import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:finishd/Model/Searchdiscover.dart';
-import 'package:finishd/Model/movie_list_item.dart';
 import 'package:finishd/Model/trending.dart';
 import 'package:finishd/MovieDetails/movie_details_screen.dart';
-import 'package:finishd/Widget/movie_action_drawer.dart';
+import 'package:finishd/Widget/interactive_media_poster.dart';
 import 'package:finishd/provider/MovieProvider.dart';
 import 'package:finishd/tmbd/Search.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
@@ -21,7 +20,7 @@ SearchDiscover searchApi = SearchDiscover();
 // Utility for TMDB image URLs
 String getTmdbImageUrl(String? path, {String size = 'w500'}) {
   if (path == null || path.isEmpty) {
-    return 'https://via.placeholder.com/200x300?text=No+Image';
+    return 'assets/noimage.jpg';
   }
   return 'https://image.tmdb.org/t/p/$size$path';
 }
@@ -171,11 +170,10 @@ class _SearchScreenState extends State<SearchScreen> {
         Expanded(
           child: Container(
             height: 40,
-          
+
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(
               children: [
-             
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
@@ -184,11 +182,15 @@ class _SearchScreenState extends State<SearchScreen> {
                     onChanged: _onSearchChanged,
                     autofocus: true,
                     style: theme.textTheme.bodyMedium,
+
                     decoration: const InputDecoration(
                       hintText: "Movies, shows, or people",
                       border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(vertical: 18),
+
+                      contentPadding: EdgeInsets.symmetric(
+                        vertical: 18,
+                        horizontal: 12,
+                      ),
                     ),
                   ),
                 ),
@@ -221,8 +223,6 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildTabBar(ThemeData theme) {
     return TabBar(
-     
-      
       indicatorColor: theme.primaryColor,
       labelColor: theme.textTheme.bodyLarge?.color,
       unselectedLabelColor: Colors.grey,
@@ -286,78 +286,115 @@ class _SearchScreenState extends State<SearchScreen> {
 
         final imagePath = isPerson ? item.profilePath : item.posterPath;
 
-        return GestureDetector(
-          onTap: () {
-            if (isPerson) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ActorProfileScreen(
-                    personId: item.id ?? 0,
-                    personName: displayName,
-                  ),
-                ),
-              );
-            } else {
-              provider.selectSearchItem(filtered, index);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => GenericDetailsScreen()),
-              );
-            }
-          },
-          onLongPress: () {
-            if (isPerson) return;
-            showMovieActionDrawer(
-              context,
-              MovieListItem(
-                id: item.id.toString(),
-                title: displayName,
-                posterPath: item.posterPath,
-                mediaType: item.mediaType ?? 'movie',
-                addedAt: DateTime.now(),
-              ),
-            );
-          },
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(26),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Builder(
+                builder: (imageContext) {
+                  return GestureDetector(
+                    onTap: () {
+                      if (isPerson) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ActorProfileScreen(
+                              personId: item.id ?? 0,
+                              personName: displayName,
+                            ),
+                          ),
+                        );
+                      } else {
+                        provider.selectSearchItem(filtered, index);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => GenericDetailsScreen(),
+                          ),
+                        );
+                      }
+                    },
+                    onLongPressStart: (details) {
+                      if (isPerson) return;
+
+                      // Get the render box for the IMAGE ONLY
+                      final RenderBox renderBox =
+                          imageContext.findRenderObject() as RenderBox;
+                      final size = renderBox.size;
+                      final offset = renderBox.localToGlobal(Offset.zero);
+
+                      // Convert Result to MediaItem
+                      final mediaItem = MediaItem(
+                        id: item.id ?? 0,
+                        title: displayName,
+                        overview: item.overview ?? '',
+                        posterPath: item.posterPath ?? '',
+                        backdropPath: item.backdropPath ?? '',
+                        genreIds: item.genreIds ?? [],
+                        voteAverage: item.voteAverage ?? 0.0,
+                        mediaType: item.mediaType ?? 'movie',
+                        releaseDate:
+                            item.releaseDate?.toString() ??
+                            item.firstAirDate?.toString() ??
+                            '',
+                        imageUrl: getTmdbImageUrl(item.posterPath),
+                      );
+
+                      showBlurPreview(
+                        context: context,
+                        item: mediaItem,
+                        childSize: size,
+                        childOffset: offset,
+                      );
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(26),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: CachedNetworkImage(
-                      imageUrl: getTmdbImageUrl(imagePath),
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(
-                        color: Colors.grey[300],
-                        child: const Center(
-                          child: CupertinoActivityIndicator(),
-                        ),
-                      ),
-                      errorWidget: (_, __, ___) => Container(
-                        color: Colors.grey[200],
-                        child: const Icon(
-                          Icons.movie_filter_rounded,
-                          color: Colors.grey,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: CachedNetworkImage(
+                          imageUrl: getTmdbImageUrl(imagePath),
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) => Container(
+                            color: Colors.grey[300],
+                            child: const Center(
+                              child: CupertinoActivityIndicator(),
+                            ),
+                          ),
+                          errorWidget: (_, __, ___) => Container(
+                            color: Colors.grey[200],
+                            child: Image.asset(
+                              'assets/noimage.jpg',
+                              fit: BoxFit.cover,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
-              const SizedBox(height: 8),
-              Text(
+            ),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () {
+                if (!isPerson) {
+                  provider.selectSearchItem(filtered, index);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => GenericDetailsScreen()),
+                  );
+                }
+              },
+              child: Text(
                 displayName,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -367,14 +404,14 @@ class _SearchScreenState extends State<SearchScreen> {
                   height: 1.2,
                 ),
               ),
-              if (!isPerson &&
-                  (item.releaseDate != null || item.firstAirDate != null))
-                Text(
-                  (item.releaseDate ?? item.firstAirDate)!.year.toString(),
-                  style: TextStyle(fontSize: 10, color: Colors.grey[600]),
-                ),
-            ],
-          ),
+            ),
+            if (!isPerson &&
+                (item.releaseDate != null || item.firstAirDate != null))
+              Text(
+                (item.releaseDate ?? item.firstAirDate)!.year.toString(),
+                style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+              ),
+          ],
         );
       },
     );

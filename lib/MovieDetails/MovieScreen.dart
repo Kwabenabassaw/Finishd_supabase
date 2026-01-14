@@ -165,6 +165,16 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
+
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _previewController?.pause();
+    } else if (state == AppLifecycleState.resumed) {
+      if (_showPreview && !_previewCompleted) {
+        _previewController?.play();
+      }
+    }
+
     // If preview already completed, don't let it restart
     if (_previewCompleted && _previewController != null) {
       _previewController?.dispose();

@@ -197,24 +197,7 @@ class _MovieRecommendersScreenState extends State<MovieRecommendersScreen> {
                       ),
                     ),
                     // Online indicator
-                    Positioned(
-                      bottom: 2,
-                      right: 2,
-                      child: Container(
-                        width: 14,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).primaryColor,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color:
-                                Theme.of(context).cardTheme.color ??
-                                Colors.white,
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                    ),
+                   
                   ],
                 ),
                 const SizedBox(width: 16),

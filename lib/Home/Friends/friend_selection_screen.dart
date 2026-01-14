@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:finishd/Model/movie_list_item.dart';
@@ -223,7 +224,7 @@ class _FriendSelectionScreenState extends State<FriendSelectionScreen> {
                       ? _sendRecommendation
                       : null,
                   style: FilledButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
+                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.2),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
                       vertical: 8,
@@ -236,10 +237,7 @@ class _FriendSelectionScreenState extends State<FriendSelectionScreen> {
                       ? const SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
+                          child: LogoLoadingScreen(),
                         )
                       : const Text(
                           'Send',
@@ -252,7 +250,7 @@ class _FriendSelectionScreenState extends State<FriendSelectionScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: LogoLoadingScreen())
           : _friends.isEmpty
           ? Center(
               child: Column(
@@ -322,8 +320,10 @@ class _FriendSelectionScreenState extends State<FriendSelectionScreen> {
                               Text(
                                 widget.movie.title,
                                 style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.bold),
+                                    ?.copyWith(fontWeight: FontWeight.bold)
+                                    ,
                                 maxLines: 2,
+                              
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 6),
@@ -343,7 +343,7 @@ class _FriendSelectionScreenState extends State<FriendSelectionScreen> {
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w800,
-                                    color: Theme.of(context).primaryColor,
+                                 
                                     letterSpacing: 0.5,
                                   ),
                                 ),

@@ -21,13 +21,14 @@ class YouTubeTrailerPlayerDialog extends StatefulWidget {
   }
 }
 
-class _YouTubeTrailerPlayerDialogState
-    extends State<YouTubeTrailerPlayerDialog> {
+class _YouTubeTrailerPlayerDialogState extends State<YouTubeTrailerPlayerDialog>
+    with WidgetsBindingObserver {
   late YoutubePlayerController _controller;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _controller = YoutubePlayerController.fromVideoId(
       videoId: widget.youtubeKey,
       autoPlay: true,
@@ -49,7 +50,18 @@ class _YouTubeTrailerPlayerDialogState
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _controller.pauseVideo();
+    } else if (state == AppLifecycleState.resumed) {
+      _controller.playVideo();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.close();
     // Restore portrait orientation
     SystemChrome.setPreferredOrientations([

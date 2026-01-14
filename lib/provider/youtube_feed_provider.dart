@@ -475,7 +475,7 @@ class YoutubeFeedProvider extends ChangeNotifier {
     int checks = 0;
     late final Timer timer;
     timer = Timer.periodic(const Duration(milliseconds: 100), (_) {
-      if (_isDisposed) {
+      if (_isDisposed || _isLifecyclePaused) {
         timer.cancel();
         _pendingTimers.remove(timer);
         return;
@@ -584,7 +584,7 @@ class YoutubeFeedProvider extends ChangeNotifier {
             debugPrint('[YTFeed] 🚀 Success: Video at $index is $state');
 
             // NEW: Auto-unmute when it starts playing
-            if (_isMuted) {
+            if (_isMuted && !_isLifecyclePaused) {
               debugPrint('[YTFeed] 🔊 Auto-unmuting since playback started');
               _isMuted = false;
               currentController.unMute();

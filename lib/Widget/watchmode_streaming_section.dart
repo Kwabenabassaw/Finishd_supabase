@@ -1,6 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:finishd/services/watchmode_service.dart';
 import 'package:flutter/material.dart';
+import 'package:sizer/sizer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Displays streaming providers using Watchmode API
@@ -192,7 +194,7 @@ class _WatchmodeStreamingSectionState extends State<WatchmodeStreamingSection> {
                       placeholder: (context, url) => Container(
                         color: Colors.grey.shade300,
                         child: const Center(
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: LogoLoadingScreen(),
                         ),
                       ),
                       errorWidget: (context, url, error) => Container(
@@ -306,7 +308,7 @@ class _WatchmodeStreamingSectionState extends State<WatchmodeStreamingSection> {
               Text(
                 "Not currently available for streaming in the US",
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 14.sp,
                   color: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.color?.withOpacity(0.6),

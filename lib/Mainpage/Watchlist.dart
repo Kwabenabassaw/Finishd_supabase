@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:finishd/Model/MovieDetails.dart';
@@ -68,7 +69,7 @@ class _WatchlistState extends State<Watchlist>
         title: isIOS
             ? _buildCustomSegmentedControl(isDark)
             : Text(
-                "Watchlist",
+                "Saved",
                 style: TextStyle(
                   color: isDark ? Colors.white : Colors.black,
                   fontWeight: FontWeight.bold,
@@ -227,7 +228,7 @@ class _WatchlistState extends State<Watchlist>
       ),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child:LogoLoadingScreen());
         }
 
         if (snapshot.hasError) {
@@ -328,9 +329,7 @@ class _WatchlistState extends State<Watchlist>
                           placeholder: (context, url) => Container(
                             color: Colors.grey[900],
                             child: const Center(
-                              child: CircularProgressIndicator(
-                                color: Colors.green,
-                              ),
+                              child:LogoLoadingScreen(),
                             ),
                           ),
                           errorWidget: (context, url, error) => Container(
@@ -554,10 +553,7 @@ class _WatchlistState extends State<Watchlist>
                               placeholder: (context, url) => Container(
                                 color: Colors.grey[900],
                                 child: const Center(
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.green,
-                                  ),
+                                  child: LogoLoadingScreen(),
                                 ),
                               ),
                               errorWidget: (context, url, error) => Container(

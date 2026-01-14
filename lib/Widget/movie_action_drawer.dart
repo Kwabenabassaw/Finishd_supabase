@@ -87,7 +87,7 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
       switch (action) {
         case 'watching':
           await _movieListService.addToWatching(uid, widget.movie);
-          _showSuccessMessage('Added to Currently Watching');
+          _showSuccessMessage('Added to Watching');
           break;
         case 'watchlist':
           await _movieListService.addToWatchlist(uid, widget.movie);
@@ -95,7 +95,7 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
           break;
         case 'finished':
           await _movieListService.addToFinished(uid, widget.movie);
-          _showSuccessMessage('Added to Finished');
+          _showSuccessMessage('Added to Finishd');
           break;
         case 'favorites':
           await _movieListService.toggleFavorite(uid, widget.movie);
@@ -269,7 +269,7 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
               children: [
                 _buildActionTile(
                   icon: Icons.play_circle_outline,
-                  title: 'Currently Watching',
+                  title: 'Watching',
                   isActive: _movieStatus['watching']!,
                   onTap: () => _handleAction('watching'),
                 ),
@@ -280,8 +280,8 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
                   onTap: () => _handleAction('watchlist'),
                 ),
                 _buildActionTile(
-                  icon: Icons.check_circle_outline,
-                  title: 'Finished Watching',
+                  icon: FontAwesomeIcons.checkCircle,
+                  title: 'Finishd',
                   isActive: _movieStatus['finished']!,
                   onTap: () => _handleAction('finished'),
                 ),

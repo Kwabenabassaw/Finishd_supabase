@@ -16,8 +16,8 @@ class ContentNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = context.watch<YoutubeFeedProvider>();
 
-    // Tab order: [Trending, Following, For You] - matching TikTok layout
-    final List<String> tabs = ["Trending", "Following", "For You"];
+    // Tab order: [Trending, For You]
+    final List<String> tabs = ["Trending", "For You"];
 
     // Map FeedType to tab index
     int selectedIndex;
@@ -26,10 +26,11 @@ class ContentNav extends StatelessWidget {
         selectedIndex = 0;
         break;
       case FeedType.following:
+        // Following tab removed, default to For You
         selectedIndex = 1;
         break;
       case FeedType.forYou:
-        selectedIndex = 2;
+        selectedIndex = 1;
         break;
     }
 
@@ -94,9 +95,6 @@ class ContentNav extends StatelessWidget {
         newType = FeedType.trending;
         break;
       case 1:
-        newType = FeedType.following;
-        break;
-      case 2:
         newType = FeedType.forYou;
         break;
       default:
