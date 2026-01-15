@@ -52,7 +52,7 @@ dependencies:
   tiktoklikescroller: ^0.2.8
 
   # Firebase
-  firebase_core: ^3.8.1
+  firebase_core: ^3.15.2
   firebase_auth: ^5.3.3
   cloud_firestore: ^5.5.2
   google_sign_in: ^6.1.6
@@ -72,6 +72,7 @@ dependencies:
   giphy_get: ^3.6.1+1
   app_links: ^7.0.0
   lucide_icons_flutter: ^3.1.9
+  firebase_analytics: ^11.6.0
 
 dev_dependencies:
   flutter_test:
