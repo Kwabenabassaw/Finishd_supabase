@@ -24,8 +24,8 @@ class _EditFavoriteContentScreenState extends State<EditFavoriteContentScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   List<MediaItem>? _discoverContent;
-  Map<String, SelectedMedia> _selectedMovies = {};
-  Map<String, SelectedMedia> _selectedShows = {};
+  final Map<String, SelectedMedia> _selectedMovies = {};
+  final Map<String, SelectedMedia> _selectedShows = {};
 
   bool _isLoading = true;
   bool _isSaving = false;

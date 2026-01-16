@@ -1,5 +1,6 @@
 import 'package:finishd/Discover/Search.dart';
 import 'package:finishd/Home/Friends/friendsTab.dart';
+import 'package:finishd/services/analytics_service.dart';
 import 'package:finishd/Home/Search.dart';
 import 'package:finishd/Home/commentScreen.dart';
 import 'package:finishd/Mainpage/Discover.dart';
@@ -132,7 +133,12 @@ class MyApp extends StatelessWidget {
               theme: AppTheme.lightTheme,
               darkTheme: AppTheme.darkTheme,
               themeMode: themeProvider.themeMode,
-              navigatorObservers: [routeObserver],
+              navigatorObservers: [
+                routeObserver,
+                // Add the two analytics observers
+                AnalyticsService().getAnalyticsObserver(), // For standard screen_view events
+                ScreenTimeObserver(), // For our custom screen_view_duration events
+              ],
               initialRoute: '/',
               routes: {
                 '/': (context) => const SplashScreen(),
