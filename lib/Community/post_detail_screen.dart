@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:finishd/Model/community_models.dart';
 import 'package:finishd/provider/community_provider.dart';
 import 'package:finishd/provider/user_provider.dart';
+import 'package:finishd/Widget/report_bottom_sheet.dart';
+import 'package:finishd/models/report_model.dart';
 import 'package:finishd/Widget/image_preview.dart';
 import 'package:finishd/Home/share_post_sheet.dart';
 import 'package:finishd/Widget/fullscreen_video_player.dart';
@@ -608,6 +610,33 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     ],
                   ),
                 ),
+                if (comment.authorId != provider.currentUid) ...[
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: Icon(
+                      Icons.flag_outlined,
+                      size: 18,
+                      color: theme.hintColor.withOpacity(0.5),
+                    ),
+                    onPressed: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => ReportBottomSheet(
+                          type: ReportType.communityComment,
+                          contentId: comment.id,
+                          reportedUserId: comment.authorId,
+                          communityId: widget.showId.toString(),
+                          parentContentId: widget.post.id,
+                        ),
+                      );
+                    },
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.all(8),
+                    tooltip: 'Report Comment',
+                  ),
+                ],
                 const Spacer(),
                 TextButton.icon(
                   onPressed: () => _replyTo(comment.id, comment.authorName),

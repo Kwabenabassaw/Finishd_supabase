@@ -3,6 +3,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:finishd/Model/community_models.dart';
 import 'package:finishd/Community/create_post_screen.dart';
 import 'package:finishd/Community/post_detail_screen.dart';
+import 'package:finishd/Widget/report_bottom_sheet.dart';
+import 'package:finishd/models/report_model.dart';
 import 'package:finishd/Widget/image_preview.dart';
 import 'package:finishd/provider/community_provider.dart';
 import 'package:finishd/provider/user_provider.dart';
@@ -1162,7 +1164,17 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                 title: const Text('Report Post'),
                 onTap: () {
                   Navigator.pop(context);
-                  // Implement report logic
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) => ReportBottomSheet(
+                      type: ReportType.communityPost,
+                      contentId: post.id,
+                      reportedUserId: post.authorId,
+                      communityId: widget.showId.toString(),
+                    ),
+                  );
                 },
               ),
             ListTile(

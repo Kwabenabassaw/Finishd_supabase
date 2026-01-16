@@ -19,7 +19,7 @@ class AppDatabase {
 
     return await openDatabase(
       path,
-      version: 5, // Upgraded to 5 for Recommendation cache
+      version: 8, // Upgraded to 8 for Movie Lists sync tracking
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -94,6 +94,61 @@ class AppDatabase {
         timestamp INTEGER NOT NULL
       )
     ''');
+
+    // 8. Following Cache (v6) - 24h TTL
+    await db.execute('''
+      CREATE TABLE following_cache (
+        user_id TEXT PRIMARY KEY,
+        following_ids TEXT NOT NULL,
+        timestamp INTEGER NOT NULL
+      )
+    ''');
+
+    // 9. Followers Cache (v6) - 24h TTL
+    await db.execute('''
+      CREATE TABLE followers_cache (
+        user_id TEXT PRIMARY KEY,
+        follower_ids TEXT NOT NULL,
+        timestamp INTEGER NOT NULL
+      )
+    ''');
+
+    // 10. User Profile Cache (v6) - 7 day TTL
+    await db.execute('''
+      CREATE TABLE user_profile_cache (
+        uid TEXT PRIMARY KEY,
+        profile_data TEXT NOT NULL,
+        timestamp INTEGER NOT NULL
+      )
+    ''');
+
+    // 11. Recommendations Received Cache (v7) - Hybrid approach
+    await db.execute('''
+      CREATE TABLE recommendations_received_cache (
+        user_id TEXT NOT NULL,
+        recommendation_id TEXT PRIMARY KEY,
+        recommendation_data TEXT NOT NULL,
+        timestamp INTEGER NOT NULL
+      )
+    ''');
+
+    // Track last sync time per user
+    await db.execute('''
+      CREATE TABLE recommendation_sync_status (
+        user_id TEXT PRIMARY KEY,
+        last_sync_timestamp INTEGER NOT NULL
+      )
+    ''');
+
+    // 12. Movie List Sync Status (v8) - Track hybrid sync per list
+    await db.execute('''
+      CREATE TABLE movie_list_sync_status (
+        user_id TEXT NOT NULL,
+        list_type TEXT NOT NULL,
+        last_sync_timestamp INTEGER NOT NULL,
+        PRIMARY KEY (user_id, list_type)
+      )
+    ''');
   }
 
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -139,6 +194,64 @@ class AppDatabase {
           cache_key TEXT PRIMARY KEY,
           friend_ids TEXT NOT NULL,
           timestamp INTEGER NOT NULL
+        )
+      ''');
+    }
+
+    if (oldVersion < 6) {
+      // Add social graph cache tables
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS following_cache (
+          user_id TEXT PRIMARY KEY,
+          following_ids TEXT NOT NULL,
+          timestamp INTEGER NOT NULL
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS followers_cache (
+          user_id TEXT PRIMARY KEY,
+          follower_ids TEXT NOT NULL,
+          timestamp INTEGER NOT NULL
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS user_profile_cache (
+          uid TEXT PRIMARY KEY,
+          profile_data TEXT NOT NULL,
+          timestamp INTEGER NOT NULL
+        )
+      ''');
+    }
+
+    if (oldVersion < 7) {
+      // Add recommendations cache tables (hybrid approach)
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS recommendations_received_cache (
+          user_id TEXT NOT NULL,
+          recommendation_id TEXT PRIMARY KEY,
+          recommendation_data TEXT NOT NULL,
+          timestamp INTEGER NOT NULL
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS recommendation_sync_status (
+          user_id TEXT PRIMARY KEY,
+          last_sync_timestamp INTEGER NOT NULL
+        )
+      ''');
+    }
+
+    if (oldVersion < 8) {
+      // Add movie list sync tracking
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS movie_list_sync_status (
+          user_id TEXT NOT NULL,
+          list_type TEXT NOT NULL,
+          last_sync_timestamp INTEGER NOT NULL,
+          PRIMARY KEY (user_id, list_type)
         )
       ''');
     }

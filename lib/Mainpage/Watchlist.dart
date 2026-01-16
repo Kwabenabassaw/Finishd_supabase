@@ -175,7 +175,8 @@ class _WatchlistState extends State<Watchlist>
 
   Widget _buildWatchlistTab() {
     return StreamBuilder<List<MovieListItem>>(
-      stream: _movieListService.streamMoviesFromList(
+      // Hybrid stream: instant load from SQLite + real-time updates
+      stream: _movieListService.streamMoviesFromListHybrid(
         _currentUserId,
         'watchlist',
       ),
@@ -222,13 +223,14 @@ class _WatchlistState extends State<Watchlist>
 
   Widget _buildSavedTab() {
     return StreamBuilder<List<MovieListItem>>(
-      stream: _movieListService.streamMoviesFromList(
+      // Hybrid stream: instant load from SQLite + real-time updates
+      stream: _movieListService.streamMoviesFromListHybrid(
         _currentUserId,
         'favorites',
       ),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child:LogoLoadingScreen());
+          return const Center(child: LogoLoadingScreen());
         }
 
         if (snapshot.hasError) {
@@ -328,9 +330,7 @@ class _WatchlistState extends State<Watchlist>
                           fit: BoxFit.cover,
                           placeholder: (context, url) => Container(
                             color: Colors.grey[900],
-                            child: const Center(
-                              child:LogoLoadingScreen(),
-                            ),
+                            child: const Center(child: LogoLoadingScreen()),
                           ),
                           errorWidget: (context, url, error) => Container(
                             color: Colors.grey[850],
@@ -552,9 +552,7 @@ class _WatchlistState extends State<Watchlist>
                               fit: BoxFit.cover,
                               placeholder: (context, url) => Container(
                                 color: Colors.grey[900],
-                                child: const Center(
-                                  child: LogoLoadingScreen(),
-                                ),
+                                child: const Center(child: LogoLoadingScreen()),
                               ),
                               errorWidget: (context, url, error) => Container(
                                 color: Colors.grey[850],

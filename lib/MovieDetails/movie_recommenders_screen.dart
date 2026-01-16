@@ -50,7 +50,8 @@ class _MovieRecommendersScreenState extends State<MovieRecommendersScreen> {
         ),
       ),
       body: StreamBuilder<List<Recommendation>>(
-        stream: _recommendationService.getMyRecommendationsForMovie(
+        // Use hybrid stream with local filtering
+        stream: _recommendationService.getMyRecommendationsForMovieHybrid(
           _currentUserId,
           widget.movieId,
         ),
@@ -196,8 +197,8 @@ class _MovieRecommendersScreenState extends State<MovieRecommendersScreen> {
                                   as ImageProvider,
                       ),
                     ),
+
                     // Online indicator
-                   
                   ],
                 ),
                 const SizedBox(width: 16),

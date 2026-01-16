@@ -35,13 +35,18 @@ class _UserListScreenState extends State<UserListScreen> {
     try {
       List<String> userIds = [];
       if (widget.isFollowers) {
-        userIds = await _userService.getFollowers(widget.uid);
+        // Use paginated fetch (limit 100)
+        userIds = await _userService.getFollowersPaginated(
+          widget.uid,
+          limit: 100,
+        );
       } else {
-        userIds = await _userService.getFollowing(widget.uid);
+        // Use cached following
+        userIds = await _userService.getFollowingCached(widget.uid);
       }
 
-      // Use optimized parallel fetching instead of sequential loop
-      final loadedUsers = await _userService.getUsers(userIds);
+      // Use cached profiles
+      final loadedUsers = await _userService.getUsersCached(userIds);
 
       if (mounted) {
         setState(() {

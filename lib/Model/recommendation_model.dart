@@ -24,6 +24,30 @@ class Recommendation {
   });
 
   factory Recommendation.fromMap(Map<String, dynamic> map, String id) {
+    // Handle timestamp being either Firestore Timestamp or a Map/String from JSON
+    DateTime parsedTime;
+    try {
+      if (map['timestamp'] is Timestamp) {
+        parsedTime = (map['timestamp'] as Timestamp).toDate();
+      } else if (map['timestamp'] is Map) {
+        // Handle serialized Timestamp as Map: {_seconds: ..., _nanoseconds: ...}
+        final t = map['timestamp'];
+        parsedTime = Timestamp(
+          t['_seconds'] ?? 0,
+          t['_nanoseconds'] ?? 0,
+        ).toDate();
+      } else if (map['timestamp'] is int) {
+        parsedTime = DateTime.fromMillisecondsSinceEpoch(map['timestamp']);
+      } else if (map['timestamp'] is String) {
+        parsedTime = DateTime.tryParse(map['timestamp']) ?? DateTime.now();
+      } else {
+        parsedTime = DateTime.now();
+      }
+    } catch (e) {
+      print('Error parsing recommendation timestamp: $e');
+      parsedTime = DateTime.now();
+    }
+
     return Recommendation(
       id: id,
       fromUserId: map['fromUserId'] ?? '',
@@ -32,7 +56,7 @@ class Recommendation {
       movieTitle: map['movieTitle'] ?? '',
       moviePosterPath: map['moviePosterPath'],
       mediaType: map['mediaType'] ?? 'movie',
-      timestamp: (map['timestamp'] as Timestamp).toDate(),
+      timestamp: parsedTime,
       status: map['status'] ?? 'unread',
     );
   }

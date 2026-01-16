@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:finishd/Chat/media_preview_screen.dart';
 import 'package:finishd/Model/user_model.dart';
 import 'package:finishd/Widget/message_bubble.dart';
+import 'package:finishd/Widget/report_bottom_sheet.dart';
+import 'package:finishd/models/report_model.dart';
 import 'package:finishd/db/objectbox/chat_entities.dart';
 import 'package:finishd/provider/chat_provider.dart';
 import 'package:finishd/provider/community_provider.dart';
@@ -210,6 +212,26 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  void _showReportSheet(BuildContext context, LocalMessage message) {
+    if (message.firestoreId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Cannot report unsynced message")),
+      );
+      return;
+    }
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => ReportBottomSheet(
+        type: ReportType.chatMessage,
+        contentId: message.firestoreId!,
+        reportedUserId: message.senderId,
+        chatId: widget.chatId,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -318,172 +340,185 @@ class _ChatScreenState extends State<ChatScreen> {
                       final message = messages[index];
                       final isMe = message.senderId == _currentUserId;
 
-                      return MessageBubble(
-                        text: message.content,
-                        isMe: isMe,
-                        timestamp: Timestamp.fromDate(message.createdAt),
-                        isRead: message.isRead,
-                        type: message.type,
-                        mediaUrl: message.mediaUrl,
-                        videoId: message.videoId,
-                        videoTitle: message.videoTitle,
-                        videoThumbnail: message.videoThumbnail,
-                        videoChannel: message.videoChannel,
-                        onVideoTap: message.isVideoLink
-                            ? () {
-                                final navProvider = context
-                                    .read<AppNavigationProvider>();
-                                final ytProvider = context
-                                    .read<YoutubeFeedProvider>();
+                      return GestureDetector(
+                        onLongPress: isMe
+                            ? null
+                            : () => _showReportSheet(context, message),
+                        child: MessageBubble(
+                          text: message.content,
+                          isMe: isMe,
+                          timestamp: Timestamp.fromDate(message.createdAt),
+                          isRead: message.isRead,
+                          type: message.type,
+                          mediaUrl: message.mediaUrl,
+                          videoId: message.videoId,
+                          videoTitle: message.videoTitle,
+                          videoThumbnail: message.videoThumbnail,
+                          videoChannel: message.videoChannel,
+                          onVideoTap: message.isVideoLink
+                              ? () {
+                                  final navProvider = context
+                                      .read<AppNavigationProvider>();
+                                  final ytProvider = context
+                                      .read<YoutubeFeedProvider>();
 
-                                ytProvider.injectAndPlayVideo(
-                                  videoId: message.videoId!,
-                                  title: message.videoTitle,
-                                  thumbnail: message.videoThumbnail,
-                                  channel: message.videoChannel,
-                                );
+                                  ytProvider.injectAndPlayVideo(
+                                    videoId: message.videoId!,
+                                    title: message.videoTitle,
+                                    thumbnail: message.videoThumbnail,
+                                    channel: message.videoChannel,
+                                  );
 
-                                navProvider.setTab(0);
-                                Navigator.of(
-                                  context,
-                                ).popUntil((route) => route.isFirst);
-                              }
-                            : null,
-                        movieId: message.movieId,
-                        movieTitle: message.movieTitle,
-                        moviePoster: message.moviePoster,
-                        mediaType: message.mediaType,
-                        postId: message.postId,
-                        postContent: message.postContent,
-                        postAuthorName: message.postAuthorName,
-                        postShowTitle: message.postShowTitle,
-                        onPostTap: message.type == 'shared_post'
-                            ? () async {
-                                final postId = message.postId;
-                                final showId = message.showId;
-                                if (postId == null || showId == null) return;
+                                  navProvider.setTab(0);
+                                  Navigator.of(
+                                    context,
+                                  ).popUntil((route) => route.isFirst);
+                                }
+                              : null,
+                          movieId: message.movieId,
+                          movieTitle: message.movieTitle,
+                          moviePoster: message.moviePoster,
+                          mediaType: message.mediaType,
+                          postId: message.postId,
+                          postContent: message.postContent,
+                          postAuthorName: message.postAuthorName,
+                          postShowTitle: message.postShowTitle,
+                          onPostTap: message.type == 'shared_post'
+                              ? () async {
+                                  final postId = message.postId;
+                                  final showId = message.showId;
+                                  if (postId == null || showId == null) return;
 
-                                showDialog(
-                                  context: context,
-                                  barrierDismissible: false,
-                                  builder: (_) => const Center(
-                                    child: CircularProgressIndicator(
-                                      color: Color(0xFF1A8927),
+                                  showDialog(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (_) => const Center(
+                                      child: CircularProgressIndicator(
+                                        color: Color(0xFF1A8927),
+                                      ),
                                     ),
-                                  ),
-                                );
+                                  );
 
-                                try {
-                                  final provider = context
-                                      .read<CommunityProvider>();
-                                  final post = await provider.getPost(postId);
+                                  try {
+                                    final provider = context
+                                        .read<CommunityProvider>();
+                                    final post = await provider.getPost(postId);
 
-                                  if (!mounted) return;
-                                  Navigator.pop(context); // Close loading
+                                    if (!mounted) return;
+                                    Navigator.pop(context); // Close loading
 
-                                  if (post != null) {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => PostDetailScreen(
-                                          post: post,
-                                          showId: showId,
+                                    if (post != null) {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              PostDetailScreen(
+                                                post: post,
+                                                showId: showId,
+                                              ),
                                         ),
-                                      ),
-                                    );
-                                  } else {
+                                      );
+                                    } else {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Post no longer available',
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (!mounted) return;
+                                    Navigator.pop(context);
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Post no longer available',
-                                        ),
-                                      ),
+                                      SnackBar(content: Text('Error: $e')),
                                     );
                                   }
-                                } catch (e) {
-                                  if (!mounted) return;
-                                  Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Error: $e')),
+                                }
+                              : null,
+                          onImageTap: message.type == 'image'
+                              ? () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          FullscreenImagePreview(
+                                            imageUrl: message.mediaUrl!,
+                                            heroTag: message.mediaUrl!,
+                                            caption: message.content,
+                                          ),
+                                    ),
                                   );
                                 }
-                              }
-                            : null,
-                        onImageTap: message.type == 'image'
-                            ? () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        FullscreenImagePreview(
-                                          imageUrl: message.mediaUrl!,
-                                          heroTag: message.mediaUrl!,
-                                          caption: message.content,
-                                        ),
-                                  ),
-                                );
-                              }
-                            : null,
-                        onRecommendationTap: message.isShowCard
-                            ? () async {
-                                final tmdbId = int.tryParse(
-                                  message.movieId ?? '',
-                                );
-                                if (tmdbId == null) return;
+                              : null,
+                          onRecommendationTap: message.isShowCard
+                              ? () async {
+                                  final tmdbId = int.tryParse(
+                                    message.movieId ?? '',
+                                  );
+                                  if (tmdbId == null) return;
 
-                                showDialog(
-                                  context: context,
-                                  barrierDismissible: false,
-                                  builder: (_) => const Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                );
+                                  showDialog(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (_) => const Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  );
 
-                                try {
-                                  final api = Trending();
-                                  if (message.mediaType == 'tv') {
-                                    final tvDetails = await api
-                                        .fetchDetailsTvShow(tmdbId);
-                                    if (context.mounted) Navigator.pop(context);
-                                    if (tvDetails != null && context.mounted) {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => ShowDetailsScreen(
-                                            movie: tvDetails,
+                                  try {
+                                    final api = Trending();
+                                    if (message.mediaType == 'tv') {
+                                      final tvDetails = await api
+                                          .fetchDetailsTvShow(tmdbId);
+                                      if (context.mounted)
+                                        Navigator.pop(context);
+                                      if (tvDetails != null &&
+                                          context.mounted) {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => ShowDetailsScreen(
+                                              movie: tvDetails,
+                                            ),
                                           ),
-                                        ),
-                                      );
+                                        );
+                                      }
+                                    } else {
+                                      final movieDetails = await api
+                                          .fetchMovieDetails(tmdbId);
+                                      if (context.mounted)
+                                        Navigator.pop(context);
+                                      if (context.mounted) {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => MovieDetailsScreen(
+                                              movie: movieDetails,
+                                            ),
+                                          ),
+                                        );
+                                      }
                                     }
-                                  } else {
-                                    final movieDetails = await api
-                                        .fetchMovieDetails(tmdbId);
+                                  } catch (e) {
                                     if (context.mounted) Navigator.pop(context);
                                     if (context.mounted) {
-                                      Navigator.push(
+                                      ScaffoldMessenger.of(
                                         context,
-                                        MaterialPageRoute(
-                                          builder: (_) => MovieDetailsScreen(
-                                            movie: movieDetails,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Error loading details: $e',
                                           ),
                                         ),
                                       );
                                     }
                                   }
-                                } catch (e) {
-                                  if (context.mounted) Navigator.pop(context);
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Error loading details: $e',
-                                        ),
-                                      ),
-                                    );
-                                  }
                                 }
-                              }
-                            : null,
+                              : null,
+                        ),
                       );
                     },
                   );

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:finishd/Model/user_model.dart';
+import 'package:finishd/services/cache/following_cache_service.dart';
 
 class UserService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -84,6 +85,10 @@ class UserService {
       batch.update(targetUserRef, {'followersCount': FieldValue.increment(1)});
 
       await batch.commit();
+
+      // Invalidate caches
+      await FollowingCacheService.invalidateFollowing(currentUid);
+      await FollowingCacheService.invalidateFollowers(targetUid);
     } catch (e) {
       print('Error following user: $e');
       throw e;
@@ -127,6 +132,10 @@ class UserService {
       batch.update(targetUserRef, {'followersCount': FieldValue.increment(-1)});
 
       await batch.commit();
+
+      // Invalidate caches
+      await FollowingCacheService.invalidateFollowing(currentUid);
+      await FollowingCacheService.invalidateFollowers(targetUid);
     } catch (e) {
       print('Error unfollowing user: $e');
       throw e;
@@ -277,6 +286,154 @@ class UserService {
     } catch (e) {
       print('Error fetching following count: $e');
       return 0;
+    }
+  }
+
+  // ==========================================================================
+  // CACHED & PAGINATED METHODS (Social Graph Optimization)
+  // ==========================================================================
+
+  /// Get following with SQLite cache (24h TTL)
+  /// Significantly reduces Firestore reads on app startup and feed generation
+  Future<List<String>> getFollowingCached(String uid) async {
+    try {
+      // 1. Try cache first
+      final cached = await FollowingCacheService.getFollowingIds(uid);
+      if (cached != null) {
+        print('✅ Using cached following for $uid (${cached.length} users)');
+        return cached;
+      }
+
+      // 2. Fetch from Firestore
+      print('📡 Fetching following from Firestore for $uid');
+      final ids = await getFollowing(uid);
+
+      // 3. Save to cache
+      await FollowingCacheService.saveFollowingIds(uid, ids);
+
+      return ids;
+    } catch (e) {
+      print('Error in getFollowingCached: $e');
+      // Fallback to direct Firestore on cache error
+      return await getFollowing(uid);
+    }
+  }
+
+  /// Get followers with SQLite cache (24h TTL)
+  Future<List<String>> getFollowersCached(String uid) async {
+    try {
+      // 1. Try cache first
+      final cached = await FollowingCacheService.getFollowersIds(uid);
+      if (cached != null) {
+        print('✅ Using cached followers for $uid (${cached.length} users)');
+        return cached;
+      }
+
+      // 2. Fetch from Firestore
+      print('📡 Fetching followers from Firestore for $uid');
+      final ids = await getFollowers(uid);
+
+      // 3. Save to cache
+      await FollowingCacheService.saveFollowersIds(uid, ids);
+
+      return ids;
+    } catch (e) {
+      print('Error in getFollowersCached: $e');
+      // Fallback to direct Firestore on cache error
+      return await getFollowers(uid);
+    }
+  }
+
+  /// Get followers with pagination (50 per page)
+  /// Reduces read costs for users with many followers
+  Future<List<String>> getFollowersPaginated(
+    String uid, {
+    int limit = 50,
+    DocumentSnapshot? lastDoc,
+  }) async {
+    try {
+      Query query = _firestore
+          .collection(_usersCollection)
+          .doc(uid)
+          .collection(_followersCollection)
+          .orderBy(FieldPath.documentId)
+          .limit(limit);
+
+      if (lastDoc != null) {
+        query = query.startAfterDocument(lastDoc);
+      }
+
+      final snapshot = await query.get();
+      return snapshot.docs.map((doc) => doc.id).toList();
+    } catch (e) {
+      print('Error in getFollowersPaginated: $e');
+      return [];
+    }
+  }
+
+  /// Get following with pagination (50 per page)
+  Future<List<String>> getFollowingPaginated(
+    String uid, {
+    int limit = 50,
+    DocumentSnapshot? lastDoc,
+  }) async {
+    try {
+      Query query = _firestore
+          .collection(_usersCollection)
+          .doc(uid)
+          .collection(_followingCollection)
+          .orderBy(FieldPath.documentId)
+          .limit(limit);
+
+      if (lastDoc != null) {
+        query = query.startAfterDocument(lastDoc);
+      }
+
+      final snapshot = await query.get();
+      return snapshot.docs.map((doc) => doc.id).toList();
+    } catch (e) {
+      print('Error in getFollowingPaginated: $e');
+      return [];
+    }
+  }
+
+  /// Get users with profile cache (7-day TTL)
+  /// Checks SQLite first, only fetches missing profiles from Firestore
+  Future<List<UserModel>> getUsersCached(List<String> uids) async {
+    if (uids.isEmpty) return [];
+
+    try {
+      final List<UserModel> users = [];
+      final List<String> missingUids = [];
+
+      // 1. Check cache for each user
+      for (final uid in uids) {
+        final cached = await FollowingCacheService.getUserProfile(uid);
+        if (cached != null) {
+          users.add(UserModel.fromJson(cached));
+        } else {
+          missingUids.add(uid);
+        }
+      }
+
+      print(
+        '✅ Cache hit: ${users.length}/${uids.length} profiles, fetching ${missingUids.length} from Firestore',
+      );
+
+      // 2. Fetch missing from Firestore
+      if (missingUids.isNotEmpty) {
+        final fetched = await getUsers(missingUids);
+        users.addAll(fetched);
+
+        // 3. Cache the fetched users
+        await FollowingCacheService.saveUserProfiles(fetched);
+      }
+
+      return users;
+    } catch (e) {
+      print('Error in getUsersCached: $e');
+      // Fallback to direct Firestore on cache error
+      return await getUsers(uids);
     }
   }
 }

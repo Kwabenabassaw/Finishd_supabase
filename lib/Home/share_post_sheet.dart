@@ -59,10 +59,13 @@ class _SharePostSheetState extends State<SharePostSheet> {
   Future<void> _fetchFriends() async {
     if (_currentUserId.isEmpty) return;
     try {
-      List<String> followerIds = await _userService.getFollowers(
+      // Use paginated fetch (limit 100 for share sheet)
+      List<String> followerIds = await _userService.getFollowersPaginated(
         _currentUserId,
+        limit: 100,
       );
-      List<UserModel> friends = await _userService.getUsers(followerIds);
+      // Use cached profiles
+      List<UserModel> friends = await _userService.getUsersCached(followerIds);
 
       if (mounted) {
         setState(() {

@@ -10,6 +10,7 @@ class CommentItem extends StatelessWidget {
   final String currentUserId;
   final VoidCallback? onDelete;
   final VoidCallback? onReply;
+  final VoidCallback? onReport;
 
   const CommentItem({
     super.key,
@@ -17,6 +18,7 @@ class CommentItem extends StatelessWidget {
     required this.currentUserId,
     this.onDelete,
     this.onReply,
+    this.onReport,
   });
 
   @override
@@ -119,6 +121,28 @@ class CommentItem extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.red[400],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else if (!isOwner && onReport != null)
+                      GestureDetector(
+                        onTap: onReport,
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.flag_outlined,
+                              size: 14,
+                              color: Colors.grey[400],
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Report',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[400],
                                 fontWeight: FontWeight.w500,
                               ),
                             ),

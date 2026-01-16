@@ -34,7 +34,8 @@ class _RecsTabState extends State<RecsTab> {
     }
 
     return StreamBuilder<List<Recommendation>>(
-      stream: _recommendationService.getRecommendations(_currentUserId),
+      // Hybrid stream: loads from cache instantly, listens for new items only
+      stream: _recommendationService.getRecommendationsHybrid(_currentUserId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());

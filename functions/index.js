@@ -275,3 +275,25 @@ exports.onChatMessageCreated = functions.firestore
       return null;
     }
   });
+
+/**
+ * 4. Add Admin Role (Callable)
+ * Allows admins to promote other users
+ */
+exports.addAdminRole = functions.https.onCall(async (data, context) => {
+  // Check if request is made by an admin
+  if (context.auth.token.admin !== true) {
+    return { error: "Only admins can add other admins, sucker" };
+  }
+
+  // Get user and add custom claim (admin)
+  try {
+    const user = await admin.auth().getUserByEmail(data.email);
+    await admin.auth().setCustomUserClaims(user.uid, {
+      admin: true,
+    });
+    return { message: `Success! ${data.email} has been made an admin.` };
+  } catch (err) {
+    return { error: err.message };
+  }
+});

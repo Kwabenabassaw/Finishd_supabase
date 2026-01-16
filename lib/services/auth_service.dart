@@ -15,6 +15,50 @@ class AuthService {
   // Get current user
   User? get currentUser => _auth.currentUser;
 
+  /// Check if user is suspended or banned.
+  /// Returns null if OK, or an error message if blocked.
+  Future<String?> checkUserModerationStatus(String userId) async {
+    try {
+      final doc = await _firestore.collection('users').doc(userId).get();
+      if (!doc.exists) return null;
+
+      final data = doc.data()!;
+
+      // Check permanent ban
+      if (data['isBanned'] == true) {
+        final reason = data['banReason'] ?? 'Policy violation';
+        await _auth.signOut();
+        return 'Your account has been permanently banned.\nReason: $reason';
+      }
+
+      // Check temporary suspension
+      if (data['isSuspended'] == true) {
+        final suspendedUntil = data['suspendedUntil'];
+        if (suspendedUntil != null) {
+          final until = (suspendedUntil as dynamic).toDate() as DateTime;
+          if (until.isAfter(DateTime.now())) {
+            final reason = data['suspensionReason'] ?? 'Policy violation';
+            final daysLeft = until.difference(DateTime.now()).inDays + 1;
+            await _auth.signOut();
+            return 'Your account is suspended for $daysLeft more day(s).\nReason: $reason';
+          } else {
+            // Suspension expired, clear the flag
+            await _firestore.collection('users').doc(userId).update({
+              'isSuspended': false,
+              'suspendedUntil': null,
+              'suspensionReason': null,
+            });
+          }
+        }
+      }
+
+      return null; // All clear
+    } catch (e) {
+      print('Error checking moderation status: $e');
+      return null; // Don't block on error
+    }
+  }
+
   // Sign Up with Email & Password
   // Returns a map with 'credential', 'isNewUser', and 'onboardingCompleted' flags
   Future<Map<String, dynamic>> signUpWithEmailAndPassword({

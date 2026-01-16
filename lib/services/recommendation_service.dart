@@ -5,6 +5,8 @@ import 'package:finishd/services/chat_service.dart';
 import 'package:finishd/db/app_database.dart';
 import 'package:sqflite/sqflite.dart';
 import 'dart:convert';
+import 'dart:async';
+import 'package:finishd/services/cache/recommendation_cache_service.dart';
 
 class RecommendationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -243,5 +245,172 @@ class RecommendationService {
     await _firestore.collection('recommendations').doc(recommendationId).update(
       {'status': 'seen'},
     );
+
+    // Also update locally
+    await RecommendationCacheService.markAsSeenLocally(recommendationId);
+  }
+
+  // ==========================================================================
+  // HYBRID APPROACH (Cached + Real-Time for New Items Only)
+  // ==========================================================================
+
+  /// Hybrid stream: Loads cached data instantly, then listens for NEW recommendations only
+  /// This reduces reads by ~90% while maintaining real-time experience
+  Stream<List<Recommendation>> getRecommendationsHybrid(String userId) async* {
+    print('🚀 [Hybrid] Starting recommendations stream for $userId');
+
+    // 1. Check local cache
+    final localRecs = await RecommendationCacheService.getLocalRecommendations(
+      userId,
+    );
+
+    // 2. Check sync status
+    final lastSync = await RecommendationCacheService.getLastSyncTime(userId);
+
+    // 3. Determine if we need a full refresh
+    // Condition:
+    // - First time user (lastSync == null)
+    // - OR Cache is empty (even if lastSync exists, we want to be safe and fetch again)
+    final bool needsFullSync = (lastSync == null) || (localRecs.isEmpty);
+
+    if (needsFullSync) {
+      if (lastSync == null) {
+        print('🔄 [Hybrid] First-time sync - fetching all recommendations');
+      } else {
+        print(
+          '⚠️ [Hybrid] Cache mismatch (empty but synced) - forcing full re-sync',
+        );
+      }
+
+      // Perform full sync
+      final allRecs = await refreshRecommendations(userId);
+      yield allRecs;
+
+      // Now set up listener for NEW items from NOW
+      final queryStartTime = DateTime.now();
+      print(
+        '📡 [Hybrid] Listening for NEW recommendations after re-sync: $queryStartTime',
+      );
+
+      await for (final snapshot
+          in _firestore
+              .collection('recommendations')
+              .where('toUserId', isEqualTo: userId)
+              .where(
+                'timestamp',
+                isGreaterThan: Timestamp.fromDate(queryStartTime),
+              )
+              .orderBy('timestamp', descending: true)
+              .snapshots()) {
+        if (snapshot.docs.isEmpty) continue;
+
+        print(
+          '🔔 [Hybrid] Received ${snapshot.docs.length} new recommendations',
+        );
+        for (final doc in snapshot.docs) {
+          final rec = Recommendation.fromMap(doc.data(), doc.id);
+          await RecommendationCacheService.appendRecommendation(userId, rec);
+        }
+        await RecommendationCacheService.updateLastSyncTime(
+          userId,
+          DateTime.now(),
+        );
+
+        final updated =
+            await RecommendationCacheService.getLocalRecommendations(userId);
+        yield updated;
+      }
+    } else {
+      // 4. Existing user with data - emit cache then listen incrementally
+      print('✅ [Hybrid] Emitting ${localRecs.length} cached recommendations');
+      yield localRecs;
+
+      print('📡 [Hybrid] Listening for recommendations after: $lastSync');
+
+      await for (final snapshot
+          in _firestore
+              .collection('recommendations')
+              .where('toUserId', isEqualTo: userId)
+              .where('timestamp', isGreaterThan: Timestamp.fromDate(lastSync!))
+              .orderBy('timestamp', descending: true)
+              .snapshots()) {
+        if (snapshot.docs.isEmpty) {
+          print('⏸️ [Hybrid] No new recommendations');
+          continue;
+        }
+
+        print(
+          '🔔 [Hybrid] Received ${snapshot.docs.length} new recommendations',
+        );
+        for (final doc in snapshot.docs) {
+          final rec = Recommendation.fromMap(doc.data(), doc.id);
+          await RecommendationCacheService.appendRecommendation(userId, rec);
+        }
+        await RecommendationCacheService.updateLastSyncTime(
+          userId,
+          DateTime.now(),
+        );
+
+        final updated =
+            await RecommendationCacheService.getLocalRecommendations(userId);
+        print('📤 [Hybrid] Emitting ${updated.length} total recommendations');
+        yield updated;
+      }
+    }
+  }
+
+  /// Hybrid stream for movie-specific recommendations
+  /// Filters locally after loading from cache
+  Stream<List<Recommendation>> getMyRecommendationsForMovieHybrid(
+    String userId,
+    String movieId,
+  ) async* {
+    await for (final allRecs in getRecommendationsHybrid(userId)) {
+      final filtered = allRecs.where((r) => r.movieId == movieId).toList();
+      yield filtered;
+    }
+  }
+
+  /// Force refresh recommendations (bypass cache)
+  Future<List<Recommendation>> refreshRecommendations(String userId) async {
+    print('🔄 [Hybrid] Force refreshing recommendations for $userId');
+
+    try {
+      // Clear cache
+      await RecommendationCacheService.clearUserRecommendations(userId);
+
+      // Fetch all from Firestore
+      print('📡 [Hybrid] Querying Firestore for toUserId=$userId');
+      final snapshot = await _firestore
+          .collection('recommendations')
+          .where('toUserId', isEqualTo: userId)
+          .orderBy('timestamp', descending: true)
+          .limit(100)
+          .get();
+
+      print('📥 [Hybrid] Firestore returned ${snapshot.docs.length} docs');
+
+      final recommendations = snapshot.docs
+          .map((doc) => Recommendation.fromMap(doc.data(), doc.id))
+          .toList();
+
+      // Save to cache
+      await RecommendationCacheService.saveRecommendations(
+        userId,
+        recommendations,
+      );
+      await RecommendationCacheService.updateLastSyncTime(
+        userId,
+        DateTime.now(),
+      );
+
+      print('✅ [Hybrid] Refreshed ${recommendations.length} recommendations');
+      return recommendations;
+    } catch (e, stackTrace) {
+      print('❌ [Hybrid] ERROR refreshing recommendations: $e');
+      print('❌ [Hybrid] Stack trace: $stackTrace');
+      // Return empty list but don't crash
+      return [];
+    }
   }
 }

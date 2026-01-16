@@ -76,8 +76,9 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   // FIX Bug 3: Subscribe to all movie lists with single state update
   void _subscribeToMovieLists() {
+    // Use hybrid streaming: instant load from SQLite + real-time updates
     _finishedSub = _movieListService
-        .streamMoviesFromList(widget.uid, 'finished')
+        .streamMoviesFromListHybrid(widget.uid, 'finished')
         .listen((movies) {
           if (mounted) {
             setState(() {
@@ -88,7 +89,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         });
 
     _watchingSub = _movieListService
-        .streamMoviesFromList(widget.uid, 'watching')
+        .streamMoviesFromListHybrid(widget.uid, 'watching')
         .listen((movies) {
           if (mounted) {
             setState(() {
@@ -99,7 +100,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         });
 
     _watchlistSub = _movieListService
-        .streamMoviesFromList(widget.uid, 'watchlist')
+        .streamMoviesFromListHybrid(widget.uid, 'watchlist')
         .listen((movies) {
           if (mounted) {
             setState(() {
@@ -198,6 +199,17 @@ class _ProfileScreenState extends State<ProfileScreen>
   Future<void> _refreshProfile() async {
     setState(() => _isLoadingCounts = true);
     await _loadFollowCounts();
+
+    // Force refresh movie lists (bypasses cache)
+    try {
+      await Future.wait([
+        _movieListService.refreshList(widget.uid, 'finished'),
+        _movieListService.refreshList(widget.uid, 'watching'),
+        _movieListService.refreshList(widget.uid, 'watchlist'),
+      ]);
+    } catch (e) {
+      debugPrint('Error refreshing movie lists: $e');
+    }
   }
 
   // FIX Bug 1: Safe conversion from MovieListItem to MovieItem
@@ -307,7 +319,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                         const SizedBox(height: 10),
                         // User Name
                         Text(
-                          user.username.isNotEmpty ? user.username : 'No Name',
+                          user.username.isNotEmpty
+                              ? '${user.firstName} ${user.lastName}'
+                              : 'No Name',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -315,7 +329,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         ),
                         // First Name
                         Text(
-                          user.firstName,
+                          user.username,
                           style: const TextStyle(
                             fontSize: 14,
                             color: Colors.grey,

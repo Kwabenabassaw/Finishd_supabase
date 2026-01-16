@@ -12,15 +12,23 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
+    // Helper function to check if user is an admin
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
     // =========================================================================
     // USERS & SUBCOLLECTIONS
     // =========================================================================
 
     // Users collection
     match /users/{userId} {
-      allow read: if isAuthenticated();
+      // Admins can list all users; regular users can read individual docs
+      allow read: if isAuthenticated() || isAdmin();
       // Allow users to update their own profile OR update follower/following counts
-      allow update: if isOwner(userId) 
+      // Admins can update suspension/ban status
+      allow update: if isAdmin()
+        || isOwner(userId) 
         || (isAuthenticated() 
             && request.resource.data.diff(resource.data).affectedKeys()
                .hasOnly(['followersCount', 'followingCount']));
@@ -95,22 +103,26 @@ service cloud.firestore {
       allow create: if request.auth != null && request.resource.data.authorId == request.auth.uid;
       // Author updates content, others update counters
       // Added 'score' to allowed fields for transactional voting updates
-      allow update: if request.auth != null
-        && (request.auth.uid == resource.data.authorId
-            || request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['upvotes', 'downvotes', 'score', 'commentCount', 'lastActivityAt']));
-      allow delete: if request.auth != null && request.auth.uid == resource.data.authorId;
+      // Author updates content, others update counters, admins can update/delete/hide
+      allow update: if isAdmin()
+        || (request.auth != null
+            && (request.auth.uid == resource.data.authorId
+                || request.resource.data.diff(resource.data).affectedKeys()
+                   .hasOnly(['upvotes', 'downvotes', 'score', 'commentCount', 'lastActivityAt', 'isHidden'])));
+      allow delete: if isAdmin() || (request.auth != null && request.auth.uid == resource.data.authorId);
     }
     
     // Community Comments
     match /community_comments/{commentId} {
       allow read: if true;
       allow create: if request.auth != null && request.resource.data.authorId == request.auth.uid;
-      allow update: if request.auth != null
-        && (request.auth.uid == resource.data.authorId
-            || request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['upvotes', 'downvotes']));
-      allow delete: if request.auth != null && request.auth.uid == resource.data.authorId;
+      // Admins can update/delete, authors can update, others can only update votes
+      allow update: if isAdmin()
+        || (request.auth != null
+            && (request.auth.uid == resource.data.authorId
+                || request.resource.data.diff(resource.data).affectedKeys()
+                   .hasOnly(['upvotes', 'downvotes', 'isHidden'])));
+      allow delete: if isAdmin() || (request.auth != null && request.auth.uid == resource.data.authorId);
     }
     
     // Community Votes
@@ -138,15 +150,31 @@ service cloud.firestore {
     // ----------------------------
     // RECOMMENDATIONS
     // ----------------------------
+    // ----------------------------
+    // RECOMMENDATIONS
+    // ----------------------------
     match /recommendations/{recId} {
+      // Create: sender must be authenticated and match fromUserId
       allow create: if request.auth != null
                     && request.resource.data.fromUserId == request.auth.uid;
 
-      allow read: if request.auth != null
+      // Read (get single doc): must be sender or receiver
+      allow get: if request.auth != null
+                 && (resource.data.toUserId == request.auth.uid
+                     || resource.data.fromUserId == request.auth.uid);
+
+      // List (query): Allow users to query recommendations they sent OR received.
+      // Firestore validates that the query implies these conditions.
+      allow list: if request.auth != null
                   && (resource.data.toUserId == request.auth.uid
                       || resource.data.fromUserId == request.auth.uid);
 
-      allow update, delete: if false;
+      // Update: Receiver can mark as seen (or other updates)
+      allow update: if request.auth != null
+                    && resource.data.toUserId == request.auth.uid;
+      
+      // Delete: Not currently implemented in app, but acceptable if needed
+      allow delete: if false;
     }
 
     match /movies/{movieId}/ratings/{document=**} {
@@ -173,9 +201,34 @@ service cloud.firestore {
       allow create: if request.auth != null && request.resource.data.participants is list && request.auth.uid in request.resource.data.participants;
       allow update: if request.auth != null && request.auth.uid in resource.data.participants;
       match /messages/{messageId} {
-        allow read: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+        allow read: if isAdmin() || (request.auth != null && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants);
         allow create: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants && request.resource.data.senderId == request.auth.uid;
+        allow update, delete: if isAdmin();
       }
+    }
+
+    // =========================================================================
+    // ADMIN & MODERATION
+    // =========================================================================
+    
+    // Reports collection - Admins can read all, users can create
+    match /reports/{reportId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    // Audit Logs - Admin actions for accountability
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+    }
+
+    // User Notifications (for warning users)
+    match /users/{userId}/notifications/{notifId} {
+      allow read: if isOwner(userId);
+      allow create: if isAdmin() || isOwner(userId);
+      allow update: if isOwner(userId);
     }
   }
 }

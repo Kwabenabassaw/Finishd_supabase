@@ -122,6 +122,7 @@ class CommunityService {
         'mediaTypes': mediaTypes,
         'hashtags': hashtags,
         'isSpoiler': isSpoiler,
+        'isHidden': false, // active by default
         'score': 0,
         'upvotes': 0,
         'downvotes': 0,
@@ -195,6 +196,7 @@ class CommunityService {
     try {
       Query query = _posts
           .where('showId', isEqualTo: showId)
+          // .where('isHidden', isNotEqualTo: true) // REMOVED: Excludes legacy data
           .orderBy(sortBy, descending: true)
           .limit(limit);
 
@@ -204,15 +206,18 @@ class CommunityService {
 
       final snapshot = await query.get();
 
-      return snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        data['id'] = doc.id;
-        data['docSnapshot'] = doc; // For pagination
-        print(
-          '[CommunityService] Post ${doc.id} - upvotes: ${data['upvotes']}, downvotes: ${data['downvotes']}, score: ${data['score']}',
-        );
-        return data;
-      }).toList();
+      return snapshot.docs
+          .map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            data['id'] = doc.id;
+            data['docSnapshot'] = doc; // For pagination
+            print(
+              '[CommunityService] Post ${doc.id} - upvotes: ${data['upvotes']}, downvotes: ${data['downvotes']}, score: ${data['score']}',
+            );
+            return data;
+          })
+          .where((data) => data['isHidden'] != true) // Client-side filter
+          .toList();
     } catch (e) {
       print('❌ Error fetching posts: $e');
       return [];
@@ -240,15 +245,19 @@ class CommunityService {
   }) {
     return _posts
         .where('showId', isEqualTo: showId)
+        // .where('isHidden', isNotEqualTo: true) // REMOVED: Excludes legacy data
         .orderBy('createdAt', descending: true)
         .limit(limit)
         .snapshots()
         .map(
-          (snapshot) => snapshot.docs.map((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            data['id'] = doc.id;
-            return data;
-          }).toList(),
+          (snapshot) => snapshot.docs
+              .map((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                data['id'] = doc.id;
+                return data;
+              })
+              .where((data) => data['isHidden'] != true) // Client-side filter
+              .toList(),
         );
   }
 
@@ -310,14 +319,18 @@ class CommunityService {
   Stream<List<Map<String, dynamic>>> getCommentsStream(String postId) {
     return _comments
         .where('postId', isEqualTo: postId)
+        // .where('isHidden', isNotEqualTo: true) // REMOVED: Excludes legacy data
         .orderBy('createdAt', descending: false)
         .snapshots()
         .map(
-          (snapshot) => snapshot.docs.map((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            data['id'] = doc.id;
-            return data;
-          }).toList(),
+          (snapshot) => snapshot.docs
+              .map((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                data['id'] = doc.id;
+                return data;
+              })
+              .where((data) => data['isHidden'] != true) // Client-side filter
+              .toList(),
         );
   }
 

@@ -44,6 +44,22 @@ class UserModel {
     );
   }
 
+  factory UserModel.fromJson(Map<String, dynamic> data) {
+    return UserModel(
+      uid: data['uid'] ?? '',
+      email: data['email'] ?? '',
+      username: data['username'] ?? '',
+      firstName: data['firstName'] ?? '',
+      lastName: data['lastName'] ?? '',
+      bio: data['bio'] ?? '',
+      description: data['description'] ?? '',
+      profileImage: data['profileImage'] ?? '',
+      followersCount: data['followersCount'] ?? 0,
+      followingCount: data['followingCount'] ?? 0,
+      joinedAt: data['joinedAt'],
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'uid': uid,

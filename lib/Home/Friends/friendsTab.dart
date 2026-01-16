@@ -67,11 +67,14 @@ class _FriendsScreenState extends State<FriendsScreen>
   Future<void> _fetchMyFriends() async {
     if (_currentUserId.isEmpty) return;
     try {
-      List<String> followerIds = await _userService.getFollowers(
+      // Use paginated fetch (limit 100) with cache
+      List<String> followerIds = await _userService.getFollowersPaginated(
         _currentUserId,
+        limit: 100,
       );
       _friendIds = followerIds.toSet(); // Cache for filtering
-      List<UserModel> friends = await _userService.getUsers(followerIds);
+      // Use cached profiles
+      List<UserModel> friends = await _userService.getUsersCached(followerIds);
       if (mounted) {
         setState(() {
           _myFriends = friends;
@@ -90,10 +93,11 @@ class _FriendsScreenState extends State<FriendsScreen>
 
   Future<void> _fetchAllUsers() async {
     try {
-      // Fetch friend IDs first (if not already fetched)
+      // Fetch friend IDs first (if not already fetched) - use paginated
       if (_friendIds.isEmpty) {
-        List<String> friendIds = await _userService.getFollowers(
+        List<String> friendIds = await _userService.getFollowersPaginated(
           _currentUserId,
+          limit: 100,
         );
         _friendIds = friendIds.toSet();
       }

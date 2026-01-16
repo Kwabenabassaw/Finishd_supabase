@@ -265,15 +265,15 @@ class PersonalizedFeedService {
   Future<List<_Interest>> _getFriendsInterests(String uid) async {
     final interests = <_Interest>[];
     try {
-      final followingIds = await _userService.getFollowing(uid);
+      final followingIds = await _userService.getFollowingCached(uid);
       if (followingIds.isEmpty) return [];
 
       // Shuffle and take top 5 friends to avoid excessive reads
       followingIds.shuffle();
       final targetFriends = followingIds.take(5).toList();
 
-      // Fetch friends' names for the reason string
-      final friends = await _userService.getUsers(targetFriends);
+      // Fetch friends' names with cache
+      final friends = await _userService.getUsersCached(targetFriends);
       final friendMap = {for (var u in friends) u.uid: u.firstName};
 
       for (final friendId in targetFriends) {

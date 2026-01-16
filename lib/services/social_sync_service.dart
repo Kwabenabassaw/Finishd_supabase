@@ -35,8 +35,8 @@ class SocialSyncService {
     debugPrint('SocialSyncService: Starting social sync for user $uid');
 
     try {
-      // 1. Get following list
-      final followingUids = await _userService.getFollowing(uid);
+      // 1. Get following list with cache
+      final followingUids = await _userService.getFollowingCached(uid);
       if (followingUids.isEmpty) {
         debugPrint(
           'SocialSyncService: user $uid is not following anyone. Nothing to sync.',
@@ -48,8 +48,8 @@ class SocialSyncService {
       // Limit to 50 for performance
       final limitedUids = followingUids.take(50).toList();
 
-      // 2. Fetch friend details (names, avatars)
-      final friends = await _userService.getUsers(limitedUids);
+      // 2. Fetch friend details with cache
+      final friends = await _userService.getUsersCached(limitedUids);
       final Map<String, dynamic> friendMap = {
         for (var f in friends)
           f.uid: {'name': f.username, 'avatar': f.profileImage},

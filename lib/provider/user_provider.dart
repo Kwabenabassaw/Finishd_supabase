@@ -31,8 +31,8 @@ class UserProvider with ChangeNotifier {
     try {
       _currentUser = await _userService.getUser(uid);
       _userPreferences = await _preferencesService.getUserPreferences(uid);
-      // Fetch following IDs as well
-      final list = await _userService.getFollowing(uid);
+      // Fetch following IDs with cache (avoid Firestore read on startup)
+      final list = await _userService.getFollowingCached(uid);
       _followingIds = list.toSet();
       _followingLoaded = true;
     } catch (e) {
@@ -135,7 +135,7 @@ class UserProvider with ChangeNotifier {
   Future<void> ensureFollowingLoaded(String uid) async {
     if (_followingLoaded) return;
     try {
-      final list = await _userService.getFollowing(uid);
+      final list = await _userService.getFollowingCached(uid);
       _followingIds = list.toSet();
       _followingLoaded = true;
       notifyListeners();
