@@ -46,6 +46,8 @@ import 'package:finishd/services/chat_sync_service.dart'; // Offline-first chat
 import 'package:finishd/provider/chat_provider.dart'; // Chat state management
 import 'package:finishd/services/deep_link_service.dart';
 import 'package:finishd/services/seen_sync_service.dart'; // Video deduplication sync
+import 'package:finishd/services/moderation_listener_service.dart'; // Real-time moderation
+import 'package:finishd/services/moderation_notification_handler.dart'; // Moderation warnings
 
 // GLOBAL ROUTE OBSERVER
 final RouteObserver<ModalRoute<void>> routeObserver =
@@ -68,6 +70,12 @@ void main() async {
     SeenSyncService.instance.syncOnLogin();
 
     final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+    // Initialize Moderation Listener (real-time ban/suspension detection)
+    ModerationListenerService.instance.init(navigatorKey);
+
+    // Initialize Moderation Notification Handler (warnings display)
+    ModerationNotificationHandler.instance.init(navigatorKey);
 
     // Start push notifications in the background so they don't block the UI
     PushNotificationService().initialize(navigatorKey).catchError((e) {
@@ -136,7 +144,8 @@ class MyApp extends StatelessWidget {
               navigatorObservers: [
                 routeObserver,
                 // Add the two analytics observers
-                AnalyticsService().getAnalyticsObserver(), // For standard screen_view events
+                AnalyticsService()
+                    .getAnalyticsObserver(), // For standard screen_view events
                 ScreenTimeObserver(), // For our custom screen_view_duration events
               ],
               initialRoute: '/',

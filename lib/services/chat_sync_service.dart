@@ -231,6 +231,15 @@ class ChatSyncService {
     required String showTitle,
     required int showId,
   }) async {
+    // DEBUG: Log the incoming data
+    print('[ChatSync] 📝 sendPostLink called:');
+    print('  - postId: $postId');
+    print(
+      '  - postContent: ${postContent.substring(0, postContent.length.clamp(0, 30))}...',
+    );
+    print('  - authorName: $authorName');
+    print('  - showTitle: $showTitle');
+
     final message = LocalMessage(
       conversationId: conversationId,
       senderId: _currentUserId,

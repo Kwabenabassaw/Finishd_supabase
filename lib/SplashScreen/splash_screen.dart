@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:finishd/services/auth_service.dart';
 import 'package:finishd/services/connectivity_service.dart';
+import 'package:finishd/services/moderation_listener_service.dart';
+import 'package:finishd/services/moderation_notification_handler.dart';
 import 'package:finishd/provider/user_provider.dart';
 import 'package:finishd/SplashScreen/no_internet_screen.dart';
+import 'package:finishd/screens/moderation_block_screen.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -69,16 +72,44 @@ class _SplashScreenState extends State<SplashScreen>
     }
   }
 
-  void _navigateBasedOnAuth() {
+  Future<void> _navigateBasedOnAuth() async {
     if (!mounted) return;
 
     final authService = Provider.of<AuthService>(context, listen: false);
     if (authService.currentUser != null) {
-      // Initialize UserProvider with user data (including following IDs)
+      final userId = authService.currentUser!.uid;
+
+      // Check moderation status BEFORE allowing into app
+      final moderationStatus = await authService.checkUserModerationStatus(
+        userId,
+      );
+
+      if (moderationStatus != null && mounted) {
+        // User is banned or suspended - show block screen with appeal option
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ModerationBlockScreen(
+              isBanned: moderationStatus.isBanned,
+              reason: moderationStatus.reason,
+              daysRemaining: moderationStatus.daysRemaining,
+            ),
+          ),
+        );
+        return;
+      }
+
+      // Start real-time moderation listener for active users
+      ModerationListenerService.instance.startListening();
+
+      // Start moderation notification handler for warnings
+      ModerationNotificationHandler.instance.startListening();
+
+      // User is clear - initialize and proceed
       Provider.of<UserProvider>(
         context,
         listen: false,
-      ).fetchCurrentUser(authService.currentUser!.uid);
+      ).fetchCurrentUser(userId);
       Navigator.pushReplacementNamed(context, 'homepage');
     } else {
       Navigator.pushReplacementNamed(context, '/home');

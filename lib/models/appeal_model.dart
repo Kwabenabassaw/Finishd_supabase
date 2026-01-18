@@ -19,6 +19,7 @@ class Appeal {
   final DateTime createdAt;
   final DateTime? reviewedAt;
   final String? reviewedBy;
+  final String? adminResponse; // Moderator's response message
 
   Appeal({
     required this.id,
@@ -32,6 +33,7 @@ class Appeal {
     required this.createdAt,
     this.reviewedAt,
     this.reviewedBy,
+    this.adminResponse,
   });
 
   Map<String, dynamic> toJson() {
@@ -46,6 +48,7 @@ class Appeal {
       'createdAt': Timestamp.fromDate(createdAt),
       if (reviewedAt != null) 'reviewedAt': Timestamp.fromDate(reviewedAt!),
       if (reviewedBy != null) 'reviewedBy': reviewedBy,
+      if (adminResponse != null) 'adminResponse': adminResponse,
     };
   }
 
@@ -65,6 +68,7 @@ class Appeal {
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       reviewedAt: (data['reviewedAt'] as Timestamp?)?.toDate(),
       reviewedBy: data['reviewedBy'],
+      adminResponse: data['adminResponse'],
     );
   }
 }

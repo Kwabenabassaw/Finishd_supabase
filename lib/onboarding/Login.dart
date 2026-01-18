@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:finishd/services/auth_service.dart';
 import 'package:finishd/provider/user_provider.dart';
+import 'package:finishd/screens/moderation_block_screen.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 // Define the primary color (Green from the image)
@@ -28,6 +29,30 @@ class _LoginState extends State<Login> {
     super.dispose();
   }
 
+  /// Check moderation status and navigate accordingly
+  /// Returns true if user is banned/suspended (navigation handled)
+  Future<bool> _checkModerationAndNavigate(AuthService authService) async {
+    final user = authService.currentUser;
+    if (user == null) return false;
+
+    final status = await authService.checkUserModerationStatus(user.uid);
+    if (status != null && mounted) {
+      // User is banned or suspended
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ModerationBlockScreen(
+            isBanned: status.isBanned,
+            reason: status.reason,
+            daysRemaining: status.daysRemaining,
+          ),
+        ),
+      );
+      return true;
+    }
+    return false;
+  }
+
   Future<void> _login() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -48,6 +73,10 @@ class _LoginState extends State<Login> {
 
       if (mounted) {
         final authService = Provider.of<AuthService>(context, listen: false);
+
+        // Check moderation status before allowing access
+        if (await _checkModerationAndNavigate(authService)) return;
+
         // If new user (auto-created), go to onboarding
         if (result['isNewUser'] == true) {
           Navigator.pushReplacementNamed(context, 'genre');
@@ -89,6 +118,10 @@ class _LoginState extends State<Login> {
 
       if (mounted) {
         final authService = Provider.of<AuthService>(context, listen: false);
+
+        // Check moderation status before allowing access
+        if (await _checkModerationAndNavigate(authService)) return;
+
         // Check if new user or if existing user hasn't completed onboarding
         if (result['isNewUser'] == true ||
             result['onboardingCompleted'] != true) {
@@ -122,6 +155,10 @@ class _LoginState extends State<Login> {
       await Provider.of<AuthService>(context, listen: false).signInWithApple();
       if (mounted) {
         final authService = Provider.of<AuthService>(context, listen: false);
+
+        // Check moderation status before allowing access
+        if (await _checkModerationAndNavigate(authService)) return;
+
         // Initialize UserProvider with following IDs
         if (authService.currentUser != null) {
           Provider.of<UserProvider>(
@@ -146,8 +183,7 @@ class _LoginState extends State<Login> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SingleChildScrollView(
-
-        padding: const EdgeInsets.symmetric(horizontal: 50.0, vertical: 10.0),
+        padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[

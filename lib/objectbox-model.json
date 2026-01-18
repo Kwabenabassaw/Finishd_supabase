@@ -132,7 +132,7 @@
     },
     {
       "id": "5:3586160544059811964",
-      "lastPropertyId": "21:104777825775197555",
+      "lastPropertyId": "26:2620960402803030156",
       "name": "LocalMessage",
       "properties": [
         {
@@ -242,6 +242,31 @@
           "id": "21:104777825775197555",
           "name": "isRead",
           "type": 1
+        },
+        {
+          "id": "22:5083317677523967902",
+          "name": "postId",
+          "type": 9
+        },
+        {
+          "id": "23:6697287315143650845",
+          "name": "postContent",
+          "type": 9
+        },
+        {
+          "id": "24:1682177965198923815",
+          "name": "postAuthorName",
+          "type": 9
+        },
+        {
+          "id": "25:178077339641931552",
+          "name": "postShowTitle",
+          "type": 9
+        },
+        {
+          "id": "26:2620960402803030156",
+          "name": "showId",
+          "type": 6
         }
       ],
       "relations": []

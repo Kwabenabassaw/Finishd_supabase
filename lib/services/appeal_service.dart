@@ -92,4 +92,19 @@ class AppealService {
     if (snapshot.docs.isEmpty) return null;
     return Appeal.fromDocument(snapshot.docs.first);
   }
+
+  /// Stream all appeals for current user (for real-time updates)
+  /// Efficient: only 1 listener, updates only when data changes
+  Stream<List<Appeal>> streamMyAppeals() {
+    if (_currentUserId == null) return Stream.value([]);
+
+    return _appealsRef
+        .where('userId', isEqualTo: _currentUserId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => Appeal.fromDocument(doc)).toList(),
+        );
+  }
 }

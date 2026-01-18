@@ -116,11 +116,8 @@ class _AllCommunitiesScreenState extends State<AllCommunitiesScreen> {
           // Search Bar
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: theme.dividerColor),
-              ),
-              child: TextField(
+            child:
+             TextField(
                 controller: _searchController,
                 style: theme.textTheme.bodyMedium,
                 decoration: InputDecoration(
@@ -136,7 +133,7 @@ class _AllCommunitiesScreenState extends State<AllCommunitiesScreen> {
                   ),
                 ),
               ),
-            ),
+          
           ),
 
           // Filters

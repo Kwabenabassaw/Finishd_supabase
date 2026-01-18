@@ -8,6 +8,7 @@ import 'package:finishd/provider/MovieProvider.dart';
 import 'package:finishd/tmbd/Search.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:finishd/screens/actor_profile_screen.dart';
+import 'package:finishd/services/feed_search_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -16,6 +17,7 @@ import 'package:provider/provider.dart';
 
 Trending api = Trending();
 SearchDiscover searchApi = SearchDiscover();
+FeedSearchService feedSearchService = FeedSearchService();
 
 // Utility for TMDB image URLs
 String getTmdbImageUrl(String? path, {String size = 'w500'}) {
@@ -109,11 +111,40 @@ class _SearchScreenState extends State<SearchScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final results = await searchApi.getSearchitem(trimmedQuery);
+      // Search both sources in parallel for speed
+      final results = await Future.wait([
+        // 1. Feed backend (curated, fast)
+        feedSearchService.search(trimmedQuery, limit: 20),
+        // 2. TMDB (broader coverage)
+        searchApi.getSearchitem(trimmedQuery),
+      ]);
+
+      final feedResults = results[0] as List<Result>;
+      final tmdbResults = results[1] as List<Result>;
+
+      // Merge results: feed first, then TMDB (deduplicated by ID)
+      final seenIds = <int>{};
+      final mergedResults = <Result>[];
+
+      // Add feed results first (higher priority - curated content)
+      for (final item in feedResults) {
+        if (item.id != null && !seenIds.contains(item.id)) {
+          seenIds.add(item.id!);
+          mergedResults.add(item);
+        }
+      }
+
+      // Add TMDB results (broader coverage)
+      for (final item in tmdbResults) {
+        if (item.id != null && !seenIds.contains(item.id)) {
+          seenIds.add(item.id!);
+          mergedResults.add(item);
+        }
+      }
 
       if (mounted) {
         setState(() {
-          _allResults = results
+          _allResults = mergedResults
               .where((r) => r.mediaType != null && r.mediaType != 'unknown')
               .toList();
           _isLoading = false;
@@ -291,93 +322,94 @@ class _SearchScreenState extends State<SearchScreen> {
           children: [
             Expanded(
               child: Builder(
-                builder: (imageContext) {
-                  return GestureDetector(
-                    onTap: () {
-                      if (isPerson) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ActorProfileScreen(
-                              personId: item.id ?? 0,
-                              personName: displayName,
-                            ),
+                builder: (context) {
+                  // Common tap handler
+                  void handleTap() {
+                    if (isPerson) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ActorProfileScreen(
+                            personId: item.id ?? 0,
+                            personName: displayName,
                           ),
-                        );
-                      } else {
-                        provider.selectSearchItem(filtered, index);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => GenericDetailsScreen(),
-                          ),
-                        );
-                      }
-                    },
-                    onLongPressStart: (details) {
-                      if (isPerson) return;
-
-                      // Get the render box for the IMAGE ONLY
-                      final RenderBox renderBox =
-                          imageContext.findRenderObject() as RenderBox;
-                      final size = renderBox.size;
-                      final offset = renderBox.localToGlobal(Offset.zero);
-
-                      // Convert Result to MediaItem
-                      final mediaItem = MediaItem(
-                        id: item.id ?? 0,
-                        title: displayName,
-                        overview: item.overview ?? '',
-                        posterPath: item.posterPath ?? '',
-                        backdropPath: item.backdropPath ?? '',
-                        genreIds: item.genreIds ?? [],
-                        voteAverage: item.voteAverage ?? 0.0,
-                        mediaType: item.mediaType ?? 'movie',
-                        releaseDate:
-                            item.releaseDate?.toString() ??
-                            item.firstAirDate?.toString() ??
-                            '',
-                        imageUrl: getTmdbImageUrl(item.posterPath),
+                        ),
                       );
-
-                      showBlurPreview(
-                        context: context,
-                        item: mediaItem,
-                        childSize: size,
-                        childOffset: offset,
+                    } else {
+                      provider.selectSearchItem(filtered, index);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => GenericDetailsScreen(),
+                        ),
                       );
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withAlpha(26),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
+                    }
+                  }
+
+                  // Poster Widget
+                  final posterWidget = Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(26),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: CachedNetworkImage(
+                        imageUrl: getTmdbImageUrl(imagePath),
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => Container(
+                          color: Colors.grey[300],
+                          child: const Center(
+                            child: CupertinoActivityIndicator(),
                           ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: CachedNetworkImage(
-                          imageUrl: getTmdbImageUrl(imagePath),
-                          fit: BoxFit.cover,
-                          placeholder: (_, __) => Container(
-                            color: Colors.grey[300],
-                            child: const Center(
-                              child: CupertinoActivityIndicator(),
-                            ),
-                          ),
-                          errorWidget: (_, __, ___) => Container(
-                            color: Colors.grey[200],
-                            child: Image.asset(
-                              'assets/noimage.jpg',
-                              fit: BoxFit.cover,
-                            ),
+                        ),
+                        errorWidget: (_, __, ___) => Container(
+                          color: Colors.grey[200],
+                          child: Image.asset(
+                            'assets/noimage.jpg',
+                            fit: BoxFit.cover,
                           ),
                         ),
                       ),
+                    ),
+                  );
+
+                  // If Person, just basic tap support
+                  if (isPerson) {
+                    return GestureDetector(
+                      onTap: handleTap,
+                      child: posterWidget,
+                    );
+                  }
+
+                  // If Movie/Show, wrap in InteractiveMediaPoster
+                  final mediaItem = MediaItem(
+                    id: item.id ?? 0,
+                    title: displayName,
+                    overview: item.overview ?? '',
+                    posterPath: item.posterPath ?? '',
+                    backdropPath: item.backdropPath ?? '',
+                    genreIds: item.genreIds ?? [],
+                    voteAverage: item.voteAverage ?? 0.0,
+                    mediaType: item.mediaType ?? 'movie',
+                    releaseDate:
+                        item.releaseDate?.toString() ??
+                        item.firstAirDate?.toString() ??
+                        '',
+                    imageUrl: getTmdbImageUrl(item.posterPath),
+                  );
+
+                  return InteractiveMediaPoster(
+                    item: mediaItem,
+                    child: GestureDetector(
+                      onTap: handleTap,
+                      child: posterWidget,
                     ),
                   );
                 },

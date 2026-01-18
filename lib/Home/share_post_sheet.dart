@@ -105,6 +105,17 @@ class _SharePostSheetState extends State<SharePostSheet> {
     try {
       for (final userId in _selectedUserIds) {
         final conversationId = _getConversationId(_currentUserId, userId);
+
+        // DEBUG: Log the post data being shared
+        debugPrint('[SharePostSheet] 📤 Sharing post:');
+        debugPrint('  - postId: ${widget.post.id}');
+        debugPrint(
+          '  - content: ${widget.post.content.substring(0, widget.post.content.length.clamp(0, 30))}...',
+        );
+        debugPrint('  - authorName: ${widget.post.authorName}');
+        debugPrint('  - showTitle: ${widget.post.showTitle}');
+        debugPrint('  - showId: ${widget.post.showId}');
+
         await Provider.of<ChatProvider>(context, listen: false).sendPostLink(
           conversationId: conversationId,
           receiverId: userId,

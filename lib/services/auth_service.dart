@@ -2,7 +2,25 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:finishd/db/app_database.dart';
 import 'package:finishd/services/chat_sync_service.dart';
+import 'package:finishd/services/moderation_listener_service.dart';
+import 'package:finishd/services/moderation_notification_handler.dart';
+
+/// Structured moderation status
+class ModerationStatus {
+  final bool isBanned;
+  final bool isSuspended;
+  final String reason;
+  final int? daysRemaining;
+
+  ModerationStatus({
+    required this.isBanned,
+    required this.isSuspended,
+    required this.reason,
+    this.daysRemaining,
+  });
+}
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -15,9 +33,9 @@ class AuthService {
   // Get current user
   User? get currentUser => _auth.currentUser;
 
-  /// Check if user is suspended or banned.
-  /// Returns null if OK, or an error message if blocked.
-  Future<String?> checkUserModerationStatus(String userId) async {
+  /// Moderation status result
+  /// Returns null if user is OK, otherwise contains block details
+  Future<ModerationStatus?> checkUserModerationStatus(String userId) async {
     try {
       final doc = await _firestore.collection('users').doc(userId).get();
       if (!doc.exists) return null;
@@ -27,8 +45,11 @@ class AuthService {
       // Check permanent ban
       if (data['isBanned'] == true) {
         final reason = data['banReason'] ?? 'Policy violation';
-        await _auth.signOut();
-        return 'Your account has been permanently banned.\nReason: $reason';
+        return ModerationStatus(
+          isBanned: true,
+          isSuspended: false,
+          reason: reason,
+        );
       }
 
       // Check temporary suspension
@@ -39,8 +60,12 @@ class AuthService {
           if (until.isAfter(DateTime.now())) {
             final reason = data['suspensionReason'] ?? 'Policy violation';
             final daysLeft = until.difference(DateTime.now()).inDays + 1;
-            await _auth.signOut();
-            return 'Your account is suspended for $daysLeft more day(s).\nReason: $reason';
+            return ModerationStatus(
+              isBanned: false,
+              isSuspended: true,
+              reason: reason,
+              daysRemaining: daysLeft,
+            );
           } else {
             // Suspension expired, clear the flag
             await _firestore.collection('users').doc(userId).update({
@@ -264,11 +289,24 @@ class AuthService {
 
   // Sign Out
   Future<void> signOut() async {
-    // Clear local chat data to prevent leaking between accounts
+    // Stop real-time moderation listener
+    ModerationListenerService.instance.stopListening();
+
+    // Stop moderation notification handler
+    ModerationNotificationHandler.instance.stopListening();
+
+    // Clear local chat data (ObjectBox) to prevent leaking between accounts
     try {
-      ChatSyncService.instance.clearLocalData();
+      await ChatSyncService.instance.clearLocalData();
     } catch (e) {
-      // Ignore if ChatSyncService not initialized
+      print('Error clearing chat data: $e');
+    }
+
+    // Clear SQLite cache data (feed, recommendations, followers, etc.)
+    try {
+      await AppDatabase.instance.clearAllUserData();
+    } catch (e) {
+      print('Error clearing SQLite cache: $e');
     }
 
     // Disconnect Google Sign-In to fully clear cached account

@@ -257,6 +257,34 @@ class AppDatabase {
     }
   }
 
+  /// Clear all user-specific data from the local database.
+  /// Call this on logout to prevent data leaking between accounts.
+  Future<void> clearAllUserData() async {
+    final db = await database;
+
+    print('🧹 [AppDatabase] Clearing all user data from local cache...');
+
+    try {
+      // Clear all user-related tables
+      await db.delete('feed_cache');
+      await db.delete('notifications_cache');
+      await db.delete('recommendation_cache');
+      await db.delete('following_cache');
+      await db.delete('followers_cache');
+      await db.delete('user_profile_cache');
+      await db.delete('recommendations_received_cache');
+      await db.delete('recommendation_sync_status');
+      await db.delete('movie_list_sync_status');
+
+      // Note: keeping trending_cache, ratings_cache, tmdb_cache, streaming_cache
+      // as these are not user-specific (they store movie/show metadata)
+
+      print('✅ [AppDatabase] Cleared all user data from local cache');
+    } catch (e) {
+      print('❌ [AppDatabase] Error clearing user data: $e');
+    }
+  }
+
   Future<void> close() async {
     final db = await instance.database;
     db.close();

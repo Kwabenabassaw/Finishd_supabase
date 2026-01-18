@@ -107,80 +107,192 @@ class _ReportBottomSheetState extends State<ReportBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Container(
       padding: EdgeInsets.only(
-        top: 16,
-        left: 16,
-        right: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        top: 12,
+        left: 20,
+        right: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
       ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Drag Handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: theme.dividerColor.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+
           // Header
           Row(
             children: [
-              const Icon(Icons.flag_outlined, color: Colors.red),
-              const SizedBox(width: 8),
-              Text(
-                'Report ${_getContentTypeName()}',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.error.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.report_gmailerrorred_rounded,
+                  color: theme.colorScheme.error,
+                  size: 20,
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Report ${_getContentTypeName()}',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
               IconButton(
-                icon: const Icon(Icons.close),
+                icon: const Icon(Icons.close_rounded),
                 onPressed: () => context.pop(),
+                style: IconButton.styleFrom(
+                  backgroundColor: theme.dividerColor.withOpacity(0.1),
+                ),
               ),
             ],
           ),
-          const Divider(),
+          const SizedBox(height: 16),
+
+          // Instruction Text
+          Text(
+            'Why are you reporting this?',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.hintColor,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 12),
 
           // Reasons List
-          const Text(
-            'Why are you reporting this?',
-            style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey),
-          ),
-          const SizedBox(height: 8),
-
           Flexible(
-            child: ListView(
-              shrinkWrap: true,
-              children: ReportReason.values.map((reason) {
-                return RadioListTile<ReportReason>(
-                  title: Text(_getReasonText(reason)),
-                  value: reason,
-                  groupValue: _selectedReason,
-                  onChanged: (val) => setState(() => _selectedReason = val),
-                  contentPadding: EdgeInsets.zero,
-                  activeColor: Colors.red,
-                );
-              }).toList(),
+            child: Container(
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: theme.dividerColor.withOpacity(0.1)),
+              ),
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: ReportReason.values.length,
+                separatorBuilder: (context, index) => Divider(
+                  height: 1,
+                  indent: 52,
+                  color: theme.dividerColor.withOpacity(0.05),
+                ),
+                itemBuilder: (context, index) {
+                  final reason = ReportReason.values[index];
+                  final isSelected = _selectedReason == reason;
+                  return RadioListTile<ReportReason>(
+                    title: Text(
+                      _getReasonText(reason),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: isSelected ? FontWeight.w600 : null,
+                        color: isSelected
+                            ? null
+                            : theme.textTheme.bodyMedium?.color?.withOpacity(
+                                0.8,
+                              ),
+                      ),
+                    ),
+                    value: reason,
+                    groupValue: _selectedReason,
+                    onChanged: (val) => setState(() => _selectedReason = val),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                    activeColor: theme.colorScheme.error,
+                    controlAffinity: ListTileControlAffinity.trailing,
+                    visualDensity: VisualDensity.compact,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  );
+                },
+              ),
             ),
           ),
 
-          // Additional Info
-          if (_selectedReason != null) ...[
-            const SizedBox(height: 12),
-            TextField(
-              controller: _additionalInfoController,
-              decoration: const InputDecoration(
-                labelText: 'Additional details (optional)',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-              maxLines: 3,
-            ),
-          ],
+          // Additional Info (Animated Visibility)
+          AnimatedSize(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+            child: _selectedReason != null
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Additional Details',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.hintColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _additionalInfoController,
+                          decoration: InputDecoration(
+                            hintText: 'Anything else we should know?',
+                            hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.hintColor.withOpacity(0.5),
+                            ),
+                            filled: true,
+                            fillColor: theme.cardColor,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: theme.dividerColor.withOpacity(0.1),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: theme.colorScheme.error.withOpacity(0.5),
+                              ),
+                            ),
+                            contentPadding: const EdgeInsets.all(16),
+                          ),
+                          maxLines: 3,
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
           // Submit Button
           SizedBox(
@@ -190,23 +302,34 @@ class _ReportBottomSheetState extends State<ReportBottomSheet> {
                   ? _submitReport
                   : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
+                backgroundColor: theme.colorScheme.error,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                disabledBackgroundColor: theme.colorScheme.error.withOpacity(
+                  0.3,
                 ),
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 0,
               ),
               child: _isLoading
                   ? const SizedBox(
                       height: 20,
                       width: 20,
                       child: CircularProgressIndicator(
-                        strokeWidth: 2,
+                        strokeWidth: 2.5,
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
-                  : const Text('Submit Report'),
+                  : Text(
+                      'Submit Report',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
             ),
           ),
         ],

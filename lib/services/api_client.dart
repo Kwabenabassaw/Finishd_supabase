@@ -330,6 +330,54 @@ class ApiClient {
     }
   }
 
+  /// Search curated feed content via feed backend
+  ///
+  /// Returns feed items (movies/TV shows) matching the query.
+  /// Uses in-memory fuzzy search for fast results (~150ms).
+  ///
+  /// [query]: Search string (min 2 characters)
+  /// [limit]: Max results (default 20, max 50)
+  /// [mediaType]: Optional filter - 'movie' or 'tv'
+  Future<List<Map<String, dynamic>>> searchFeedContent({
+    required String query,
+    int limit = 20,
+    String? mediaType,
+  }) async {
+    if (query.trim().length < 2) {
+      return [];
+    }
+
+    try {
+      final queryParams = {
+        'q': query.trim(),
+        'limit': limit.toString(),
+        if (mediaType != null) 'type': mediaType,
+      };
+
+      _log('📡 Searching feed content: "$query"');
+
+      final response = await _getFeedBackend(
+        '/search',
+        queryParams: queryParams,
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> results = jsonDecode(response.body);
+        _log('✅ Feed search: Found ${results.length} results for "$query"');
+        return results.cast<Map<String, dynamic>>();
+      } else if (response.statusCode == 401) {
+        _log('Feed search unauthorized', isError: true);
+        return [];
+      } else {
+        _log('Feed search error: ${response.statusCode}', isError: true);
+        return [];
+      }
+    } catch (e) {
+      _log('Error searching feed content: $e', isError: true);
+      return [];
+    }
+  }
+
   // =========================================================================
   // FEED API (TMDB-based - Legacy)
 

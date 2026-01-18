@@ -149,7 +149,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
       id: const obx_int.IdUid(5, 3586160544059811964),
       name: 'LocalMessage',
-      lastPropertyId: const obx_int.IdUid(21, 104777825775197555),
+      lastPropertyId: const obx_int.IdUid(26, 2620960402803030156),
       flags: 0,
       properties: <obx_int.ModelProperty>[
         obx_int.ModelProperty(
@@ -257,6 +257,31 @@ final _entities = <obx_int.ModelEntity>[
             id: const obx_int.IdUid(21, 104777825775197555),
             name: 'isRead',
             type: 1,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(22, 5083317677523967902),
+            name: 'postId',
+            type: 9,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(23, 6697287315143650845),
+            name: 'postContent',
+            type: 9,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(24, 1682177965198923815),
+            name: 'postAuthorName',
+            type: 9,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(25, 178077339641931552),
+            name: 'postShowTitle',
+            type: 9,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(26, 2620960402803030156),
+            name: 'showId',
+            type: 6,
             flags: 0)
       ],
       relations: <obx_int.ModelRelation>[],
@@ -670,7 +695,18 @@ obx_int.ModelDefinition getObjectBoxModel() {
           final videoChannelOffset = object.videoChannel == null
               ? null
               : fbb.writeString(object.videoChannel!);
-          fbb.startTable(22);
+          final postIdOffset =
+              object.postId == null ? null : fbb.writeString(object.postId!);
+          final postContentOffset = object.postContent == null
+              ? null
+              : fbb.writeString(object.postContent!);
+          final postAuthorNameOffset = object.postAuthorName == null
+              ? null
+              : fbb.writeString(object.postAuthorName!);
+          final postShowTitleOffset = object.postShowTitle == null
+              ? null
+              : fbb.writeString(object.postShowTitle!);
+          fbb.startTable(27);
           fbb.addInt64(0, object.localId);
           fbb.addOffset(1, firestoreIdOffset);
           fbb.addOffset(2, conversationIdOffset);
@@ -692,6 +728,11 @@ obx_int.ModelDefinition getObjectBoxModel() {
           fbb.addInt64(18, object.retryCount);
           fbb.addBool(19, object.isPending);
           fbb.addBool(20, object.isRead);
+          fbb.addOffset(21, postIdOffset);
+          fbb.addOffset(22, postContentOffset);
+          fbb.addOffset(23, postAuthorNameOffset);
+          fbb.addOffset(24, postShowTitleOffset);
+          fbb.addInt64(25, object.showId);
           fbb.finish(fbb.endTable());
           return object.localId;
         },
@@ -733,6 +774,19 @@ obx_int.ModelDefinition getObjectBoxModel() {
           final videoChannelParam =
               const fb.StringReader(asciiOptimization: true)
                   .vTableGetNullable(buffer, rootOffset, 34);
+          final postIdParam = const fb.StringReader(asciiOptimization: true)
+              .vTableGetNullable(buffer, rootOffset, 46);
+          final postContentParam =
+              const fb.StringReader(asciiOptimization: true)
+                  .vTableGetNullable(buffer, rootOffset, 48);
+          final postAuthorNameParam =
+              const fb.StringReader(asciiOptimization: true)
+                  .vTableGetNullable(buffer, rootOffset, 50);
+          final postShowTitleParam =
+              const fb.StringReader(asciiOptimization: true)
+                  .vTableGetNullable(buffer, rootOffset, 52);
+          final showIdParam =
+              const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 54);
           final createdAtParam = DateTime.fromMillisecondsSinceEpoch(
               const fb.Int64Reader().vTableGet(buffer, rootOffset, 36, 0));
           final statusParam =
@@ -759,6 +813,11 @@ obx_int.ModelDefinition getObjectBoxModel() {
               videoTitle: videoTitleParam,
               videoThumbnail: videoThumbnailParam,
               videoChannel: videoChannelParam,
+              postId: postIdParam,
+              postContent: postContentParam,
+              postAuthorName: postAuthorNameParam,
+              postShowTitle: postShowTitleParam,
+              showId: showIdParam,
               createdAt: createdAtParam,
               status: statusParam,
               retryCount: retryCountParam,
@@ -1089,6 +1148,26 @@ class LocalMessage_ {
   /// see [LocalMessage.isRead]
   static final isRead =
       obx.QueryBooleanProperty<LocalMessage>(_entities[2].properties[20]);
+
+  /// see [LocalMessage.postId]
+  static final postId =
+      obx.QueryStringProperty<LocalMessage>(_entities[2].properties[21]);
+
+  /// see [LocalMessage.postContent]
+  static final postContent =
+      obx.QueryStringProperty<LocalMessage>(_entities[2].properties[22]);
+
+  /// see [LocalMessage.postAuthorName]
+  static final postAuthorName =
+      obx.QueryStringProperty<LocalMessage>(_entities[2].properties[23]);
+
+  /// see [LocalMessage.postShowTitle]
+  static final postShowTitle =
+      obx.QueryStringProperty<LocalMessage>(_entities[2].properties[24]);
+
+  /// see [LocalMessage.showId]
+  static final showId =
+      obx.QueryIntegerProperty<LocalMessage>(_entities[2].properties[25]);
 }
 
 /// [LocalParticipant] entity fields to define ObjectBox queries.

@@ -340,6 +340,21 @@ class _ChatScreenState extends State<ChatScreen> {
                       final message = messages[index];
                       final isMe = message.senderId == _currentUserId;
 
+                      // DEBUG: Trace shared post data
+                      if (message.type == 'shared_post') {
+                        debugPrint('[ChatScreen] 📝 Shared post message:');
+                        debugPrint('  - postId: ${message.postId}');
+                        debugPrint(
+                          '  - postContent: ${message.postContent?.substring(0, (message.postContent?.length ?? 0).clamp(0, 30))}...',
+                        );
+                        debugPrint(
+                          '  - postAuthorName: ${message.postAuthorName}',
+                        );
+                        debugPrint(
+                          '  - postShowTitle: ${message.postShowTitle}',
+                        );
+                      }
+
                       return GestureDetector(
                         onLongPress: isMe
                             ? null
