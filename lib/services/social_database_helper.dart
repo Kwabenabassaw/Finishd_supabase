@@ -167,9 +167,38 @@ class SocialDatabaseHelper {
     );
   }
 
-  Future<void> clearAll() async {
+  /// Clear all user-specific data from the social database.
+  /// Call this on logout to prevent data leaking between accounts.
+  Future<void> clearAllUserData() async {
     final db = await database;
-    await db.delete('friend_activity');
+    print('🧹 [SocialDatabaseHelper] Clearing all user data...');
+
+    try {
+      // Clear friend activity
+      await db.delete('friend_activity');
+
+      // Clear user's movie lists (FinishD, Watching, Watch Later)
+      await db.delete('user_list_item');
+
+      // Clear favorite posts
+      await db.delete('favorite_posts');
+
+      // Clear favorite communities (if table exists)
+      try {
+        await db.delete('favorite_communities');
+      } catch (e) {
+        // Table might not exist yet
+      }
+
+      print('✅ [SocialDatabaseHelper] Cleared all user data');
+    } catch (e) {
+      print('❌ [SocialDatabaseHelper] Error clearing user data: $e');
+    }
+  }
+
+  /// Legacy method - kept for backwards compatibility
+  Future<void> clearAll() async {
+    await clearAllUserData();
   }
 
   // ==================== USER LIST METHODS ====================

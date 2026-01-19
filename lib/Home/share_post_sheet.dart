@@ -94,7 +94,8 @@ class _SharePostSheetState extends State<SharePostSheet> {
     });
   }
 
-  String get _shareUrl => 'https://finishd.app/post/${widget.post.id}';
+  String get _shareUrl =>
+      'https://finishd-admin.vercel.app/post/${widget.post.id}';
   String get _shareText =>
       '📝 ${widget.post.authorName} shared a post in ${widget.post.showTitle ?? 'Community'}\n\n"${widget.post.content}"\n\nCheck it out on FINISHD: $_shareUrl';
 

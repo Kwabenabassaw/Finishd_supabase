@@ -6,6 +6,7 @@ import 'package:finishd/db/app_database.dart';
 import 'package:finishd/services/chat_sync_service.dart';
 import 'package:finishd/services/moderation_listener_service.dart';
 import 'package:finishd/services/moderation_notification_handler.dart';
+import 'package:finishd/services/social_database_helper.dart';
 
 /// Structured moderation status
 class ModerationStatus {
@@ -307,6 +308,13 @@ class AuthService {
       await AppDatabase.instance.clearAllUserData();
     } catch (e) {
       print('Error clearing SQLite cache: $e');
+    }
+
+    // Clear social database (movie lists, friend activity, favorites)
+    try {
+      await SocialDatabaseHelper().clearAllUserData();
+    } catch (e) {
+      print('Error clearing social database: $e');
     }
 
     // Disconnect Google Sign-In to fully clear cached account

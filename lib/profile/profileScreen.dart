@@ -75,40 +75,80 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   // FIX Bug 3: Subscribe to all movie lists with single state update
+  // FIX: Use hybrid caching only for own profile; direct Firestore for others
   void _subscribeToMovieLists() {
-    // Use hybrid streaming: instant load from SQLite + real-time updates
-    _finishedSub = _movieListService
-        .streamMoviesFromListHybrid(widget.uid, 'finished')
-        .listen((movies) {
-          if (mounted) {
-            setState(() {
-              _finishedMovies = movies;
-              _isLoadingMovies = false;
-            });
-          }
-        });
+    final bool isOwnProfile = _currentUserId == widget.uid;
 
-    _watchingSub = _movieListService
-        .streamMoviesFromListHybrid(widget.uid, 'watching')
-        .listen((movies) {
-          if (mounted) {
-            setState(() {
-              _watchingMovies = movies;
-              _isLoadingMovies = false;
-            });
-          }
-        });
+    // For own profile: use hybrid (SQLite cache + real-time updates)
+    // For other profiles: use direct Firestore stream (cache is user-specific)
+    if (isOwnProfile) {
+      _finishedSub = _movieListService
+          .streamMoviesFromListHybrid(widget.uid, 'finished')
+          .listen((movies) {
+            if (mounted) {
+              setState(() {
+                _finishedMovies = movies;
+                _isLoadingMovies = false;
+              });
+            }
+          });
 
-    _watchlistSub = _movieListService
-        .streamMoviesFromListHybrid(widget.uid, 'watchlist')
-        .listen((movies) {
-          if (mounted) {
-            setState(() {
-              _watchlistMovies = movies;
-              _isLoadingMovies = false;
-            });
-          }
-        });
+      _watchingSub = _movieListService
+          .streamMoviesFromListHybrid(widget.uid, 'watching')
+          .listen((movies) {
+            if (mounted) {
+              setState(() {
+                _watchingMovies = movies;
+                _isLoadingMovies = false;
+              });
+            }
+          });
+
+      _watchlistSub = _movieListService
+          .streamMoviesFromListHybrid(widget.uid, 'watchlist')
+          .listen((movies) {
+            if (mounted) {
+              setState(() {
+                _watchlistMovies = movies;
+                _isLoadingMovies = false;
+              });
+            }
+          });
+    } else {
+      // Other users' profiles: stream directly from Firestore
+      _finishedSub = _movieListService
+          .streamMoviesFromList(widget.uid, 'finished')
+          .listen((movies) {
+            if (mounted) {
+              setState(() {
+                _finishedMovies = movies;
+                _isLoadingMovies = false;
+              });
+            }
+          });
+
+      _watchingSub = _movieListService
+          .streamMoviesFromList(widget.uid, 'watching')
+          .listen((movies) {
+            if (mounted) {
+              setState(() {
+                _watchingMovies = movies;
+                _isLoadingMovies = false;
+              });
+            }
+          });
+
+      _watchlistSub = _movieListService
+          .streamMoviesFromList(widget.uid, 'watchlist')
+          .listen((movies) {
+            if (mounted) {
+              setState(() {
+                _watchlistMovies = movies;
+                _isLoadingMovies = false;
+              });
+            }
+          });
+    }
   }
 
   // FIX Bug 2: Load follower/following counts once

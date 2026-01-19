@@ -36,7 +36,7 @@ class DeepLinkService {
   void _handleUri(Uri uri) async {
     debugPrint('Deep Link Received: $uri');
 
-    // Structure: https://finishd.app/post/{postId}
+    // Structure: https://finishd-admin.vercel.app/post/{postId}
     // pathSegments: ['post', 'POST_ID']
     if (uri.pathSegments.length >= 2 && uri.pathSegments[0] == 'post') {
       final postId = uri.pathSegments[1];

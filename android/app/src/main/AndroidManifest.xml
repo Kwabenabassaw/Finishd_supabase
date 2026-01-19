@@ -28,12 +28,12 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
             
-            <!-- App Links for https://finishd.app deep linking -->
+            <!-- App Links for https://finishd-admin.vercel.app deep linking -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="finishd.app" />
+                <data android:scheme="https" android:host="finishd-admin.vercel.app" />
             </intent-filter>
             
             <!-- Custom URL Scheme fallback -->

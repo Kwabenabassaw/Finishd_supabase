@@ -1,4 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:finishd/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../provider/theme_provider.dart';
@@ -175,7 +175,7 @@ class SettingsScreen extends StatelessWidget {
                 child: OutlinedButton(
                   onPressed: () async {
                     try {
-                      await FirebaseAuth.instance.signOut();
+                      await AuthService().signOut();
                       if (context.mounted) {
                         Navigator.pushNamedAndRemoveUntil(
                           context,
