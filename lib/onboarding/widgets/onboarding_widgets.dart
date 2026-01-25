@@ -131,7 +131,7 @@ class ToggleButtonRow extends StatelessWidget {
                       : [],
                 ),
                 child: Text(
-                  'Log In',
+                  'Sign In',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,

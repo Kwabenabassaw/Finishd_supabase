@@ -1,7 +1,8 @@
 import 'package:finishd/onboarding/widgets/button.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:flutter/services.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:finishd/services/auth_service.dart';
 import 'package:finishd/provider/user_provider.dart';
@@ -228,12 +229,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
             // 3. Subtitle
             const Text(
-              'Log in or register to unlock your personal TV feed.',
+              'Sign in or register to unlock your personal TV feed.',
               style: TextStyle(fontSize: 14, color: Colors.grey),
             ),
             const SizedBox(height: 20),
 
-            // 4. Log In / Sign Up Segmented Control
+            // 4. Sign In / Sign Up Segmented Control
             const ToggleButtonRow(),
             const SizedBox(height: 20),
 
@@ -347,45 +348,49 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                   ),
                 ),
-                SizedBox(
-                  width: double.infinity,
+                SignInWithAppleButton(
+                  onPressed: _isLoading ? null : _signUpWithApple,
+                  style: Theme.of(context).brightness == Brightness.dark
+                      ? SignInWithAppleButtonStyle.white
+                      : SignInWithAppleButtonStyle.black,
                   height: 55,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _signUpWithApple,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          Theme.of(context).brightness == Brightness.dark
-                          ? const Color(0xFF1E1E1E)
-                          : Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        side: const BorderSide(color: Colors.grey, width: 0.5),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: Row(
-                      spacing: 14,
-                      mainAxisSize: MainAxisSize.min,
+                ),
+                const SizedBox(height: 20),
+                // Privacy Policy & Terms of Service
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: RichText(
+                    textAlign: TextAlign.center,
+                    text: TextSpan(
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
                       children: [
-                        FaIcon(
-                          FontAwesomeIcons.apple,
-                          size: 24.0,
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white
-                              : Colors.grey,
-                          // Google's primary brand color is red/blue/green/yellow
+                        const TextSpan(
+                          text: 'By continuing, you agree to our ',
                         ),
-                        const Text(
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.right,
-                          'Continue With Apple ',
-
-                          style: TextStyle(
-                            fontSize: 18,
+                        TextSpan(
+                          text: 'Terms of Service',
+                          style: const TextStyle(
+                            color: primaryGreen,
                             fontWeight: FontWeight.bold,
-                            color: Colors.grey,
                           ),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () {
+                              // TODO: Add navigation to Terms of Service
+                            },
                         ),
+                        const TextSpan(text: ' and '),
+                        TextSpan(
+                          text: 'Privacy Policy',
+                          style: const TextStyle(
+                            color: primaryGreen,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () {
+                              // TODO: Add navigation to Privacy Policy
+                            },
+                        ),
+                        const TextSpan(text: '.'),
                       ],
                     ),
                   ),
@@ -520,7 +525,7 @@ class ToggleButtonRow extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  'Log In',
+                  'Sign In',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
