@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "754154797926",
+    "firebase_url": "https://finishd-app-default-rtdb.firebaseio.com",
     "project_id": "finishd-app",
     "storage_bucket": "finishd-app.firebasestorage.app"
   },
@@ -19,6 +20,14 @@
           "android_info": {
             "package_name": "com.example.finishd",
             "certificate_hash": "fbe82cf3c475ef5131adc5aad41ab9f82d18322a"
+          }
+        },
+        {
+          "client_id": "754154797926-t3fcp2us0hku7v748dj8pq7p2idkhe3o.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.finishd",
+            "certificate_hash": "7b41dff238d1e11e48fee40a58669d176339cea2"
           }
         },
         {

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:finishd/services/backend_notification_service.dart';
 import 'package:finishd/services/episode_alert_service.dart';
 import 'package:finishd/services/cache/notification_cache_service.dart';
-import 'package:finishd/MovieDetails/MovieScreen.dart';
 import 'package:finishd/MovieDetails/Tvshowscreen.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:finishd/LoadingWidget/LogoLoading.dart';

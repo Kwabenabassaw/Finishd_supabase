@@ -6,6 +6,7 @@ import 'package:finishd/Model/user_model.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:finishd/Widget/user_avatar.dart';
 import 'package:provider/provider.dart';
 
 /// Offline-first Chat List Screen.
@@ -242,23 +243,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
         },
         child: Column(
           children: [
-            CircleAvatar(
+            UserAvatar(
               radius: 32,
-              backgroundColor: Colors.grey[200],
-              backgroundImage: user.profileImage.isNotEmpty
-                  ? NetworkImage(user.profileImage)
-                  : null,
-              child: user.profileImage.isEmpty
-                  ? Text(
-                      user.username.isNotEmpty
-                          ? user.username[0].toUpperCase()
-                          : '?',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        color: Colors.black54,
-                      ),
-                    )
-                  : null,
+              profileImageUrl: user.profileImage,
+              username: user.username,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              userId: user.uid,
             ),
             const SizedBox(height: 8),
             Text(
@@ -324,21 +315,13 @@ class _ConversationTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             child: Row(
               children: [
-                CircleAvatar(
+                UserAvatar(
                   radius: 30,
-                  backgroundColor: Colors.grey[200],
-                  backgroundImage: otherUser.profileImage.isNotEmpty
-                      ? NetworkImage(otherUser.profileImage)
-                      : null,
-                  child: otherUser.profileImage.isEmpty
-                      ? Text(
-                          otherUser.username[0].toUpperCase(),
-                          style: const TextStyle(
-                            fontSize: 20,
-                            color: Colors.black54,
-                          ),
-                        )
-                      : null,
+                  profileImageUrl: otherUser.profileImage,
+                  username: otherUser.username,
+                  firstName: otherUser.firstName,
+                  lastName: otherUser.lastName,
+                  userId: otherUser.uid,
                 ),
                 const SizedBox(width: 15),
                 Expanded(

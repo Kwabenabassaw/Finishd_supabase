@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:finishd/services/auth_service.dart';
 import 'package:finishd/provider/user_provider.dart';
 import 'package:finishd/screens/moderation_block_screen.dart';
+import 'package:finishd/utils/name_utils.dart';
 
 // Define the primary color (Green from the image)
 const Color primaryGreen = Color(0xFF1A8927);
@@ -75,8 +76,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
           .signUpWithEmailAndPassword(
             email: _emailController.text.trim(),
             password: _passwordController.text.trim(),
-            firstName: _firstNameController.text.trim(),
-            lastName: _lastNameController.text.trim(),
+            firstName: NameUtils.capitalizeName(_firstNameController.text),
+            lastName: NameUtils.capitalizeName(_lastNameController.text),
           );
 
       if (mounted) {
@@ -99,9 +100,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
               ).fetchCurrentUser(authService.currentUser!.uid);
             }
             // Onboarding complete, go to homepage
+            TextInput.finishAutofillContext(); // Trigger Credential Save
             Navigator.pushReplacementNamed(context, 'homepage');
           } else {
             // Onboarding not complete, continue with onboarding
+            TextInput.finishAutofillContext(); // Trigger Credential Save
             Navigator.pushReplacementNamed(context, 'genre');
           }
         }
@@ -235,45 +238,57 @@ class _SignUpScreenState extends State<SignUpScreen> {
             const SizedBox(height: 20),
 
             // 5. Form Fields
-            // First Name and Last Name in a Row
-            Row(
-              children: <Widget>[
-                // First Name Field
-                Expanded(
-                  child: LabeledTextField(
-                    label: 'First Name',
-                    hintText: 'John',
-                    controller: _firstNameController,
+            AutofillGroup(
+              child: Column(
+                children: [
+                  // First Name and Last Name in a Row
+                  Row(
+                    children: <Widget>[
+                      // First Name Field
+                      Expanded(
+                        child: LabeledTextField(
+                          label: 'First Name',
+                          hintText: 'John',
+                          controller: _firstNameController,
+                          textCapitalization: TextCapitalization.words,
+                          autofillHints: const [AutofillHints.givenName],
+                        ),
+                      ),
+                      const SizedBox(width: 15),
+                      // Last Name Field
+                      Expanded(
+                        child: LabeledTextField(
+                          label: 'Last Name',
+                          hintText: 'Doe',
+                          controller: _lastNameController,
+                          textCapitalization: TextCapitalization.words,
+                          autofillHints: const [AutofillHints.familyName],
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 15),
-                // Last Name Field
-                Expanded(
-                  child: LabeledTextField(
-                    label: 'Last Name',
-                    hintText: 'Doe',
-                    controller: _lastNameController,
+                  const SizedBox(height: 20),
+
+                  // Email Field
+                  LabeledTextField(
+                    label: 'Email',
+                    hintText: 'johndoe@gmail.com',
+                    keyboardType: TextInputType.emailAddress,
+                    controller: _emailController,
+                    autofillHints: const [AutofillHints.email],
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-            // Email Field
-            LabeledTextField(
-              label: 'Email',
-              hintText: 'johndoe@gmail.com',
-              keyboardType: TextInputType.emailAddress,
-              controller: _emailController,
-            ),
-            const SizedBox(height: 20),
-
-            // Password Field
-            LabeledTextField(
-              label: 'Set Password',
-              hintText: '********',
-              isPassword: true,
-              controller: _passwordController,
+                  // Password Field
+                  LabeledTextField(
+                    label: 'Set Password',
+                    hintText: '********',
+                    isPassword: true,
+                    controller: _passwordController,
+                    autofillHints: const [AutofillHints.newPassword],
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 30),
 
@@ -393,6 +408,8 @@ class LabeledTextField extends StatefulWidget {
   final TextInputType keyboardType;
   final bool isPassword;
   final TextEditingController? controller;
+  final Iterable<String>? autofillHints;
+  final TextCapitalization textCapitalization;
 
   const LabeledTextField({
     super.key,
@@ -401,6 +418,8 @@ class LabeledTextField extends StatefulWidget {
     this.keyboardType = TextInputType.text,
     this.isPassword = false,
     this.controller,
+    this.autofillHints,
+    this.textCapitalization = TextCapitalization.none,
   });
 
   @override
@@ -436,6 +455,8 @@ class _LabeledTextFieldState extends State<LabeledTextField> {
           controller: widget.controller,
           obscureText: _obscureText,
           keyboardType: widget.keyboardType,
+          autofillHints: widget.autofillHints,
+          textCapitalization: widget.textCapitalization,
           style: const TextStyle(fontWeight: FontWeight.w500),
           decoration: InputDecoration(
             hintText: widget.hintText,

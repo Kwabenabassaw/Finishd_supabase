@@ -11,6 +11,7 @@ import 'package:finishd/Model/user_model.dart';
 import 'package:finishd/Model/movie_ratings_model.dart';
 
 import 'package:finishd/services/recommendation_service.dart';
+import 'package:finishd/Widget/user_avatar.dart';
 import 'package:finishd/services/user_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -29,7 +30,6 @@ import 'package:finishd/Widget/rating_action_button.dart';
 import 'package:finishd/Widget/emotion_rating_slider.dart';
 import 'package:finishd/MovieDetails/widgets/ai_chat_sheet.dart';
 import 'package:finishd/MovieDetails/widgets/ai_floating_button.dart';
-import 'package:finishd/provider/ai_assistant_provider.dart';
 import 'package:sizer/sizer.dart';
 import 'package:finishd/services/ratings_service.dart';
 // --- Placeholder/Mock Data Models ---
@@ -588,8 +588,9 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen>
 
   Widget _buildRecommendedSection() {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null || _recommendationsStream == null)
+    if (user == null || _recommendationsStream == null) {
       return const SizedBox.shrink();
+    }
 
     final UserService userService = UserService();
 
@@ -665,12 +666,11 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen>
       padding: const EdgeInsets.only(right: 20.0),
       child: Column(
         children: [
-          CircleAvatar(
+          UserAvatar(
+            profileImageUrl: imageUrl,
+            username: name,
+            userId: name, // Using name as fallback for deterministic color
             radius: 30,
-            backgroundImage: imageUrl.isNotEmpty
-                ? CachedNetworkImageProvider(imageUrl)
-                : const AssetImage('assets/noimage.jpg') as ImageProvider,
-            backgroundColor: Colors.grey.shade200,
           ),
           const SizedBox(height: 8),
           SizedBox(

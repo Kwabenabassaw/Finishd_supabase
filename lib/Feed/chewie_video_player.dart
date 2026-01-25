@@ -13,11 +13,11 @@ class ChewieVideoPlayer extends StatefulWidget {
   final FastVideoPoolManager manager;
 
   const ChewieVideoPlayer({
-    Key? key,
+    super.key,
     required this.video,
     required this.index,
     required this.manager,
-  }) : super(key: key);
+  });
 
   @override
   State<ChewieVideoPlayer> createState() => _ChewieVideoPlayerState();
@@ -188,7 +188,11 @@ class _ChewieVideoPlayerState extends State<ChewieVideoPlayer> {
                 children: [
                   _buildActionButton(Icons.favorite, "Like"),
                   const SizedBox(height: 20),
-                  _buildActionButton(Icons.comment, "Comment"),
+                  Transform(
+                    alignment: Alignment.center,
+                    transform: Matrix4.rotationY(3.14159), // Flip horizontally
+                    child: _buildActionButton(Icons.comment, "Comment"),
+                  ),
                   const SizedBox(height: 20),
                   GestureDetector(
                     onTap: () => Navigator.pushNamed(context, 'friends'),

@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:finishd/Widget/user_avatar.dart';
 import 'package:flutter/material.dart';
 
 /// Widget that displays overlapping profile avatars
@@ -10,12 +11,12 @@ class OverlappingAvatarsWidget extends StatelessWidget {
   final double overlapOffset;
 
   const OverlappingAvatarsWidget({
-    Key? key,
+    super.key,
     required this.imageUrls,
     this.onTap,
     this.avatarSize = 30,
     this.overlapOffset = 20,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -64,11 +65,10 @@ class OverlappingAvatarsWidget extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          CircleAvatar(
+          UserAvatar(
             radius: avatarSize / 2,
-            backgroundImage: imageUrl != null && imageUrl.isNotEmpty
-                ? CachedNetworkImageProvider(imageUrl)
-                : const AssetImage('assets/noimage.jpg') as ImageProvider,
+            profileImageUrl: imageUrl,
+            userId: imageUrl ?? 'anonymous', // Minimal requirement for deterministic color
           ),
           // Badge overlay if there are more avatars
           if (showBadge)

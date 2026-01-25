@@ -10,7 +10,7 @@ import 'package:finishd/services/api_client.dart';
 /// - Following: Friends' activity
 /// - For You: Personalized recommendations
 class ContentNav extends StatelessWidget {
-  const ContentNav({Key? key}) : super(key: key);
+  const ContentNav({super.key});
 
   @override
   Widget build(BuildContext context) {

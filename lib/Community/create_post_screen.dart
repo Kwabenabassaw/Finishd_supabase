@@ -1,10 +1,13 @@
 import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:finishd/Widget/user_avatar.dart';
 import 'package:finishd/provider/community_provider.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
-import 'package:giphy_get/giphy_get.dart';
+import 'package:finishd/Widget/gif_picker_sheet.dart';
+import 'package:finishd/models/gif_model.dart';
 import 'package:sizer/sizer.dart';
 
 /// Screen for creating a new post in a community
@@ -31,7 +34,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   final ImagePicker _imagePicker = ImagePicker();
 
   List<XFile> _selectedMedia = [];
-  List<String> _selectedGifUrls = [];
+  final List<String> _selectedGifUrls = [];
   bool _isSpoiler = false;
   List<String> _hashtags = [];
 
@@ -72,20 +75,17 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   }
 
   Future<void> _pickGif() async {
-    // Note: You'll need a Giphy API Key. Using a placeholder for now.
-    // In production, move this to a config file.
-    GiphyGif? gif = await GiphyGet.getGif(
+    final GifModel? gif = await showModalBottomSheet<GifModel>(
       context: context,
-      apiKey: "5H4NTxpI7v2iKKWp49vZou0zWCShnTpb", // Placeholder
-      lang: GiphyLanguage.english,
-      randomID: "test",
-      tabColor: const Color(0xFF1A8927),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const GifPickerSheet(),
     );
 
-    if (gif != null && gif.images?.fixedWidth?.url != null) {
+    if (gif != null && gif.gifUrl.isNotEmpty) {
       if (_selectedMedia.length + _selectedGifUrls.length < 4) {
         setState(() {
-          _selectedGifUrls.add(gif.images!.fixedWidth!.url!);
+          _selectedGifUrls.add(gif.gifUrl);
         });
       }
     }
@@ -275,11 +275,17 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor: theme.hintColor.withOpacity(0.3),
-                        child: Icon(Icons.person, color: theme.hintColor),
-                      ),
+                      Builder(builder: (context) {
+                        final user = FirebaseAuth.instance.currentUser;
+                        return UserAvatar(
+                          radius: 24,
+                          profileImageUrl: user?.photoURL,
+                          firstName: user?.displayName ??
+                              user?.email?.split('@').first ??
+                              'User',
+                          userId: user?.uid ?? '',
+                        );
+                      }),
                       const SizedBox(width: 12),
                       Expanded(
 

@@ -1,7 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:finishd/Model/Watchprovider.dart';
-import 'package:finishd/Model/movieprovider.dart';
 import 'package:finishd/tmbd/getproviders.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -397,8 +396,10 @@ class ServiceLogoTile extends StatelessWidget {
                   placeholder: (context, url) => const Center(
                     child: LogoLoadingScreen(),
                   ),
-                  errorWidget: (context, url, error) =>
-                      Image.asset("assets/noimage.jpg", fit: BoxFit.cover),
+                  errorWidget: (context, url, error) => const Icon(
+                    Icons.broken_image,
+                    color: Colors.grey,
+                  ),
                 ),
               ),
             ),

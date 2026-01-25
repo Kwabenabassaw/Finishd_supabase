@@ -7,6 +7,7 @@
 /// - Unmute button for user to enable sound after autoplay
 /// - Error handling for Status 150 (restricted content)
 /// - Loading state with thumbnail
+library;
 
 import 'package:flutter/material.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';

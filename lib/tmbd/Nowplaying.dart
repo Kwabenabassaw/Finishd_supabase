@@ -1,4 +1,3 @@
-import 'package:finishd/Model/trending.dart';
 import 'package:tmdb_api/tmdb_api.dart';
 
 class NowPlaying {

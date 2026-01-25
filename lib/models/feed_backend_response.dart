@@ -1,6 +1,7 @@
 /// Feed Backend Response Models
 ///
 /// Models for the new Generator & Hydrator feed backend responses.
+library;
 
 import 'feed_item.dart';
 

@@ -7,6 +7,7 @@
 /// - Only 3 active controllers at any time (previous, current, next)
 /// - Muted autoplay for browser compatibility
 /// - Aggressive cleanup of controllers outside the window
+library;
 
 import 'package:flutter/foundation.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';

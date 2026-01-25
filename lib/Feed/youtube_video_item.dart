@@ -18,7 +18,7 @@ import 'image_feed_item.dart';
 class YoutubeVideoItem extends StatefulWidget {
   final int index;
 
-  const YoutubeVideoItem({Key? key, required this.index}) : super(key: key);
+  const YoutubeVideoItem({super.key, required this.index});
 
   @override
   State<YoutubeVideoItem> createState() => _YoutubeVideoItemState();

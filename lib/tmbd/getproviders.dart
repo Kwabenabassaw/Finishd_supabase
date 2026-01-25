@@ -1,9 +1,7 @@
 
 
-import 'dart:convert';
 
 import 'package:finishd/Model/Watchprovider.dart';
-import 'package:finishd/provider/MovieProvider.dart';
 import 'package:tmdb_api/tmdb_api.dart';
 
 class Getproviders {

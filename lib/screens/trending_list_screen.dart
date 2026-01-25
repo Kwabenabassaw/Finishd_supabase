@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:finishd/models/feed_video.dart'; // Reusing FeedVideo or create a Movie model if available
+// Reusing FeedVideo or create a Movie model if available
 // Assuming you have a MovieDetails or similar screen to navigate to
 // import 'package:finishd/MovieDetails/MovieDetailsScreen.dart';
 
 class TrendingListScreen extends StatelessWidget {
   final String? date;
 
-  const TrendingListScreen({Key? key, this.date}) : super(key: key);
+  const TrendingListScreen({super.key, this.date});
 
   @override
   Widget build(BuildContext context) {

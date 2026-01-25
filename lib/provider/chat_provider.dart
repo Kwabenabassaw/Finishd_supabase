@@ -205,6 +205,27 @@ class ChatProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Send a GIF message.
+  Future<void> sendGifMessage({
+    required String conversationId,
+    required String receiverId,
+    required String gifUrl,
+    String? caption,
+  }) async {
+    _isSending = true;
+    notifyListeners();
+
+    await _syncService.sendGifMessage(
+      conversationId: conversationId,
+      receiverId: receiverId,
+      gifUrl: gifUrl,
+      caption: caption,
+    );
+
+    _isSending = false;
+    notifyListeners();
+  }
+
   /// Send a movie/show recommendation.
   Future<void> sendShowCard({
     required String conversationId,

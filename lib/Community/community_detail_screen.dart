@@ -7,6 +7,7 @@ import 'package:finishd/Widget/report_bottom_sheet.dart';
 import 'package:finishd/models/report_model.dart';
 import 'package:finishd/Widget/image_preview.dart';
 import 'package:finishd/provider/community_provider.dart';
+import 'package:finishd/Widget/user_avatar.dart';
 import 'package:finishd/provider/user_provider.dart';
 import 'package:finishd/Home/share_post_sheet.dart';
 import 'package:finishd/MovieDetails/MovieScreen.dart';
@@ -606,21 +607,11 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                           width: 2,
                         ),
                       ),
-                      child: CircleAvatar(
+                      child: UserAvatar(
                         radius: 22,
-                        backgroundImage: post.authorAvatar != null
-                            ? NetworkImage(post.authorAvatar!)
-                            : null,
-                        backgroundColor: primaryGreen.withOpacity(0.1),
-                        child: post.authorAvatar == null
-                            ? Text(
-                                post.authorName[0].toUpperCase(),
-                                style: TextStyle(
-                                  color: primaryGreen,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              )
-                            : null,
+                        profileImageUrl: post.authorAvatar,
+                        username: post.authorName,
+                        userId: post.authorId,
                       ),
                     ),
                     const SizedBox(width: 12),

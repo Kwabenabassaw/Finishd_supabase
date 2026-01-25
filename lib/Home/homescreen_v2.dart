@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:finishd/models/feed_item.dart';
 import 'package:finishd/services/api_client.dart';
 import 'package:finishd/services/youtube_video_manager.dart';

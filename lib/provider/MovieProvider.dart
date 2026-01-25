@@ -17,7 +17,7 @@ class MovieProvider extends ChangeNotifier {
   List<MediaItem> _airingToday = [];
   List<MediaItem> _nowPlaying = [];
   List<MediaItem> _topRatedTv = [];
-  Map<int, List<MediaItem>> _genreSections = {};
+  final Map<int, List<MediaItem>> _genreSections = {};
 
   // Social Signals
   Map<String, SocialSignal> _socialSignals = {};

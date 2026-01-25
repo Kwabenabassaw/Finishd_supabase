@@ -23,8 +23,8 @@ class _EditStreamingServicesScreenState
   final Getproviders _getProviders = Getproviders();
 
   List<WatchProvider>? _allServices;
-  Set<int> _selectedProviderIds = {};
-  Map<int, SelectedProvider> _selectedProvidersMap = {};
+  final Set<int> _selectedProviderIds = {};
+  final Map<int, SelectedProvider> _selectedProvidersMap = {};
 
   bool _isLoading = true;
   bool _isSaving = false;

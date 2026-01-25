@@ -9,6 +9,7 @@
 /// - Lifecycle handling (pause on background, resume on foreground)
 /// - Loading/error/empty states
 /// - Debug tools for development
+library;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';

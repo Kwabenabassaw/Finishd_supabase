@@ -70,11 +70,15 @@ class _CommentButtonState extends State<CommentButton> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          FaIcon(
-            FontAwesomeIcons.solidCommentDots,
-            color: widget.color ?? Colors.white,
-            size: widget.size + 4,
-            shadows: const [Shadow(color: Colors.black54, blurRadius: 4)],
+          Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.rotationY(3.14159), // Flip horizontally
+            child: FaIcon(
+              FontAwesomeIcons.solidCommentDots,
+              color: widget.color ?? Colors.white,
+              size: widget.size + 4,
+              shadows: const [Shadow(color: Colors.black54, blurRadius: 4)],
+            ),
           ),
           const SizedBox(height: 4),
           Text(

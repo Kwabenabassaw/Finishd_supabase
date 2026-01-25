@@ -1,10 +1,12 @@
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:finishd/Model/user_model.dart';
+import 'package:finishd/Widget/user_avatar.dart';
 import 'package:finishd/provider/user_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:finishd/utils/name_utils.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final UserModel user;
@@ -66,8 +68,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           listen: false,
         ).updateUserProfile(
           uid: widget.user.uid,
-          firstName: _firstNameController.text.trim(),
-          lastName: _lastNameController.text.trim(),
+          firstName: NameUtils.capitalizeName(_firstNameController.text),
+          lastName: NameUtils.capitalizeName(_lastNameController.text),
           username: _usernameController.text.trim(),
           bio: _bioController.text.trim(),
           description: _descriptionController.text.trim(),
@@ -123,18 +125,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 child: Stack(
                   alignment: Alignment.bottomRight,
                   children: [
-                    CircleAvatar(
-                      radius: 60,
-                      backgroundImage: _imageFile != null
-                          ? FileImage(_imageFile!)
-                          : (widget.user.profileImage.isNotEmpty
-                                    ? CachedNetworkImageProvider(
-                                        widget.user.profileImage,
-                                      )
-                                    : const AssetImage('assets/noimage.jpg'))
-                                as ImageProvider,
-                      backgroundColor: Colors.grey.shade200,
-                    ),
+                    _imageFile != null
+                        ? CircleAvatar(
+                            radius: 60,
+                            backgroundImage: FileImage(_imageFile!),
+                          )
+                        : UserAvatar(
+                            profileImageUrl: widget.user.profileImage,
+                            firstName: widget.user.firstName,
+                            lastName: widget.user.lastName,
+                            username: widget.user.username,
+                            userId: widget.user.uid,
+                            radius: 60,
+                          ),
                     Container(
                       padding: const EdgeInsets.all(4),
                       decoration: const BoxDecoration(
@@ -155,6 +158,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               // First Name
               TextFormField(
                 controller: _firstNameController,
+                textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(
                   labelText: 'First Name',
                   hintText: 'Enter your first name',
@@ -178,6 +182,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               // Last Name
               TextFormField(
                 controller: _lastNameController,
+                textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(
                   labelText: 'Last Name',
                   hintText: 'Enter your last name',
@@ -201,6 +206,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               // Username
               TextFormField(
                 controller: _usernameController,
+                textCapitalization: TextCapitalization.none, // Explicitly none
                 decoration: const InputDecoration(
                   labelText: 'Username',
                   hintText: 'Enter a unique username',
@@ -225,6 +231,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               // Bio
               TextFormField(
                 controller: _bioController,
+                textCapitalization: TextCapitalization.sentences,
                 decoration: InputDecoration(
                   labelText: 'Bio',
                   hintText: 'Write a short bio about yourself',
@@ -239,6 +246,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               // Description
               TextFormField(
                 controller: _descriptionController,
+                textCapitalization: TextCapitalization.sentences,
                 decoration: InputDecoration(
                   labelText: 'Description',
                   hintText: 'Tell others more about yourself',

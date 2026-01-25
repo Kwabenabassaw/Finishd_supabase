@@ -332,7 +332,7 @@ class _EpisodeDetailsScreenState extends State<EpisodeDetailsScreen> {
   }
 
   Widget _buildCrewItem(BuildContext context, Crew crew) {
-    return Container(
+    return SizedBox(
       width: (MediaQuery.of(context).size.width - 56) / 2,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

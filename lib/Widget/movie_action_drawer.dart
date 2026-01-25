@@ -218,8 +218,8 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
                   height: 90,
                   fit: BoxFit.cover,
                   placeholder: (context, url) =>
-                      Container(width: 60, height: 90),
-                  errorWidget: (context, url, error) => Container(
+                      SizedBox(width: 60, height: 90),
+                  errorWidget: (context, url, error) => SizedBox(
                     width: 60,
                     height: 90,
                     child: const Icon(Icons.error, color: Colors.white),

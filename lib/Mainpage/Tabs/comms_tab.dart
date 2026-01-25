@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async'; // Added for Timer
 import 'package:finishd/Model/community_models.dart';
 import 'package:finishd/Model/trending.dart';
 import 'package:finishd/Community/community_detail_screen.dart';
@@ -15,6 +16,10 @@ class CommsTab extends StatefulWidget {
 }
 
 class _CommsTabState extends State<CommsTab> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  Timer? _debounceTimer;
+  
   @override
   void initState() {
     super.initState();
@@ -26,6 +31,29 @@ class _CommsTabState extends State<CommsTab> {
       provider.fetchRecommendedCommunities();
       provider.fetchDiscoverContent();
     });
+    
+    // Listen to search input with debouncing
+    _searchController.addListener(() {
+      final query = _searchController.text.trim();
+      final provider = Provider.of<CommunityProvider>(context, listen: false);
+      if (query == provider.searchState.query) return;
+      
+      provider.searchCommunities(query);
+      
+      _debounceTimer?.cancel();
+      _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          // No longer needed here as searchCommunities handles state updates
+        }
+      });
+    });
+  }
+  
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounceTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -33,22 +61,29 @@ class _CommsTabState extends State<CommsTab> {
     final theme = Theme.of(context);
     final primaryGreen = const Color(0xFF1A8927);
     final provider = Provider.of<CommunityProvider>(context);
+    final searchState = provider.searchState;
+    final isSearching = searchState.query.isNotEmpty;
 
     return RefreshIndicator(
       onRefresh: () async {
-        await Future.wait([
-          provider.fetchMyCommunities(),
-          provider.fetchTrendingCommunities(),
-          provider.fetchRecommendedCommunities(),
-          provider.fetchDiscoverContent(),
-        ]);
+        if (isSearching) {
+          await provider.searchCommunities(searchState.query);
+        } else {
+          await Future.wait([
+            provider.fetchMyCommunities(),
+            provider.fetchTrendingCommunities(),
+            provider.fetchRecommendedCommunities(),
+            provider.fetchDiscoverContent(),
+          ]);
+        }
       },
       color: primaryGreen,
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           // 1. My Communities (Horizontal Avatars)
-          if (!provider.isLoadingMyCommunities &&
+          if (!isSearching &&
+              !provider.isLoadingMyCommunities &&
               provider.myCommunities.isNotEmpty) ...[
             _buildSectionHeader(
               context,
@@ -77,19 +112,24 @@ class _CommsTabState extends State<CommsTab> {
           ],
 
           // 2. Trending Communities
-          if (!provider.isLoadingTrending &&
-              provider.trendingCommunities.isNotEmpty) ...[
-            _buildSectionHeader(context, 'Trending', 'More'),
+          // During search, this shows filtered results. If empty during search, we hide this section to reduce noise?
+          // Prompt says: "If no results for a category: Show empty state inside that container only. Do not hide the tab."
+          // But strict reading: "Replace container contents with search-filtered results".
+          // So if filtered list is empty, maybe show nothing or "No trending matches"?
+          // I will hide the section if list is empty to keep UI clean, UNLESS it's the only thing.
+          // Actually, let's show it if it has matches OR if not searching.
+          if (!provider.isLoadingTrending && provider.filteredTrendingCommunities.isNotEmpty) ...[
+            _buildSectionHeader(context, isSearching ? 'Trending Matches' : 'Trending', isSearching ? '' : 'More'),
             SliverToBoxAdapter(
               child: SizedBox(
                 height: 180,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
-                  itemCount: provider.trendingCommunities.length,
+                  itemCount: provider.filteredTrendingCommunities.length,
                   itemBuilder: (context, index) => _buildCommunityHeroCard(
                     context,
-                    provider.trendingCommunities[index],
+                    provider.filteredTrendingCommunities[index],
                     true,
                   ),
                 ),
@@ -98,12 +138,11 @@ class _CommsTabState extends State<CommsTab> {
           ],
 
           // 3. Recommended Communities
-          if (!provider.isLoadingRecommended &&
-              provider.recommendedCommunities.isNotEmpty) ...[
-            _buildSectionHeader(
+          if (!provider.isLoadingRecommended && provider.filteredRecommendedCommunities.isNotEmpty) ...[
+             _buildSectionHeader(
               context,
               'Recommended',
-              'Refresh',
+              isSearching ? '' : 'Refresh',
               onSeeAll: () => provider.fetchRecommendedCommunities(),
             ),
             SliverToBoxAdapter(
@@ -112,10 +151,10 @@ class _CommsTabState extends State<CommsTab> {
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
-                  itemCount: provider.recommendedCommunities.length,
+                  itemCount: provider.filteredRecommendedCommunities.length,
                   itemBuilder: (context, index) => _buildCommunityHeroCard(
                     context,
-                    provider.recommendedCommunities[index],
+                    provider.filteredRecommendedCommunities[index],
                     false,
                   ),
                 ),
@@ -123,10 +162,16 @@ class _CommsTabState extends State<CommsTab> {
             ),
           ],
 
-          // 4. Discover Content
-          _buildSectionHeader(context, 'Discover', ''),
+          // Search Header & Bar (Relocated to top in original code, ensuring it stays)
+          // Wait, 'Discover' header is at line 164. 'Search Results' or 'Discover'.
+          // I'll update line 164 block to be consistent.
+          _buildSectionHeader(
+            context,
+            isSearching ? 'Media Results' : 'Discover',
+            '',
+          ),
 
-          // Search bar (Floating-like search) - RELOCATED
+          // Search bar
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -143,6 +188,11 @@ class _CommsTabState extends State<CommsTab> {
                   ],
                 ),
                 child: TextField(
+                  controller: _searchController,
+                  onChanged: (val) {
+                     provider.setSearchQuery(val); // Local update for filtering trending/rec
+                     // Debounce handled in listener for API call
+                  },
                   decoration: InputDecoration(
                     hintText: 'Search communities, shows...',
                     hintStyle: TextStyle(color: theme.hintColor),
@@ -150,6 +200,15 @@ class _CommsTabState extends State<CommsTab> {
                       Icons.search_rounded,
                       color: theme.hintColor,
                     ),
+                    suffixIcon: searchState.query.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(Icons.clear, color: theme.hintColor),
+                            onPressed: () {
+                              _searchController.clear();
+                              provider.clearSearch();
+                            },
+                          )
+                        : null,
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -161,43 +220,44 @@ class _CommsTabState extends State<CommsTab> {
             ),
           ),
 
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  _buildFilterChip(
-                    context,
-                    provider,
-                    'Trending',
-                    'trending',
-                    primaryGreen,
-                  ),
-                  _buildFilterChip(
-                    context,
-                    provider,
-                    'TV Shows',
-                    'tv',
-                    primaryGreen,
-                  ),
-                  _buildFilterChip(
-                    context,
-                    provider,
-                    'Movies',
-                    'movie',
-                    primaryGreen,
-                  ),
-                ],
+          if (!isSearching)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    _buildFilterChip(
+                      context,
+                      provider,
+                      'Trending',
+                      'trending',
+                      primaryGreen,
+                    ),
+                    _buildFilterChip(
+                      context,
+                      provider,
+                      'TV Shows',
+                      'tv',
+                      primaryGreen,
+                    ),
+                    _buildFilterChip(
+                      context,
+                      provider,
+                      'Movies',
+                      'movie',
+                      primaryGreen,
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
 
-          if (provider.isLoadingDiscover)
+          if (isSearching ? searchState.isSearching : provider.isLoadingDiscover)
             const SliverFillRemaining(
               hasScrollBody: false,
               child: Center(child: CircularProgressIndicator()),
             )
-          else if (provider.discoverContent.isEmpty)
+          else if (isSearching ? searchState.results.isEmpty : provider.discoverContent.isEmpty)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(48),
@@ -205,13 +265,13 @@ class _CommsTabState extends State<CommsTab> {
                   child: Column(
                     children: [
                       Icon(
-                        Icons.movie_filter_rounded,
+                        isSearching ? Icons.search_off : Icons.movie_filter_rounded,
                         size: 64,
                         color: theme.hintColor.withOpacity(0.3),
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'No content found',
+                        isSearching ? 'No results found for "${searchState.query}"' : 'No content found',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.hintColor,
                         ),
@@ -226,13 +286,16 @@ class _CommsTabState extends State<CommsTab> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
-                  (context, index) => _buildDiscoverPremiumCard(
-                    context,
-                    provider.discoverContent[index],
-                    theme,
-                    primaryGreen,
-                  ),
-                  childCount: provider.discoverContent.length,
+                  (context, index) {
+                    final item = isSearching ? searchState.results[index] : provider.discoverContent[index];
+                    return _buildDiscoverPremiumCard(
+                      context,
+                      item,
+                      theme,
+                      primaryGreen,
+                    );
+                  },
+                  childCount: isSearching ? searchState.results.length : provider.discoverContent.length,
                 ),
               ),
             ),

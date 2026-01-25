@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
@@ -19,13 +18,13 @@ class FeedVideoPlayerV2 extends StatefulWidget {
   final YouTubeVideoManager? videoManager;
 
   const FeedVideoPlayerV2({
-    Key? key,
+    super.key,
     required this.item,
     required this.index,
     this.isActive = false,
     this.onNext,
     this.videoManager,
-  }) : super(key: key);
+  });
 
   @override
   State<FeedVideoPlayerV2> createState() => _FeedVideoPlayerV2State();

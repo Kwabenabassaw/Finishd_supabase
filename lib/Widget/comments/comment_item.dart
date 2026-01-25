@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:finishd/Model/comment_data.dart';
+import 'package:finishd/Widget/user_avatar.dart';
 
 /// Individual comment item widget
 ///
@@ -31,24 +32,11 @@ class CommentItem extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // User avatar
-          CircleAvatar(
+          UserAvatar(
             radius: 18,
-            backgroundColor: Colors.grey[800],
-            backgroundImage: comment.userAvatar != null
-                ? NetworkImage(comment.userAvatar!)
-                : null,
-            child: comment.userAvatar == null
-                ? Text(
-                    comment.userName.isNotEmpty
-                        ? comment.userName[0].toUpperCase()
-                        : '?',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  )
-                : null,
+            profileImageUrl: comment.userAvatar,
+            username: comment.userName,
+            userId: comment.userId,
           ),
           const SizedBox(width: 12),
 

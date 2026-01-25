@@ -1,12 +1,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:finishd/Discover/discover.dart';
 import 'package:finishd/Model/trending.dart';
 import 'package:finishd/Model/user_preferences.dart';
 import 'package:finishd/Widget/serviceLogoTileSkeleton.dart';
 import 'package:finishd/provider/onboarding_provider.dart';
 import 'package:finishd/tmbd/Search.dart';
 import 'package:finishd/tmbd/fetchDiscover.dart';
-import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -115,7 +113,7 @@ class _ShowSelectionScreenState extends State<ShowSelectionScreen> {
                             ),
                         itemCount: show!.length,
                         itemBuilder: (context, index) {
-                          final shows = show![index];
+                          final shows = show[index];
                           final onboardingProvider =
                               Provider.of<OnboardingProvider>(
                                 context,

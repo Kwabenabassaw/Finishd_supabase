@@ -222,6 +222,16 @@ class RecommendationService {
         });
   }
 
+  // Get unread recommendation count stream for badges
+  Stream<int> getUnreadCountStream(String userId) {
+    return _firestore
+        .collection('recommendations')
+        .where('toUserId', isEqualTo: userId)
+        .where('status', isEqualTo: 'unread')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
   // Get recommendations for a specific movie (to show "Recommended By")
   // This is used to show who recommended a specific movie to the current user
   Stream<List<Recommendation>> getMyRecommendationsForMovie(
@@ -331,7 +341,7 @@ class RecommendationService {
           in _firestore
               .collection('recommendations')
               .where('toUserId', isEqualTo: userId)
-              .where('timestamp', isGreaterThan: Timestamp.fromDate(lastSync!))
+              .where('timestamp', isGreaterThan: Timestamp.fromDate(lastSync))
               .orderBy('timestamp', descending: true)
               .snapshots()) {
         if (snapshot.docs.isEmpty) {

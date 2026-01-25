@@ -8,6 +8,36 @@ import 'package:finishd/services/voting_api_client.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'dart:async';
+
+/// Encapsulates the state for Comms search to ensure determinism
+class CommsSearchState {
+  final String query;
+  final bool isSearching;
+  final List<MediaItem> results;
+  final int lastRequestId;
+
+  CommsSearchState({
+    this.query = '',
+    this.isSearching = false,
+    this.results = const [],
+    this.lastRequestId = 0,
+  });
+
+  CommsSearchState copyWith({
+    String? query,
+    bool? isSearching,
+    List<MediaItem>? results,
+    int? lastRequestId,
+  }) {
+    return CommsSearchState(
+      query: query ?? this.query,
+      isSearching: isSearching ?? this.isSearching,
+      results: results ?? this.results,
+      lastRequestId: lastRequestId ?? this.lastRequestId,
+    );
+  }
+}
 
 class CommunityProvider extends ChangeNotifier {
   final CommunityService _communityService = CommunityService();
@@ -16,7 +46,7 @@ class CommunityProvider extends ChangeNotifier {
   final VotingApiClient _votingApi = VotingApiClient();
 
   // Feature flag: Set to true to use new backend, false to use Firestore directly
-  bool _useVotingBackend = true;
+  final bool _useVotingBackend = true;
 
   bool _isUploadingMedia = false;
   String? _selectedHashtag;
@@ -40,67 +70,23 @@ class CommunityProvider extends ChangeNotifier {
 
   // Current Open Community (for detail screen)
   Community? _currentCommunity;
+  // Keyed by Post ID to prevent duplicates
+  final Map<String, CommunityPost> _postsMap = {};
   List<CommunityPost> _currentPosts = [];
   bool _isLoadingCommunityDetails = false;
   bool _isMemberOfCurrent = false;
   String _currentSortBy = 'createdAt';
   String _searchQuery = '';
   Map<String, int> _currentUserVotes = {}; // postId -> vote
-  Map<String, int> _commentVotes = {}; // commentId -> vote
-
+  final Map<String, int> _commentVotes = {}; // commentId -> vote
+  
+  // Real-time listener for posts
+  StreamSubscription<List<Map<String, dynamic>>>? _postsSubscription;
+  
   // Getters
-  List<CommunityPost> get filteredPosts {
-    List<CommunityPost> results = _currentPosts;
-
-    // Apply hashtag filter if any
-    if (_selectedHashtag != null) {
-      results = results
-          .where((p) => p.hashtags.contains(_selectedHashtag))
-          .toList();
-    }
-
-    // Apply search query filter if any
-    if (_searchQuery.isNotEmpty) {
-      final query = _searchQuery.toLowerCase();
-      results = results.where((post) {
-        final contentMatch = post.content.toLowerCase().contains(query);
-        final authorMatch = post.authorName.toLowerCase().contains(query);
-        final hashtagMatch = post.hashtags.any(
-          (tag) => tag.toLowerCase().contains(query),
-        );
-        return contentMatch || authorMatch || hashtagMatch;
-      }).toList();
-    }
-
-    return results;
-  }
-
-  /// Get trending hashtags for the current community based on post frequency
-  List<String> get trendingHashtags {
-    if (_currentPosts.isEmpty) return [];
-
-    final counts = <String, int>{};
-    for (final post in _currentPosts) {
-      for (final tag in post.hashtags) {
-        counts[tag] = (counts[tag] ?? 0) + 1;
-      }
-    }
-
-    // Sort by frequency and return top 10
-    final sortedTags = counts.keys.toList()
-      ..sort((a, b) => counts[b]!.compareTo(counts[a]!));
-
-    return sortedTags.take(10).toList();
-  }
-
-  void setSearchQuery(String query) {
-    _searchQuery = query;
-    notifyListeners();
-  }
-
   List<Community> get myCommunities => _myCommunities;
   bool get isLoadingMyCommunities => _isLoadingMyCommunities;
-
+  
   List<MediaItem> get discoverContent => _discoverContent;
   bool get isLoadingDiscover => _isLoadingDiscover;
   String get discoverFilter => _discoverFilter;
@@ -115,65 +101,79 @@ class CommunityProvider extends ChangeNotifier {
   bool get isLoadingCommunityDetails => _isLoadingCommunityDetails;
   bool get isMemberOfCurrent => _isMemberOfCurrent;
   String get currentSortBy => _currentSortBy;
-  String? get currentUid => FirebaseAuth.instance.currentUser?.uid;
+  String get searchQuery => _searchQuery;
   Map<String, int> get currentUserVotes => _currentUserVotes;
-  Map<String, int> get commentVotes => _commentVotes;
+  
+  String? get currentUid => FirebaseAuth.instance.currentUser?.uid;
 
-  // --- Global Lists ---
+  /// Returns sorted and filtered posts (by hashtag if selected)
+  List<CommunityPost> get filteredPosts {
+    if (_selectedHashtag == null || _selectedHashtag!.isEmpty) {
+      return _currentPosts;
+    }
+    return _currentPosts.where((post) => post.hashtags.contains(_selectedHashtag)).toList();
+  }
+
+  /// Returns Trending Communities filtered by search query
+  List<Community> get filteredTrendingCommunities {
+    if (_searchQuery.isEmpty) return _trendingCommunities;
+    
+    final query = _searchQuery.toLowerCase();
+    
+    // Filter by prefix (startsWith)
+    final filtered = _trendingCommunities.where((c) => 
+      c.title.toLowerCase().startsWith(query)
+    ).toList();
+    
+    // Sort by: 1. Popularity (memberCount) DESC, 2. Alphabetical ASC
+    filtered.sort((a, b) {
+      if (a.memberCount != b.memberCount) {
+        return b.memberCount.compareTo(a.memberCount); // Popularity DESC
+      }
+      return a.title.toLowerCase().compareTo(b.title.toLowerCase()); // Alpha ASC
+    });
+    
+    return filtered;
+  }
+  
+  /// Returns Recommended Communities filtered by search query
+  List<Community> get filteredRecommendedCommunities {
+     if (_searchQuery.isEmpty) return _recommendedCommunities;
+     final query = _searchQuery.toLowerCase();
+     return _recommendedCommunities.where((c) => c.title.toLowerCase().startsWith(query)).toList();
+  }
+
+  /// Placeholder for trending hashtags in a community
+  List<String> get trendingHashtags {
+    if (_currentPosts.isEmpty) return [];
+    final Map<String, int> counts = {};
+    for (var post in _currentPosts) {
+      for (var tag in post.hashtags) {
+        counts[tag] = (counts[tag] ?? 0) + 1;
+      }
+    }
+    var sorted = counts.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    return sorted.take(10).map((e) => e.key).toList();
+  }
+
+  // ...
+
+  // Deterministic search state
+  CommsSearchState _searchState = CommsSearchState();
+  CommsSearchState get searchState => _searchState;
+
+  // --- Collection Fetches ---
 
   Future<void> fetchMyCommunities() async {
     _isLoadingMyCommunities = true;
     notifyListeners();
-
     try {
-      final results = await _communityService.getMyCommunities();
-      _myCommunities = results.map((c) => Community.fromJson(c)).toList();
+      final data = await _communityService.getMyCommunities();
+      _myCommunities = data.map((json) => Community.fromJson(json)).toList();
     } catch (e) {
-      print('Error fetching my communities: $e');
+      debugPrint('Error fetching my communities: $e');
     } finally {
       _isLoadingMyCommunities = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> fetchDiscoverContent() async {
-    _isLoadingDiscover = true;
-    notifyListeners();
-
-    try {
-      List<MediaItem> content = [];
-
-      // We need to know my communities to filter them out
-      if (_myCommunities.isEmpty) {
-        // Ensure my communities are loaded for filtering
-        final myResults = await _communityService.getMyCommunities();
-        _myCommunities = myResults.map((c) => Community.fromJson(c)).toList();
-      }
-      final myShowIds = _myCommunities.map((c) => c.showId).toSet();
-
-      if (_discoverFilter == 'trending' || _discoverFilter == 'movie') {
-        final movies = await _trending.fetchTrendingMovie();
-        content.addAll(movies);
-      }
-
-      if (_discoverFilter == 'trending' || _discoverFilter == 'tv') {
-        final shows = await _trending.fetchTrendingShow();
-        content.addAll(shows);
-      }
-
-      if (_discoverFilter == 'trending') {
-        content.shuffle();
-      }
-
-      // Filter out joined communities
-      _discoverContent = content
-          .where((item) => !myShowIds.contains(item.id))
-          .take(10)
-          .toList();
-    } catch (e) {
-      print('Error fetching discover content: $e');
-    } finally {
-      _isLoadingDiscover = false;
       notifyListeners();
     }
   }
@@ -181,12 +181,9 @@ class CommunityProvider extends ChangeNotifier {
   Future<void> fetchTrendingCommunities() async {
     _isLoadingTrending = true;
     notifyListeners();
-
     try {
-      final results = await _communityService.discoverCommunities(limit: 10);
-      _trendingCommunities = results.map((c) => Community.fromJson(c)).toList();
-    } catch (e) {
-      print('Error fetching trending communities: $e');
+      final data = await _communityService.discoverCommunities(limit: 10);
+      _trendingCommunities = data.map((json) => Community.fromJson(json)).toList();
     } finally {
       _isLoadingTrending = false;
       notifyListeners();
@@ -196,43 +193,87 @@ class CommunityProvider extends ChangeNotifier {
   Future<void> fetchRecommendedCommunities() async {
     _isLoadingRecommended = true;
     notifyListeners();
-
     try {
-      // For now, recommendation is just more active communities but potentially different order/filter
-      // In a real app, this would be based on user interests
-      final results = await _communityService.discoverCommunities(limit: 15);
-      final all = results.map((c) => Community.fromJson(c)).toList();
-
-      // Filter out joined ones and trending ones to make it feel "recommended"
-      final trendingIds = _trendingCommunities.map((c) => c.showId).toSet();
-      final myIds = _myCommunities.map((c) => c.showId).toSet();
-
-      _recommendedCommunities = all
-          .where(
-            (c) => !myIds.contains(c.showId) && !trendingIds.contains(c.showId),
-          )
-          .take(10)
-          .toList();
-
-      // If empty, just show some diverse ones
-      if (_recommendedCommunities.isEmpty) {
-        _recommendedCommunities = all
-            .where((c) => !myIds.contains(c.showId))
-            .take(10)
-            .toList();
-      }
-    } catch (e) {
-      print('Error fetching recommended communities: $e');
+      // For now, same as trending or some logic
+      final data = await _communityService.discoverCommunities(limit: 10);
+      _recommendedCommunities = data.map((json) => Community.fromJson(json)).toList();
     } finally {
       _isLoadingRecommended = false;
       notifyListeners();
     }
   }
 
+  Future<void> fetchDiscoverContent({String? filter}) async {
+    if (filter != null) _discoverFilter = filter;
+    _isLoadingDiscover = true;
+    notifyListeners();
+    try {
+      List<MediaItem> results;
+      if (_discoverFilter == 'tv') {
+        results = await _trending.fetchTrendingShow();
+      } else if (_discoverFilter == 'movie') {
+        results = await _trending.fetchTrendingMovie();
+      } else {
+        // Combined
+        final shows = await _trending.fetchTrendingShow();
+        final movies = await _trending.fetchTrendingMovie();
+        results = [...shows, ...movies]..shuffle();
+      }
+      _discoverContent = results;
+    } catch (e) {
+      debugPrint('Error fetching discover content: $e');
+    } finally {
+      _isLoadingDiscover = false;
+      notifyListeners();
+    }
+  }
+
   void setDiscoverFilter(String filter) {
-    if (_discoverFilter != filter) {
-      _discoverFilter = filter;
-      fetchDiscoverContent();
+    if (_discoverFilter == filter) return;
+    _discoverFilter = filter;
+    fetchDiscoverContent();
+  }
+
+  // --- Search Logic ---
+
+  void setSearchQuery(String query) {
+    _searchQuery = query;
+    notifyListeners();
+  }
+
+  void clearSearch() {
+    _searchQuery = '';
+    _searchState = CommsSearchState();
+    notifyListeners();
+  }
+
+  Future<void> searchCommunities(String query) async {
+    final requestId = DateTime.now().millisecondsSinceEpoch;
+    _searchState = _searchState.copyWith(
+      query: query,
+      isSearching: true,
+      lastRequestId: requestId,
+    );
+    notifyListeners();
+
+    try {
+      // Use Trending service to search media (to find shows/movies to start a community for)
+      final results = await _trending.searchMedia(query);
+      
+      // Ensure we only update if this is the latest request
+      if (_searchState.lastRequestId == requestId) {
+        _searchState = _searchState.copyWith(
+          results: results,
+          isSearching: false,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error searching communities: $e');
+      if (_searchState.lastRequestId == requestId) {
+        _searchState = _searchState.copyWith(isSearching: false);
+      }
+    } finally {
+      notifyListeners();
     }
   }
 
@@ -240,54 +281,129 @@ class CommunityProvider extends ChangeNotifier {
 
   void clearCurrentCommunity() {
     _currentCommunity = null;
+    _postsMap.clear();
     _currentPosts = [];
     _isMemberOfCurrent = false;
     _currentUserVotes = {};
     _selectedHashtag = null;
-    // Don't notify listeners here usually to avoid rebuilds during nav,
-    // but if needed: notifyListeners();
+    _stopPostsStream();
   }
 
   Future<void> loadCommunityDetails(int showId, {String? sortBy}) async {
     _isLoadingCommunityDetails = true;
-    // We might not want to clear previous immediately if we want to show stale data while loading
-    // but for now let's be safe
     if (sortBy != null) _currentSortBy = sortBy;
 
+    // Clear previous state to avoid cross-contamination
+    _postsMap.clear();
+    _currentPosts = [];
     notifyListeners();
 
     try {
-      // Fetch community info and posts in parallel
+      // Fetch community info and membership status
       final results = await Future.wait([
         _communityService.getCommunity(showId),
         _communityService.isMember(showId),
-        _communityService.getPosts(showId: showId, sortBy: _currentSortBy),
       ]);
 
       final communityData = results[0] as Map<String, dynamic>?;
       final isMember = results[1] as bool;
-      final postsData = results[2] as List<Map<String, dynamic>>;
 
       _currentCommunity = communityData != null
           ? Community.fromJson(communityData)
           : null;
       _isMemberOfCurrent = isMember;
-      _currentPosts = postsData.map((p) => CommunityPost.fromJson(p)).toList();
 
-      // Load votes in parallel
-      final voteFutures = _currentPosts.map((post) async {
-        final vote = await _communityService.getUserVote(post.id, showId);
-        return MapEntry(post.id, vote);
-      });
+      // Start listening to posts stream for real-time updates
+      _listenToPostsStream(showId);
 
-      final votes = await Future.wait(voteFutures);
-      _currentUserVotes = Map.fromEntries(votes);
+      // Note: We can't load votes here for _currentPosts because they are empty initially.
+      // We will load votes incrementally as posts arrive or in batches.
     } catch (e) {
       print('Error loading community details: $e');
     } finally {
       _isLoadingCommunityDetails = false;
       notifyListeners();
     }
+  }
+
+  /// Listen to real-time posts stream
+  void _listenToPostsStream(int showId) {
+    // Cancel any existing subscription
+    _postsSubscription?.cancel();
+
+    print('🔄 [CommunityProvider] Starting real-time listener for showId: $showId');
+
+    _postsSubscription = _communityService.getPostsStream(showId: showId, limit: 50)
+        .listen(
+      (postsData) {
+        print('📡 [CommunityProvider] Received ${postsData.length} posts from stream');
+        
+        // 1. Process incoming posts into the Map
+        for (final data in postsData) {
+          final post = CommunityPost.fromJson(data);
+          // Insert or update logic: Always take the latest from server
+          _postsMap[post.id] = post;
+        }
+
+        // 2. Re-derive the sorted list
+        _rebuildPostsList();
+        
+        // 3. Load votes for new posts (optimization: only for new ones)
+        // For simplicity in this refactor, we can retry loading votes for visible posts
+        _loadVotesForCurrentPosts(showId);
+
+        notifyListeners();
+      },
+      onError: (error) {
+        print('❌ [CommunityProvider] Error in posts stream: $error');
+      },
+    );
+  }
+
+  void _rebuildPostsList() {
+    final list = _postsMap.values.toList();
+    
+    // Check sort order
+    if (_currentSortBy == 'top') {
+      list.sort((a, b) => b.score.compareTo(a.score));
+    } else {
+      // Default: createdAt descending (newest first)
+      list.sort((a, b) => (b.createdAt ?? DateTime.now()).compareTo(a.createdAt ?? DateTime.now()));
+    }
+    
+    _currentPosts = list;
+  }
+
+  Future<void> _loadVotesForCurrentPosts(int showId) async {
+    if (_currentPosts.isEmpty) return;
+    try {
+        final voteFutures = _currentPosts
+            .where((p) => !_currentUserVotes.containsKey(p.id)) // Only fetch unknown
+            .map((post) async {
+          final vote = await _communityService.getUserVote(post.id, showId);
+          return MapEntry(post.id, vote);
+        });
+
+        if (voteFutures.isNotEmpty) {
+            final votes = await Future.wait(voteFutures);
+            _currentUserVotes.addAll(Map.fromEntries(votes));
+            notifyListeners(); // Notify again if votes changed
+        }
+    } catch (e) {
+        print('Error loading votes: $e');
+    }
+  }
+  /// Stop listening to posts stream
+  void _stopPostsStream() {
+    _postsSubscription?.cancel();
+    _postsSubscription = null;
+    print('🛑 [CommunityProvider] Stopped posts stream');
+  }
+
+  @override
+  void dispose() {
+    _stopPostsStream();
+    super.dispose();
   }
 
   Future<void> setSortBy(int showId, String sortBy) async {
@@ -579,17 +695,75 @@ class CommunityProvider extends ChangeNotifier {
       notifyListeners();
     }
 
-    return _communityService.createPost(
+    // OPTIMISTIC UI: Create temporary post and add to list immediately
+    final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+    final tempPost = CommunityPost(
+      id: tempId,
       showId: showId,
       showTitle: showTitle,
-      posterPath: posterPath,
-      mediaType: mediaType,
+      communityId: showId.toString(),
+      authorId: uid,
+      authorName: FirebaseAuth.instance.currentUser?.displayName ?? 'You',
+      authorAvatar: FirebaseAuth.instance.currentUser?.photoURL,
       content: content,
       mediaUrls: mediaUrls,
       mediaTypes: mediaTypes,
       hashtags: hashtags,
       isSpoiler: isSpoiler,
+      isHidden: false,
+      score: 0,
+      upvotes: 0,
+      downvotes: 0,
+      commentCount: 0,
+      createdAt: DateTime.now(),
+      lastActivityAt: DateTime.now(),
     );
+
+    // Add to map and rebuild list for immediate UI update
+    _postsMap[tempId] = tempPost;
+    _rebuildPostsList();
+    notifyListeners();
+
+    print('✨ [CommunityProvider] Optimistic UI: Added temp post $tempId');
+
+    try {
+      // Create the actual post in Firestore
+      final postId = await _communityService.createPost(
+        showId: showId,
+        showTitle: showTitle,
+        posterPath: posterPath,
+        mediaType: mediaType,
+        content: content,
+        mediaUrls: mediaUrls,
+        mediaTypes: mediaTypes,
+        hashtags: hashtags,
+        isSpoiler: isSpoiler,
+      );
+
+      if (postId != null) {
+        print('✅ [CommunityProvider] Post created with ID: $postId');
+        // Remove temp post and let the real-time listener handle the new post
+        // OR manually swap it if we want instant ID consistency before the listener fires
+        _postsMap.remove(tempId);
+        _rebuildPostsList();
+        notifyListeners();
+      } else {
+        // If post creation failed (but no exception), remove the temp post
+        print('❌ [CommunityProvider] Post creation returned null ID');
+        _postsMap.remove(tempId);
+        _rebuildPostsList();
+        notifyListeners();
+      }
+
+      return postId;
+    } catch (e) {
+      print('❌ [CommunityProvider] Post creation failed: $e');
+      // Remove temp post on error
+      _postsMap.remove(tempId);
+      _rebuildPostsList();
+      notifyListeners();
+      rethrow;
+    }
   }
 
   /// Delete a post and remove it from the local list

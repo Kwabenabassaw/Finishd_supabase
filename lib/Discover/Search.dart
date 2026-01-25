@@ -119,8 +119,8 @@ class _SearchScreenState extends State<SearchScreen> {
         searchApi.getSearchitem(trimmedQuery),
       ]);
 
-      final feedResults = results[0] as List<Result>;
-      final tmdbResults = results[1] as List<Result>;
+      final feedResults = results[0];
+      final tmdbResults = results[1];
 
       // Merge results: feed first, then TMDB (deduplicated by ID)
       final seenIds = <int>{};

@@ -17,11 +17,13 @@ class _CommunityListScreenState extends State<CommunityListScreen>
     with SingleTickerProviderStateMixin {
   final CommunityService _communityService = CommunityService();
   late TabController _tabController;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   List<Community> _myCommunities = [];
   List<Community> _discoverCommunities = [];
   bool _isLoading = true;
-  String _selectedFilter = 'all'; // 'all', 'tv', 'movie'
+  final String _selectedFilter = 'all'; // 'all', 'tv', 'movie'
 
   @override
   void initState() {
@@ -33,6 +35,7 @@ class _CommunityListScreenState extends State<CommunityListScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -113,6 +116,11 @@ class _CommunityListScreenState extends State<CommunityListScreen>
   }
 
   Widget _buildCommsTab() {
+    final filteredCommunities = _myCommunities.where((community) {
+      final query = _searchQuery.toLowerCase();
+      return community.title.toLowerCase().contains(query);
+    }).toList();
+
     return RefreshIndicator(
       onRefresh: _loadCommunities,
       color: AppTheme.primaryGreen,
@@ -120,9 +128,7 @@ class _CommunityListScreenState extends State<CommunityListScreen>
         slivers: [
           // Search bar
           SliverToBoxAdapter(
-            
-            
-              child: Container(
+            child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
                   color: AppTheme.cardBackground,
@@ -132,6 +138,10 @@ class _CommunityListScreenState extends State<CommunityListScreen>
                   children: [
                     Expanded(
                       child: TextField(
+                        controller: _searchController,
+                        onChanged: (value) {
+                          setState(() => _searchQuery = value);
+                        },
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           icon: Icon(Icons.search),
@@ -215,11 +225,25 @@ class _CommunityListScreenState extends State<CommunityListScreen>
             )
           else if (_myCommunities.isEmpty)
             SliverToBoxAdapter(child: _buildEmptyState())
+          else if (filteredCommunities.isEmpty)
+            _searchQuery.isNotEmpty
+                ? SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Center(
+                        child: Text(
+                          'No communities found',
+                          style: TextStyle(color: Colors.grey[500]),
+                        ),
+                      ),
+                    ),
+                  )
+                : SliverToBoxAdapter(child: _buildEmptyState())
           else
             SliverList(
               delegate: SliverChildBuilderDelegate(
-                (context, index) => _buildCommunityCard(_myCommunities[index]),
-                childCount: _myCommunities.length,
+                (context, index) => _buildCommunityCard(filteredCommunities[index]),
+                childCount: filteredCommunities.length,
               ),
             ),
 

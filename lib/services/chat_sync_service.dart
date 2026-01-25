@@ -221,6 +221,28 @@ class ChatSyncService {
     return _saveAndQueueMessage(message);
   }
 
+  /// Send a GIF message.
+  Future<LocalMessage> sendGifMessage({
+    required String conversationId,
+    required String receiverId,
+    required String gifUrl,
+    String? caption,
+  }) async {
+    final message = LocalMessage(
+      conversationId: conversationId,
+      senderId: _currentUserId,
+      receiverId: receiverId,
+      content: caption ?? '',
+      type: 'gif',
+      mediaUrl: gifUrl,
+      createdAt: DateTime.now(),
+      status: MessageStatus.pending,
+      isPending: true,
+    );
+
+    return _saveAndQueueMessage(message);
+  }
+
   /// Share a community post.
   Future<LocalMessage> sendPostLink({
     required String conversationId,

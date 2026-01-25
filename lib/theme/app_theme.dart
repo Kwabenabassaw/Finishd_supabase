@@ -9,7 +9,6 @@ class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
-      fontFamily: 'Poppins',
       brightness: Brightness.light,
       scaffoldBackgroundColor: AppColors.background,
       colorScheme: ColorScheme.fromSeed(
@@ -60,7 +59,6 @@ class AppTheme {
             borderRadius: BorderRadius.circular(12),
           ),
           textStyle: const TextStyle(
-            fontFamily: 'Poppins',
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -116,7 +114,6 @@ class AppTheme {
         centerTitle: true,
         iconTheme: IconThemeData(color: AppColors.textDark),
         titleTextStyle: TextStyle(
-          fontFamily: 'Poppins',
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: AppColors.textDark,
@@ -144,7 +141,6 @@ class AppTheme {
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
-      fontFamily: 'Poppins',
       brightness: Brightness.dark,
       scaffoldBackgroundColor: const Color(0xFF121212),
       colorScheme: ColorScheme.fromSeed(
@@ -194,7 +190,6 @@ class AppTheme {
             borderRadius: BorderRadius.circular(12),
           ),
           textStyle: const TextStyle(
-            fontFamily: 'Poppins',
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -246,7 +241,6 @@ class AppTheme {
         centerTitle: true,
         iconTheme: IconThemeData(color: Colors.white),
         titleTextStyle: TextStyle(
-          fontFamily: 'Poppins',
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: Colors.white,

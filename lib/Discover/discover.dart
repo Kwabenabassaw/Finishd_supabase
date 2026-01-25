@@ -230,24 +230,22 @@ class _ExploreScreenState extends State<ExploreScreen> {
       try {
         // Try to fetch as movie first, then TV
         final movie = await movieApi.fetchMovieDetails(int.parse(id));
-        if (movie != null) {
-          items.add(
-            MediaItem(
-              id: movie.id,
-              title: movie.title,
-              overview: movie.overview ?? '',
-              posterPath: movie.posterPath ?? '',
-              backdropPath: movie.backdropPath ?? '',
-              voteAverage: movie.voteAverage ?? 0.0,
-              mediaType: 'movie',
-              releaseDate: movie.releaseDate ?? '',
-              genreIds: movie.genres.map((g) => g.id).toList(),
-              imageUrl: '',
-            ),
-          );
-          continue;
-        }
-      } catch (e) {
+        items.add(
+          MediaItem(
+            id: movie.id,
+            title: movie.title,
+            overview: movie.overview ?? '',
+            posterPath: movie.posterPath ?? '',
+            backdropPath: movie.backdropPath ?? '',
+            voteAverage: movie.voteAverage ?? 0.0,
+            mediaType: 'movie',
+            releaseDate: movie.releaseDate ?? '',
+            genreIds: movie.genres.map((g) => g.id).toList(),
+            imageUrl: '',
+          ),
+        );
+        continue;
+            } catch (e) {
         // Try TV
         try {
           final tv = await movieApi.fetchDetailsTvShow(int.parse(id));
@@ -397,7 +395,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                           ),
                         ),
                       );
-                    }).toList(),
+                    }),
 
                     // Social Section: Popular in Your Network
                     if (provider.popularInNetwork.isNotEmpty)

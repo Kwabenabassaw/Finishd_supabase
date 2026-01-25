@@ -1,7 +1,6 @@
-import 'package:finishd/onboarding/signUp.dart';
 import 'package:finishd/onboarding/widgets/button.dart';
 import 'package:flutter/material.dart';
-import 'dart:math' as math; // Needed for the rotation angle
+// Needed for the rotation angle
 
 class LandingScreen extends StatelessWidget {
   const LandingScreen({super.key});

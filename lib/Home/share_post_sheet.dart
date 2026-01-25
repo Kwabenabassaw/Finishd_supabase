@@ -39,7 +39,7 @@ class _SharePostSheetState extends State<SharePostSheet> {
 
   List<UserModel> _friends = [];
   List<UserModel> _filteredFriends = [];
-  Set<String> _selectedUserIds = {};
+  final Set<String> _selectedUserIds = {};
   bool _isLoading = true;
   bool _isSending = false;
 
@@ -88,7 +88,7 @@ class _SharePostSheetState extends State<SharePostSheet> {
         _filteredFriends = _friends.where((user) {
           return user.username.toLowerCase().contains(query) ||
               user.firstName.toLowerCase().contains(query) ||
-              user.lastName.toLowerCase().contains(query);
+              (user.lastName?.toLowerCase().contains(query) ?? false);
         }).toList();
       }
     });
@@ -358,10 +358,11 @@ class _SharePostSheetState extends State<SharePostSheet> {
     return ListTile(
       onTap: () {
         setState(() {
-          if (isSelected)
+          if (isSelected) {
             _selectedUserIds.remove(user.uid);
-          else
+          } else {
             _selectedUserIds.add(user.uid);
+          }
         });
       },
       leading: Stack(
@@ -401,17 +402,18 @@ class _SharePostSheetState extends State<SharePostSheet> {
         ),
       ),
       subtitle: Text(
-        '${user.firstName} ${user.lastName}',
+        '${user.firstName} ${user.lastName ?? ''}',
         style: theme.textTheme.bodySmall,
       ),
       trailing: Checkbox(
         value: isSelected,
         onChanged: (val) {
           setState(() {
-            if (val == true)
+            if (val == true) {
               _selectedUserIds.add(user.uid);
-            else
+            } else {
               _selectedUserIds.remove(user.uid);
+            }
           });
         },
         activeColor: primaryGreen,

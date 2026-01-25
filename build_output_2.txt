@@ -1,0 +1,33 @@
+Launching lib\main.dart on SM A065F in debug mode...
+Running Gradle task 'assembleDebug'...                          
+lib/services/auth_service.dart:29:38: Error: Couldn't find constructor 'GoogleSignIn'.
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
+                                     ^^^^^^^^^^^^
+lib/services/auth_service.dart:206:67: Error: The method 'signIn' isn't defined for the type 'GoogleSignIn'.
+ - 'GoogleSignIn' is from 'package:google_sign_in/google_sign_in.dart' ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/google_sign_in-7.2.0/lib/google_sign_in.dart').
+Try correcting the name to the name of an existing method, or defining a method named 'signIn'.
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+                                                                  ^^^^^^
+lib/services/auth_service.dart:213:33: Error: The getter 'accessToken' isn't defined for the type 'GoogleSignInAuthentication'.
+ - 'GoogleSignInAuthentication' is from 'package:google_sign_in/src/token_types.dart' ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/google_sign_in-7.2.0/lib/src/token_types.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'accessToken'.
+        accessToken: googleAuth.accessToken,
+                                ^^^^^^^^^^^
+Target kernel_snapshot_program failed: Exception
+
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileFlutterBuildDebug'.
+> Process 'command 'C:\Users\Curtis\flutter\flutter\bin\flutter.bat'' finished with non-zero exit value 1
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 24s
+Running Gradle task 'assembleDebug'...                             24.6s
+Error: Gradle task assembleDebug failed with exit code 1

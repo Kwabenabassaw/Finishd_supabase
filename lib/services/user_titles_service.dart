@@ -104,7 +104,7 @@ class UserTitlesService {
       await _syncWithLegacyLists(uid, titleId, rating);
     } catch (e) {
       print('Error updating rating: $e');
-      throw e;
+      rethrow;
     }
   }
 

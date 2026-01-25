@@ -120,8 +120,8 @@ class _MessagesState extends State<Messages>
           ),
           floatingActionButton: _tabController.index == 2
               ? Padding(
-                  padding: EdgeInsets.only(
-                    bottom: MediaQuery.of(context).padding.bottom + 30.0,
+                  padding: const EdgeInsets.only(
+                    bottom: 30.0,
                   ),
                   child: FloatingActionButton(
                     backgroundColor: const Color(0xFF1A8927),

@@ -2,6 +2,7 @@ import 'dart:io' show Platform;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:finishd/Model/user_model.dart';
 import 'package:finishd/profile/profileScreen.dart';
+import 'package:finishd/Widget/user_avatar.dart';
 import 'package:finishd/services/user_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
@@ -176,13 +177,13 @@ class _FriendsScreenState extends State<FriendsScreen>
     setState(() {
       _filteredMyFriends = _myFriends.where((user) {
         final username = user.username.toLowerCase();
-        final fullName = '${user.firstName} ${user.lastName}'.toLowerCase();
+        final fullName = '${user.firstName} ${user.lastName ?? ''}'.toLowerCase();
         return username.contains(searchLower) || fullName.contains(searchLower);
       }).toList();
 
       _filteredAllUsers = _allUsers.where((user) {
         final username = user.username.toLowerCase();
-        final fullName = '${user.firstName} ${user.lastName}'.toLowerCase();
+        final fullName = '${user.firstName} ${user.lastName ?? ''}'.toLowerCase();
         return username.contains(searchLower) || fullName.contains(searchLower);
       }).toList();
     });
@@ -231,12 +232,13 @@ class _FriendsScreenState extends State<FriendsScreen>
                 width: 2,
               ),
             ),
-            child: CircleAvatar(
+            child: UserAvatar(
               radius: 28,
-              backgroundImage: user.profileImage.isNotEmpty
-                  ? CachedNetworkImageProvider(user.profileImage)
-                  : const AssetImage('assets/noimage.jpg') as ImageProvider,
-              backgroundColor: theme.disabledColor.withOpacity(0.1),
+              profileImageUrl: user.profileImage,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              username: user.username,
+              userId: user.uid,
             ),
           ),
         ),
@@ -251,8 +253,8 @@ class _FriendsScreenState extends State<FriendsScreen>
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 4),
           child: Text(
-            user.firstName.isNotEmpty || user.lastName.isNotEmpty
-                ? '${user.firstName} ${user.lastName}'
+            user.firstName.isNotEmpty || (user.lastName?.isNotEmpty ?? false)
+                ? '${user.firstName} ${user.lastName ?? ''}'
                 : '@${user.username}',
             style: TextStyle(
               color: theme.textTheme.bodySmall?.color?.withOpacity(0.6),

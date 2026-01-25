@@ -1,6 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:finishd/LoadingWidget/LogoLoading.dart';
-import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:finishd/Model/MovieDetails.dart';
 import 'package:finishd/Model/movie_list_item.dart';

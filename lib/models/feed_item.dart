@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 
 /// Represents a single item in the personalized feed.
 ///

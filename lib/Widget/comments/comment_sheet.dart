@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:finishd/Model/comment_data.dart';
+import 'package:finishd/Widget/user_avatar.dart';
 import 'package:finishd/services/comment_service.dart';
 import 'package:finishd/Widget/comments/comment_item.dart';
 
@@ -269,23 +270,11 @@ class _CommentSheetState extends State<CommentSheet> {
               child: Row(
                 children: [
                   // User avatar
-                  CircleAvatar(
+                  UserAvatar(
                     radius: 16,
-                    backgroundColor: Colors.grey[700],
-                    backgroundImage: widget.userAvatar != null
-                        ? NetworkImage(widget.userAvatar!)
-                        : null,
-                    child: widget.userAvatar == null
-                        ? Text(
-                            widget.userName.isNotEmpty
-                                ? widget.userName[0].toUpperCase()
-                                : '?',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                            ),
-                          )
-                        : null,
+                    profileImageUrl: widget.userAvatar,
+                    username: widget.userName,
+                    userId: widget.userId,
                   ),
                   const SizedBox(width: 12),
 

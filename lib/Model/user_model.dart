@@ -5,7 +5,7 @@ class UserModel {
   final String email;
   final String username;
   final String firstName;
-  final String lastName;
+  final String? lastName; // Optional - can be null
   final String bio;
   final String description;
   final String profileImage;
@@ -18,7 +18,7 @@ class UserModel {
     required this.email,
     required this.username,
     required this.firstName,
-    required this.lastName,
+    this.lastName, // Optional - no longer required
     this.bio = '',
     this.description = '',
     this.profileImage = '',
@@ -102,5 +102,24 @@ class UserModel {
       followingCount: followingCount ?? this.followingCount,
       joinedAt: joinedAt ?? this.joinedAt,
     );
+  }
+
+  /// Get display name (firstName + lastName or just firstName)
+  String get displayName {
+    if (lastName != null && lastName!.trim().isNotEmpty) {
+      return '$firstName ${lastName!.trim()}'.trim();
+    }
+    return firstName;
+  }
+
+  /// Get initials for avatar fallback
+  String get initials {
+    if (lastName != null && lastName!.trim().isNotEmpty) {
+      return '${firstName[0]}${lastName![0]}'.toUpperCase();
+    }
+    if (firstName.isNotEmpty) {
+      return firstName[0].toUpperCase();
+    }
+    return username.isNotEmpty ? username[0].toUpperCase() : '';
   }
 }

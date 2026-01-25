@@ -10,6 +10,7 @@ import 'package:finishd/profile/edit_profile_screen.dart';
 import 'package:finishd/profile/user_list_screen.dart';
 import 'package:finishd/provider/user_provider.dart';
 import 'package:finishd/services/movie_list_service.dart';
+import 'package:finishd/Widget/user_avatar.dart';
 import 'package:finishd/services/user_service.dart';
 import 'package:flutter/material.dart';
 import 'package:finishd/Chat/chatScreen.dart';
@@ -348,13 +349,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                       children: [
                         const SizedBox(height: 10),
                         // User Avatar - FIX Issue 7: Null-safe image check
-                        CircleAvatar(
+                        UserAvatar(
+                          profileImageUrl: user.profileImage,
+                          firstName: user.firstName,
+                          lastName: user.lastName,
+                          username: user.username,
+                          userId: user.uid,
                           radius: 50,
-                          backgroundImage: user.profileImage.isNotEmpty
-                              ? CachedNetworkImageProvider(user.profileImage)
-                              : const AssetImage('assets/noimage.jpg')
-                                    as ImageProvider,
-                          backgroundColor: Colors.grey.shade200,
+                          showBorder: true,
                         ),
                         const SizedBox(height: 10),
                         // User Name

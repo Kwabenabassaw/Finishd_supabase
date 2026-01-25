@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:finishd/Model/movie_list_item.dart';
 import 'package:finishd/Model/user_model.dart';
 import 'package:finishd/services/recommendation_service.dart';
+import 'package:finishd/Widget/user_avatar.dart';
 import 'package:finishd/services/user_service.dart';
 
 class FriendSelectionScreen extends StatefulWidget {
@@ -22,9 +23,9 @@ class _FriendSelectionScreenState extends State<FriendSelectionScreen> {
   final String _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
   final ScrollController _scrollController = ScrollController();
 
-  List<UserModel> _friends = [];
+  final List<UserModel> _friends = [];
   List<String> _allFollowerIds = []; // Store all friend IDs for pagination
-  Set<String> _selectedUserIds = {};
+  final Set<String> _selectedUserIds = {};
   Set<String> _alreadyRecommendedUserIds = {};
 
   // Pagination state
@@ -446,20 +447,13 @@ class _FriendSelectionScreenState extends State<FriendSelectionScreen> {
                                           opacity: isAlreadyRecommended
                                               ? 0.5
                                               : 1.0,
-                                          child: CircleAvatar(
+                                          child: UserAvatar(
+                                            profileImageUrl: user.profileImage,
+                                            firstName: user.firstName,
+                                            lastName: user.lastName,
+                                            username: user.username,
+                                            userId: user.uid,
                                             radius: 28,
-                                            backgroundColor: Theme.of(
-                                              context,
-                                            ).dividerColor.withOpacity(0.1),
-                                            backgroundImage:
-                                                user.profileImage.isNotEmpty
-                                                ? CachedNetworkImageProvider(
-                                                    user.profileImage,
-                                                  )
-                                                : const AssetImage(
-                                                        'assets/noimage.jpg',
-                                                      )
-                                                      as ImageProvider,
                                           ),
                                         ),
                                       ),

@@ -20,6 +20,7 @@ import 'package:sizer/sizer.dart';
 import 'dart:io' show Platform;
 
 import 'package:finishd/provider/app_navigation_provider.dart';
+import 'package:finishd/provider/unread_state_provider.dart';
 import 'package:finishd/provider/youtube_feed_provider.dart';
 import 'package:finishd/SplashScreen/splash_screen.dart';
 import 'package:finishd/onboarding/CategoriesTypeMove.dart';
@@ -32,6 +33,7 @@ import 'package:finishd/onboarding/streamingService.dart';
 import 'package:finishd/settings/settimgPage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Added for SystemNavigator
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 
@@ -99,6 +101,10 @@ void main() async {
             create: (_) => YoutubeFeedProvider()..initialize(),
           ),
           ChangeNotifierProvider(create: (_) => ChatProvider()..initialize()),
+          ChangeNotifierProxyProvider<ChatProvider, UnreadStateProvider>(
+            create: (context) => UnreadStateProvider(context.read<ChatProvider>())..initialize(),
+            update: (context, chatProvider, unreadProvider) => unreadProvider!,
+          ),
           ChangeNotifierProvider(create: (_) => AiAssistantProvider()),
           Provider<AuthService>(create: (_) => AuthService()),
         ],
@@ -191,97 +197,173 @@ final List<Widget> _pages = [
 ];
 
 class _HomePageState extends State<HomePage> {
+  DateTime? _lastBackPressTime;
+
+  Future<void> _handleBackPress(BuildContext context) async {
+    final navProvider = Provider.of<AppNavigationProvider>(context, listen: false);
+    final selectedIndex = navProvider.currentIndex;
+
+    // 1. If not on Home tab (index 0), navigate to Home tab
+    if (selectedIndex != 0) {
+      navProvider.setTab(0);
+      return;
+    }
+
+    // 2. If already on Home tab, check for double-press
+    final now = DateTime.now();
+    if (_lastBackPressTime == null || 
+        now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
+      _lastBackPressTime = now;
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'Press back again to exit',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+            backgroundColor: const Color(0xFF1A8927).withOpacity(0.9),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+      return;
+    }
+
+    // 3. Second press within 2 seconds -> Exit app
+    SystemNavigator.pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final navProvider = context.watch<AppNavigationProvider>();
     final selectedIndex = navProvider.currentIndex;
 
-    return Scaffold(
-      extendBody: true, // IMPORTANT for transparency
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        _handleBackPress(context);
+      },
+      child: Scaffold(
+        extendBody: false, // Ensure content sits ABOVE the nav bar, not behind it
 
-      body: IndexedStack(index: selectedIndex, children: _pages),
+        body: IndexedStack(index: selectedIndex, children: _pages),
 
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: selectedIndex,
-        onTap: (index) {
-          // Handle video playback on tab switch
-          final feedProvider = context.read<YoutubeFeedProvider>();
-          if (index != 0) {
-            feedProvider.pauseAll();
-          } else if (index == 0 && selectedIndex != 0) {
-            // Only resume if actually switching TO home from another tab
-            feedProvider.resumeCurrent();
-          }
-          navProvider.setTab(index);
-        },
-        showUnselectedLabels: false,
-        iconSize: 24,
-        enableFeedback: true,
+        bottomNavigationBar: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          currentIndex: selectedIndex,
+          onTap: (index) {
+            final feedProvider = context.read<YoutubeFeedProvider>();
+            if (index != 0) {
+              feedProvider.pauseAll();
+            } else if (index == 0 && selectedIndex != 0) {
+              feedProvider.resumeCurrent();
+            }
 
-        // 🔥 Dynamic unselected color based on backgrounds
-        unselectedItemColor: selectedIndex == 0
-            ? Colors.white54
-            : Theme.of(context).brightness == Brightness.dark
-            ? Colors.white54
-            : Colors.black45,
+            // Mark messages as viewed when tapping the Messages tab (Index 3)
+            if (index == 3) {
+              Provider.of<UnreadStateProvider>(context, listen: false).markMessagesAsViewed();
+            }
 
-        selectedItemColor: AppColors.primary,
+            navProvider.setTab(index);
+          },
+          showUnselectedLabels: false,
+          iconSize: 24,
+          enableFeedback: true,
 
-        // 🔥 Dynamic background: Black for Home Feed, Theme Surface for others
-        backgroundColor: selectedIndex == 0
-            ? Colors.black
-            : Theme.of(context).cardColor,
+          unselectedItemColor: selectedIndex == 0
+              ? Colors.white54
+              : Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white54
+                  : Colors.black45,
 
-        // ⚡ Standard elevation
-        elevation: 8,
+          selectedItemColor: const Color(0xFF1A8927),
 
-        items: [
-          if (Platform.isAndroid) ...[
-            BottomNavigationBarItem(
-              icon: FaIcon(FontAwesomeIcons.houseChimney),
-              label: "Home",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.compass_fill),
-              label: 'Discover',
-            ),
-            BottomNavigationBarItem(
-              icon: FaIcon(FontAwesomeIcons.solidBookmark, size: 24.0),
-              label: 'Watchlist',
-            ),
-            BottomNavigationBarItem(
-              icon: FaIcon(FontAwesomeIcons.signalMessenger),
-              label: "Messages",
-            ),
-            BottomNavigationBarItem(
-              icon: FaIcon(FontAwesomeIcons.user, size: 24.0),
-              label: 'Profile',
-            ),
+          backgroundColor: selectedIndex == 0
+              ? Colors.black
+              : Theme.of(context).cardColor,
+
+          elevation: 8,
+
+          items: [
+            if (Platform.isAndroid) ...[
+              const BottomNavigationBarItem(
+                icon: FaIcon(FontAwesomeIcons.solidHouse),
+                label: "Home",
+              ),
+              const BottomNavigationBarItem(
+                icon: Icon(CupertinoIcons.compass_fill),
+                label: 'Discover',
+              ),
+              const BottomNavigationBarItem(
+                icon: FaIcon(FontAwesomeIcons.solidBookmark, size: 24.0),
+                label: 'Watchlist',
+              ),
+              BottomNavigationBarItem(
+                icon: Consumer<UnreadStateProvider>(
+                  builder: (context, unreadProvider, child) {
+                    return Badge(
+                      isLabelVisible: unreadProvider.hasNewActivity,
+                      smallSize: 8,
+                      label: null,
+                      backgroundColor: const Color(0xFF1A8927),
+                      child: Transform(
+                        alignment: Alignment.center,
+                        transform: Matrix4.rotationY(3.14159),
+                        child: const FaIcon(FontAwesomeIcons.signalMessenger),
+                      ),
+                    );
+                  },
+                ),
+                label: "Messages",
+              ),
+              const BottomNavigationBarItem(
+                icon: FaIcon(FontAwesomeIcons.imagePortrait, size: 24.0),
+                label: 'Profile',
+              ),
+            ],
+            if (Platform.isIOS) ...[
+              const BottomNavigationBarItem(
+                icon: FaIcon(FontAwesomeIcons.solidHouse),
+                label: "Home",
+              ),
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.explore),
+                label: 'Discover',
+              ),
+              const BottomNavigationBarItem(
+                icon: FaIcon(FontAwesomeIcons.bookmark, size: 24.0),
+                label: 'Watchlist',
+              ),
+              BottomNavigationBarItem(
+                icon: Consumer<UnreadStateProvider>(
+                  builder: (context, unreadProvider, child) {
+                    return Badge(
+                      isLabelVisible: unreadProvider.hasNewActivity,
+                      smallSize: 8,
+                      label: null,
+                      backgroundColor: const Color(0xFF1A8927),
+                      child: Transform(
+                        alignment: Alignment.center,
+                        transform: Matrix4.rotationY(3.14159),
+                        child: const FaIcon(FontAwesomeIcons.solidMessage),
+                      ),
+                    );
+                  },
+                ),
+                label: "Messages",
+              ),
+              const BottomNavigationBarItem(
+                icon: FaIcon(FontAwesomeIcons.imagePortrait, size: 24.0),
+                label: 'Profile',
+              ),
+            ],
           ],
-          if (Platform.isIOS) ...[
-            BottomNavigationBarItem(
-              icon: FaIcon(FontAwesomeIcons.houseChimney),
-              label: "Home",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.explore),
-              label: 'Discover',
-            ),
-            BottomNavigationBarItem(
-              icon: FaIcon(FontAwesomeIcons.bookmark, size: 24.0),
-              label: 'Watchlist',
-            ),
-            BottomNavigationBarItem(
-              icon: FaIcon(FontAwesomeIcons.solidMessage),
-              label: "Messages",
-            ),
-            BottomNavigationBarItem(
-              icon: FaIcon(FontAwesomeIcons.user, size: 24.0),
-              label: 'Profile',
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }

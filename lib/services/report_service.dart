@@ -1,8 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:finishd/models/report_model.dart';
-import 'package:finishd/Model/community_models.dart';
-import 'package:finishd/models/message_model.dart';
 
 class ReportService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;

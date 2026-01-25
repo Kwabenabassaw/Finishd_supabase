@@ -56,7 +56,7 @@ class _ShareToFriendsSheetState extends State<ShareToFriendsSheet> {
 
   List<UserModel> _friends = [];
   List<UserModel> _filteredFriends = [];
-  Set<String> _selectedUserIds = {};
+  final Set<String> _selectedUserIds = {};
   bool _isLoading = true;
   bool _isSending = false;
 
@@ -109,7 +109,7 @@ class _ShareToFriendsSheetState extends State<ShareToFriendsSheet> {
         _filteredFriends = _friends.where((user) {
           return user.username.toLowerCase().contains(query) ||
               user.firstName.toLowerCase().contains(query) ||
-              user.lastName.toLowerCase().contains(query);
+              (user.lastName?.toLowerCase().contains(query) ?? false);
         }).toList();
       }
     });
@@ -243,8 +243,8 @@ class _ShareToFriendsSheetState extends State<ShareToFriendsSheet> {
                     width: 80,
                     height: 50,
                     fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(width: 80, height: 50),
-                    errorWidget: (_, __, ___) => Container(
+                    placeholder: (_, __) => SizedBox(width: 80, height: 50),
+                    errorWidget: (_, __, ___) => SizedBox(
                       width: 80,
                       height: 50,
 
@@ -400,7 +400,7 @@ class _ShareToFriendsSheetState extends State<ShareToFriendsSheet> {
       ),
       subtitle: user.firstName.isNotEmpty
           ? Text(
-              '${user.firstName} ${user.lastName}',
+              '${user.firstName} ${user.lastName ?? ''}',
               style: TextStyle(fontSize: 13),
             )
           : null,

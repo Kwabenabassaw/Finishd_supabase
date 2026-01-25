@@ -143,7 +143,7 @@ class CommunityService {
       // We use the transactional join here to ensure consistency
       await joinCommunity(showId);
 
-      print('📝 Created post in ${showTitle} community');
+      print('📝 Created post in $showTitle community');
       return postRef.id;
     } catch (e) {
       print('❌ Error creating post: $e');
@@ -570,6 +570,31 @@ class CommunityService {
       }).toList();
     } catch (e) {
       print('❌ Error discovering communities: $e');
+      return [];
+    }
+  }
+
+  /// Search for communities by title
+  Future<List<Map<String, dynamic>>> searchCommunities(String query) async {
+    if (query.isEmpty) return [];
+
+    try {
+      // Basic "starts with" search using Firestore
+      // Note: This is case-sensitive and limited. For production, Algolia/ElasticSearch is better.
+      final snapshot = await _communities
+          .orderBy('title')
+          .startAt([query])
+          .endAt([query + '\uf8ff'])
+          .limit(20)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    } catch (e) {
+      print('❌ Error searching communities: $e');
       return [];
     }
   }

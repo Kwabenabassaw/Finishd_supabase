@@ -79,7 +79,7 @@ class UserProvider with ChangeNotifier {
       _currentUser = updatedUser;
     } catch (e) {
       print('Error updating user profile: $e');
-      throw e;
+      rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -102,7 +102,7 @@ class UserProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       print('Error following user: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -122,7 +122,7 @@ class UserProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       print('Error unfollowing user: $e');
-      throw e;
+      rethrow;
     }
   }
 

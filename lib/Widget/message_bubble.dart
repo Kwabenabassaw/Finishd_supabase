@@ -61,6 +61,7 @@ class MessageBubble extends StatelessWidget {
   bool get _isImage => type == 'image' && mediaUrl != null;
   bool get _isVideo => type == 'video' && mediaUrl != null;
   bool get _isSharedPost => type == 'shared_post' && postId != null;
+  bool get _isGif => type == 'gif' && mediaUrl != null;
 
   @override
   Widget build(BuildContext context) {
@@ -98,6 +99,9 @@ class MessageBubble extends StatelessWidget {
             // Image message
             else if (_isImage)
               _buildImageBubble(context)
+            // GIF message
+            else if (_isGif)
+              _buildGifBubble(context)
             // Video message
             else if (_isVideo)
               _buildVideoBubble(context)
@@ -111,6 +115,7 @@ class MessageBubble extends StatelessWidget {
             if (_isVideoLink ||
                 _isRecommendation ||
                 _isImage ||
+                _isGif ||
                 _isVideo ||
                 _isSharedPost)
               Padding(
@@ -119,6 +124,100 @@ class MessageBubble extends StatelessWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  // ... (Methods for text, image, video bubbles remain, adding GIF bubble below)
+
+  Widget _buildGifBubble(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final receivedBgColor = isDark
+        ? Colors.white.withOpacity(0.08)
+        : Colors.white;
+    final receivedBorderColor = isDark
+        ? Colors.white.withOpacity(0.1)
+        : Colors.grey.withOpacity(0.2);
+    final primaryGreen = const Color(0xFF1A8927);
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: isMe ? primaryGreen : receivedBgColor,
+        border: isMe
+            ? null
+            : Border.all(color: receivedBorderColor, width: 0.5),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          if (!isMe && !isDark)
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.65,
+                maxHeight: 300,
+              ),
+              child: Hero(
+                tag: mediaUrl!,
+                child: Image.network(
+                  mediaUrl!,
+                  fit: BoxFit.contain, // GIFs should show full content usually
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      width: 200,
+                      height: 150,
+                      color: Colors.grey[800],
+                      child: const Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      width: 200,
+                      height: 150,
+                      color: Colors.grey[800],
+                      child: const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.gif,
+                            size: 50,
+                            color: Colors.white54,
+                          ),
+                          Text(
+                            "GIF Failed",
+                            style: TextStyle(color: Colors.white54, fontSize: 12),
+                          )
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+          // GIFs usually don't have captions in this app, but if they did:
+          if (text.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
+              child: Text(
+                text,
+                style: const TextStyle(color: Colors.white, fontSize: 15),
+              ),
+            ),
+        ],
       ),
     );
   }

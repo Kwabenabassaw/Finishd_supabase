@@ -26,7 +26,7 @@ class ModerationStatus {
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
   // Stream of auth changes
   Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -203,14 +203,14 @@ class AuthService {
       // This allows users to switch between Google accounts
       await _googleSignIn.signOut();
 
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      final GoogleSignInAccount? googleUser = await _googleSignIn.authenticate();
       if (googleUser == null) return null; // user canceled
 
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
 
       final OAuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
+        // accessToken: googleAuth.accessToken, // Removed in v7
         idToken: googleAuth.idToken,
       );
 

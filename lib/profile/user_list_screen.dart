@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:finishd/Model/user_model.dart';
 import 'package:finishd/profile/profileScreen.dart';
+import 'package:finishd/Widget/user_avatar.dart';
 import 'package:finishd/services/user_service.dart';
 import 'package:flutter/material.dart';
 
@@ -94,20 +95,21 @@ class _UserListScreenState extends State<UserListScreen> {
               itemBuilder: (context, index) {
                 final user = _users[index];
                 return ListTile(
-                  leading: CircleAvatar(
-                    backgroundImage: user.profileImage.isNotEmpty
-                        ? CachedNetworkImageProvider(user.profileImage)
-                        : const AssetImage('assets/noimage.jpg')
-                              as ImageProvider,
-                    backgroundColor: Colors.grey.shade200,
+                  leading: UserAvatar(
+                    profileImageUrl: user.profileImage,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    username: user.username,
+                    userId: user.uid,
+                    radius: 20,
                   ),
                   title: Text(
                     user.username.isNotEmpty ? user.username : 'No Name',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Text(
-                    user.firstName.isNotEmpty || user.lastName.isNotEmpty
-                        ? '${user.firstName} ${user.lastName}'
+                    user.firstName.isNotEmpty || (user.lastName?.isNotEmpty ?? false)
+                        ? '${user.firstName} ${user.lastName ?? ''}'
                         : '@${user.username}',
                   ),
                   onTap: () {

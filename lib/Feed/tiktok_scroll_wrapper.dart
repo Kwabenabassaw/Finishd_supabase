@@ -7,6 +7,7 @@
 /// - Notifies provider on page changes
 /// - Configurable swipe thresholds and animation duration
 /// - Uses YoutubeVideoItem for each page
+library;
 
 import 'dart:async';
 import 'package:flutter/material.dart';

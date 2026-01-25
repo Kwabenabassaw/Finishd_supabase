@@ -46,7 +46,7 @@ class UserService {
           .update(user.toJson());
     } catch (e) {
       print('Error updating user: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -91,7 +91,7 @@ class UserService {
       await FollowingCacheService.invalidateFollowers(targetUid);
     } catch (e) {
       print('Error following user: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -138,7 +138,7 @@ class UserService {
       await FollowingCacheService.invalidateFollowers(targetUid);
     } catch (e) {
       print('Error unfollowing user: $e');
-      throw e;
+      rethrow;
     }
   }
 

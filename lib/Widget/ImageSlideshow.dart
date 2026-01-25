@@ -21,9 +21,7 @@ class MovieBannerWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = movie.backdropPath != null
-        ? "https://image.tmdb.org/t/p/w780${movie.backdropPath}"
-        : "https://image.tmdb.org/t/p/w500${movie.posterPath}";
+    final imageUrl = "https://image.tmdb.org/t/p/w780${movie.backdropPath}";
 
     return GestureDetector(
       onTap: onWatchTrailerPressed,

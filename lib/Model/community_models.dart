@@ -130,6 +130,7 @@ class CommunityPost {
   final List<String> mediaTypes;
   final List<String> hashtags;
   final bool isSpoiler;
+  final bool isHidden; // Whether post is hidden/deleted
   final int score;
   final int upvotes;
   final int downvotes;
@@ -150,6 +151,7 @@ class CommunityPost {
     this.mediaTypes = const [],
     this.hashtags = const [],
     this.isSpoiler = false,
+    this.isHidden = false,
     this.score = 0,
     this.upvotes = 0,
     this.downvotes = 0,
@@ -172,6 +174,7 @@ class CommunityPost {
       mediaTypes: List<String>.from(json['mediaTypes'] ?? []),
       hashtags: List<String>.from(json['hashtags'] ?? []),
       isSpoiler: json['isSpoiler'] ?? false,
+      isHidden: json['isHidden'] ?? false,
       score:
           json['score'] ?? ((json['upvotes'] ?? 0) - (json['downvotes'] ?? 0)),
       upvotes: json['upvotes'] ?? 0,
@@ -200,6 +203,7 @@ class CommunityPost {
     List<String>? mediaTypes,
     List<String>? hashtags,
     bool? isSpoiler,
+    bool? isHidden,
     int? score,
     int? upvotes,
     int? downvotes,
@@ -220,6 +224,7 @@ class CommunityPost {
       mediaTypes: mediaTypes ?? this.mediaTypes,
       hashtags: hashtags ?? this.hashtags,
       isSpoiler: isSpoiler ?? this.isSpoiler,
+      isHidden: isHidden ?? this.isHidden,
       score: score ?? this.score,
       upvotes: upvotes ?? this.upvotes,
       downvotes: downvotes ?? this.downvotes,
@@ -242,6 +247,7 @@ class CommunityPost {
     'mediaTypes': mediaTypes,
     'hashtags': hashtags,
     'isSpoiler': isSpoiler,
+    'isHidden': isHidden,
     'score': score,
     'upvotes': upvotes,
     'downvotes': downvotes,

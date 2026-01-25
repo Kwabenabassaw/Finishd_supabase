@@ -154,7 +154,7 @@ class MovieListService {
       await batch.commit();
     } catch (e) {
       print('Error updating rating: $e');
-      throw e;
+      rethrow;
     }
   }
 

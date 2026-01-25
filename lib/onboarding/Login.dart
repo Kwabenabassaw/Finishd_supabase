@@ -89,6 +89,7 @@ class _LoginState extends State<Login> {
             ).fetchCurrentUser(authService.currentUser!.uid);
           }
           // Existing user, go to homepage
+          TextInput.finishAutofillContext(); // Trigger Credential Save
           Navigator.pushReplacementNamed(context, 'homepage');
         }
       }
@@ -221,21 +222,29 @@ class _LoginState extends State<Login> {
             const SizedBox(height: 30),
 
             // 5. Form Fields
-            // Email Field
-            LabeledTextField(
-              label: 'Email',
-              hintText: 'johndoe@gmail.com',
-              keyboardType: TextInputType.emailAddress,
-              controller: _emailController,
-            ),
-            const SizedBox(height: 20),
+            AutofillGroup(
+              child: Column(
+                children: [
+                  // Email Field
+                  LabeledTextField(
+                    label: 'Email',
+                    hintText: 'johndoe@gmail.com',
+                    keyboardType: TextInputType.emailAddress,
+                    controller: _emailController,
+                    autofillHints: const [AutofillHints.email],
+                  ),
+                  const SizedBox(height: 20),
 
-            // Password Field
-            LabeledTextField(
-              label: 'Set Password',
-              hintText: '********',
-              isPassword: true,
-              controller: _passwordController,
+                  // Password Field
+                  LabeledTextField(
+                    label: 'Set Password',
+                    hintText: '********',
+                    isPassword: true,
+                    controller: _passwordController,
+                    autofillHints: const [AutofillHints.password],
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 30),
 
@@ -351,6 +360,7 @@ class LabeledTextField extends StatefulWidget {
   final TextInputType keyboardType;
   final bool isPassword;
   final TextEditingController? controller;
+  final Iterable<String>? autofillHints;
 
   const LabeledTextField({
     super.key,
@@ -359,6 +369,7 @@ class LabeledTextField extends StatefulWidget {
     this.keyboardType = TextInputType.text,
     this.isPassword = false,
     this.controller,
+    this.autofillHints,
   });
 
   @override
@@ -394,6 +405,7 @@ class _LabeledTextFieldState extends State<LabeledTextField> {
           controller: widget.controller,
           obscureText: _obscureText,
           keyboardType: widget.keyboardType,
+          autofillHints: widget.autofillHints,
           style: const TextStyle(fontWeight: FontWeight.w500),
           decoration: InputDecoration(
             hintText: widget.hintText,

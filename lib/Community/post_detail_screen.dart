@@ -1,6 +1,6 @@
-import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:flutter/material.dart';
 import 'package:finishd/Model/community_models.dart';
+import 'package:finishd/Widget/user_avatar.dart';
 import 'package:finishd/provider/community_provider.dart';
 import 'package:finishd/provider/user_provider.dart';
 import 'package:finishd/Widget/report_bottom_sheet.dart';
@@ -10,7 +10,6 @@ import 'package:finishd/Home/share_post_sheet.dart';
 import 'package:finishd/Widget/fullscreen_video_player.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
-import 'package:sizer/sizer.dart';
 
 /// Screen showing a single post with its comments
 class PostDetailScreen extends StatefulWidget {
@@ -293,21 +292,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             // Author row
             Row(
               children: [
-                CircleAvatar(
+                UserAvatar(
                   radius: 22,
-                  backgroundImage: widget.post.authorAvatar != null
-                      ? NetworkImage(widget.post.authorAvatar.toString())
-                      : null,
-                  backgroundColor: primaryGreen.withOpacity(0.1),
-                  child: widget.post.authorAvatar == null
-                      ? Text(
-                          widget.post.authorName[0].toUpperCase(),
-                          style: TextStyle(
-                            color: primaryGreen,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        )
-                      : null,
+                  profileImageUrl: widget.post.authorAvatar?.toString(),
+                  username: widget.post.authorName,
+                  userId: widget.post.authorId,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -500,22 +489,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           children: [
             Row(
               children: [
-                CircleAvatar(
+                UserAvatar(
                   radius: 16,
-                  backgroundImage: comment.authorAvatar != null
-                      ? NetworkImage(comment.authorAvatar!)
-                      : null,
-                  backgroundColor: primaryGreen.withOpacity(0.1),
-                  child: comment.authorAvatar == null
-                      ? Text(
-                          comment.authorName[0].toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: primaryGreen,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        )
-                      : null,
+                  profileImageUrl: comment.authorAvatar,
+                  username: comment.authorName,
+                  userId: comment.authorId,
                 ),
                 const SizedBox(width: 10),
                 Expanded(

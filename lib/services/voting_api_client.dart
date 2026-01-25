@@ -5,6 +5,7 @@
 ///
 /// IMPORTANT: The client no longer updates Firestore counters directly.
 /// All vote operations go through the backend.
+library;
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;

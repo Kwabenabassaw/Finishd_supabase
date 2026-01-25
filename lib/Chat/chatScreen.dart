@@ -5,6 +5,7 @@ import 'package:finishd/Widget/message_bubble.dart';
 import 'package:finishd/Widget/report_bottom_sheet.dart';
 import 'package:finishd/models/report_model.dart';
 import 'package:finishd/db/objectbox/chat_entities.dart';
+import 'package:finishd/Widget/user_avatar.dart';
 import 'package:finishd/provider/chat_provider.dart';
 import 'package:finishd/provider/community_provider.dart';
 import 'package:finishd/Community/post_detail_screen.dart';
@@ -22,6 +23,8 @@ import 'package:finishd/Widget/image_preview.dart';
 import 'package:finishd/profile/profileScreen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:finishd/Widget/gif_picker_sheet.dart';
+import 'package:finishd/models/gif_model.dart';
 
 class ChatScreen extends StatefulWidget {
   final String chatId;
@@ -133,6 +136,14 @@ class _ChatScreenState extends State<ChatScreen> {
                 _pickAndPreviewMedia(ImageSource.gallery, 'video');
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.gif_box),
+              title: const Text('GIF'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickAndSendGif();
+              },
+            ),
           ],
         ),
       ),
@@ -205,7 +216,38 @@ class _ChatScreenState extends State<ChatScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Failed to send ${type}: $e')));
+        ).showSnackBar(SnackBar(content: Text('Failed to send $type: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingMedia = false);
+    }
+  }
+
+  Future<void> _pickAndSendGif() async {
+    try {
+      final GifModel? gif = await showModalBottomSheet<GifModel>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => const GifPickerSheet(),
+      );
+
+      if (gif == null || !mounted) return;
+
+      setState(() => _isUploadingMedia = true);
+
+      await context.read<ChatProvider>().sendGifMessage(
+        conversationId: widget.chatId,
+        receiverId: widget.otherUser.uid,
+        gifUrl: gif.gifUrl,
+      );
+
+      _scrollToBottom();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send GIF: $e')),
+        );
       }
     } finally {
       if (mounted) setState(() => _isUploadingMedia = false);
@@ -262,20 +304,13 @@ class _ChatScreenState extends State<ChatScreen> {
           },
           child: Row(
             children: [
-              CircleAvatar(
+              UserAvatar(
                 radius: 18,
-                backgroundImage: widget.otherUser.profileImage.isNotEmpty
-                    ? NetworkImage(widget.otherUser.profileImage)
-                    : null,
-                backgroundColor: isDark ? Colors.grey[800] : Colors.grey[300],
-                child: widget.otherUser.profileImage.isEmpty
-                    ? Text(
-                        widget.otherUser.username[0].toUpperCase(),
-                        style: TextStyle(
-                          color: isDark ? Colors.white70 : Colors.grey[800],
-                        ),
-                      )
-                    : null,
+                profileImageUrl: widget.otherUser.profileImage,
+                username: widget.otherUser.username,
+                firstName: widget.otherUser.firstName,
+                lastName: widget.otherUser.lastName,
+                userId: widget.otherUser.uid,
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -488,8 +523,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                     if (message.mediaType == 'tv') {
                                       final tvDetails = await api
                                           .fetchDetailsTvShow(tmdbId);
-                                      if (context.mounted)
+                                      if (context.mounted) {
                                         Navigator.pop(context);
+                                      }
                                       if (tvDetails != null &&
                                           context.mounted) {
                                         Navigator.push(
@@ -504,8 +540,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                     } else {
                                       final movieDetails = await api
                                           .fetchMovieDetails(tmdbId);
-                                      if (context.mounted)
+                                      if (context.mounted) {
                                         Navigator.pop(context);
+                                      }
                                       if (context.mounted) {
                                         Navigator.push(
                                           context,

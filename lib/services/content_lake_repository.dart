@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:objectbox/objectbox.dart';
 import '../db/objectbox/feed_entities.dart';
 import '../db/objectbox/objectbox_store.dart';
 import '../objectbox.g.dart';
@@ -451,7 +450,7 @@ Expires:   $expiresAt
       position: position,
       version: version,
       cachedAt: DateTime.now(),
-      genresJson: genres != null ? genres.join(',') : null,
+      genresJson: genres?.join(','),
     );
   }
 
@@ -652,8 +651,9 @@ Expires:   $expiresAt
     double interactionMultiplier = 1.0;
     if (seen != null) {
       if (seen.liked) interactionMultiplier *= 1.3;
-      if (seen.viewDurationMs > 30000)
+      if (seen.viewDurationMs > 30000) {
         interactionMultiplier *= 1.2; // Watched > 30s
+      }
       // We don't punish skip here, that's done via session bias or hard suppression
     }
 

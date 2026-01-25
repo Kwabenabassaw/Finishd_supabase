@@ -123,7 +123,7 @@ class _ExploreShimmerState extends State<ExploreShimmer>
     double radius = 8,
   }) {
     return Shimmer.fromColors(
-      baseColor: const Color.fromARGB(255, 231, 226, 226)!,
+      baseColor: const Color.fromARGB(255, 231, 226, 226),
       highlightColor: Colors.grey[700]!,
       child: Container(
         height: height,

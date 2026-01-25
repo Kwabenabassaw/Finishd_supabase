@@ -1,11 +1,9 @@
-import 'dart:convert';
 
 import 'package:finishd/Model/MovieDetails.dart';
 import 'package:finishd/Model/Watchprovider.dart';
 import 'package:finishd/Model/trending.dart';
 import 'package:finishd/Model/tvdetail.dart';
 import 'package:finishd/Model/season_detail_model.dart';
-import 'package:finishd/onboarding/streamingService.dart';
 import 'package:tmdb_api/tmdb_api.dart';
 
 class Trending {
@@ -404,6 +402,24 @@ class Trending {
           .toList();
     } catch (e) {
       print("Error fetching discover page $page: $e");
+      return [];
+    }
+  }
+
+  Future<List<MediaItem>> searchMedia(String query) async {
+    try {
+      Map result = await tmdb.v3.search.queryMulti(
+        query,
+        language: 'en-US',
+        includeAdult: false,
+      );
+      List list = result['results'] ?? [];
+      return list
+          .where((item) => item['media_type'] == 'tv' || item['media_type'] == 'movie')
+          .map((json) => MediaItem.fromJson(json))
+          .toList();
+    } catch (e) {
+      print("Error searching media: $e");
       return [];
     }
   }

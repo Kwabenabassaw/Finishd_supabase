@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:finishd/Model/recommendation_model.dart';
 import 'package:finishd/Model/user_model.dart';
 import 'package:finishd/services/recommendation_service.dart';
+import 'package:finishd/Widget/user_avatar.dart';
 import 'package:finishd/services/user_service.dart';
 import 'package:intl/intl.dart';
 import 'package:finishd/profile/profileScreen.dart';
@@ -189,12 +190,13 @@ class _MovieRecommendersScreenState extends State<MovieRecommendersScreen> {
                           width: 2,
                         ),
                       ),
-                      child: CircleAvatar(
+                      child: UserAvatar(
                         radius: 32,
-                        backgroundImage: user.profileImage.isNotEmpty
-                            ? CachedNetworkImageProvider(user.profileImage)
-                            : const AssetImage('assets/noimage.jpg')
-                                  as ImageProvider,
+                        profileImageUrl: user.profileImage,
+                        firstName: user.firstName,
+                        lastName: user.lastName,
+                        username: user.username,
+                        userId: user.uid,
                       ),
                     ),
 

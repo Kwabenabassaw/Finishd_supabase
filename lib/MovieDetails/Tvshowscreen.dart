@@ -15,6 +15,7 @@ import 'package:finishd/Widget/movie_action_drawer.dart';
 import 'package:finishd/Model/recommendation_model.dart';
 import 'package:finishd/Model/user_model.dart';
 import 'package:finishd/services/recommendation_service.dart';
+import 'package:finishd/Widget/user_avatar.dart';
 import 'package:finishd/services/user_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:finishd/services/tmdb_sync_service.dart';
@@ -593,8 +594,9 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen>
 
   Widget _buildRecommendedSection(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null || _recommendationsStream == null)
+    if (user == null || _recommendationsStream == null) {
       return const SizedBox.shrink();
+    }
 
     final UserService userService = UserService();
 
@@ -670,12 +672,11 @@ class _ShowDetailsScreenState extends State<ShowDetailsScreen>
       padding: const EdgeInsets.only(right: 20.0),
       child: Column(
         children: [
-          CircleAvatar(
+          UserAvatar(
+            profileImageUrl: imageUrl,
+            username: name,
+            userId: name, // Using name as fallback for deterministic color
             radius: 30,
-            backgroundImage: imageUrl.isNotEmpty
-                ? CachedNetworkImageProvider(imageUrl)
-                : const AssetImage('assets/noimage.jpg') as ImageProvider,
-            backgroundColor: Colors.grey.shade200,
           ),
           const SizedBox(height: 8),
           SizedBox(
