@@ -46,6 +46,10 @@ app.*.map.json
 # Credentials
 serviceAccountKey.json
 *.json
+# .gitignore
+functions/serviceAccountKey.json
+node_modules/
+.env
 
 # Dependencies
 node_modules/
