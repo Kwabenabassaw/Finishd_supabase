@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'video_link_preview.dart';
 import 'recommendation_preview.dart';
@@ -7,8 +6,10 @@ import 'recommendation_preview.dart';
 class MessageBubble extends StatelessWidget {
   final String text;
   final bool isMe;
-  final Timestamp timestamp;
+  final DateTime timestamp;
   final bool isRead;
+  final bool isPending; // True if message not yet synced to server
+  final int messageStatus; // 0=pending, 1=sent, 2=delivered, 3=read, -1=failed
   final String type;
   final String? mediaUrl;
   final String? videoId;
@@ -36,6 +37,8 @@ class MessageBubble extends StatelessWidget {
     required this.isMe,
     required this.timestamp,
     required this.isRead,
+    this.isPending = false,
+    this.messageStatus = 1, // Default to sent
     this.type = 'text',
     this.mediaUrl,
     this.videoId,
@@ -65,7 +68,7 @@ class MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final time = DateFormat('hh:mm a').format(timestamp.toDate());
+    final time = DateFormat('hh:mm a').format(timestamp);
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -178,9 +181,7 @@ class MessageBubble extends StatelessWidget {
                       width: 200,
                       height: 150,
                       color: Colors.grey[800],
-                      child: const Center(
-                        child: CircularProgressIndicator(),
-                      ),
+                      child: const Center(child: CircularProgressIndicator()),
                     );
                   },
                   errorBuilder: (context, error, stackTrace) {
@@ -191,15 +192,14 @@ class MessageBubble extends StatelessWidget {
                       child: const Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.gif,
-                            size: 50,
-                            color: Colors.white54,
-                          ),
+                          Icon(Icons.gif, size: 50, color: Colors.white54),
                           Text(
                             "GIF Failed",
-                            style: TextStyle(color: Colors.white54, fontSize: 12),
-                          )
+                            style: TextStyle(
+                              color: Colors.white54,
+                              fontSize: 12,
+                            ),
+                          ),
                         ],
                       ),
                     );
@@ -223,7 +223,7 @@ class MessageBubble extends StatelessWidget {
   }
 
   Widget _buildTextBubble(BuildContext context) {
-    final time = DateFormat('hh:mm a').format(timestamp.toDate());
+    final time = DateFormat('hh:mm a').format(timestamp);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Premium Color Palette
@@ -315,11 +315,7 @@ class MessageBubble extends StatelessWidget {
                   ),
                   if (isMe) ...[
                     const SizedBox(width: 4),
-                    Icon(
-                      isRead ? Icons.done_all : Icons.done,
-                      size: 14,
-                      color: isRead ? Colors.white : Colors.white60,
-                    ),
+                    _buildTextBubbleStatusIcon(),
                   ],
                 ],
               ),
@@ -337,16 +333,49 @@ class MessageBubble extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         Text(time, style: TextStyle(color: Colors.grey[500], fontSize: 11)),
-        if (isMe) ...[
-          const SizedBox(width: 4),
-          Icon(
-            isRead ? Icons.done_all : Icons.done,
-            size: 16,
-            color: isRead ? const Color(0xFF34B7F1) : Colors.grey,
-          ),
-        ],
+        if (isMe) ...[const SizedBox(width: 4), _buildStatusIcon()],
       ],
     );
+  }
+
+  /// Build status icon: clock (pending), single tick (sent), double tick (delivered/read)
+  Widget _buildStatusIcon() {
+    if (isPending || messageStatus == 0) {
+      // Pending - show clock
+      return const Icon(Icons.access_time, size: 14, color: Colors.grey);
+    } else if (messageStatus == -1) {
+      // Failed - show error
+      return const Icon(Icons.error_outline, size: 14, color: Colors.red);
+    } else if (isRead || messageStatus == 3) {
+      // Read - double tick blue
+      return const Icon(Icons.done_all, size: 14, color: Color(0xFF34B7F1));
+    } else if (messageStatus == 2) {
+      // Delivered - double tick grey
+      return const Icon(Icons.done_all, size: 14, color: Colors.grey);
+    } else {
+      // Sent - single tick
+      return const Icon(Icons.done, size: 14, color: Colors.grey);
+    }
+  }
+
+  /// Build status icon for text bubbles (white colors for visibility on green background)
+  Widget _buildTextBubbleStatusIcon() {
+    if (isPending || messageStatus == 0) {
+      // Pending - show clock
+      return const Icon(Icons.access_time, size: 14, color: Colors.white60);
+    } else if (messageStatus == -1) {
+      // Failed - show error
+      return const Icon(Icons.error_outline, size: 14, color: Colors.redAccent);
+    } else if (isRead || messageStatus == 3) {
+      // Read - double tick
+      return const Icon(Icons.done_all, size: 14, color: Colors.white);
+    } else if (messageStatus == 2) {
+      // Delivered - double tick
+      return const Icon(Icons.done_all, size: 14, color: Colors.white70);
+    } else {
+      // Sent - single tick
+      return const Icon(Icons.done, size: 14, color: Colors.white70);
+    }
   }
 
   Widget _buildImageBubble(BuildContext context) {
@@ -459,7 +488,7 @@ class MessageBubble extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           GestureDetector(
-            onTap: onImageTap, // Reuse for video tap handling
+            onTap: onVideoTap,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Stack(

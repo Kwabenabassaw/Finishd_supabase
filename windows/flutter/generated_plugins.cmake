@@ -4,13 +4,9 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   app_links
-  cloud_firestore
   connectivity_plus
   emoji_picker_flutter
   file_selector_windows
-  firebase_auth
-  firebase_core
-  firebase_storage
   flutter_inappwebview_windows
   objectbox_flutter_libs
   share_plus
@@ -18,7 +14,6 @@ list(APPEND FLUTTER_PLUGIN_LIST
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
-  flutter_local_notifications_windows
 )
 
 set(PLUGIN_BUNDLED_LIBRARIES)

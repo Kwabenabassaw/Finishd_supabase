@@ -13,7 +13,7 @@ import 'package:finishd/Model/movie_ratings_model.dart';
 import 'package:finishd/services/recommendation_service.dart';
 import 'package:finishd/Widget/user_avatar.dart';
 import 'package:finishd/services/user_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:finishd/MovieDetails/movie_recommenders_screen.dart';
@@ -72,7 +72,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen>
     WidgetsBinding.instance.addObserver(this);
     _recommendationsStream = RecommendationService()
         .getMyRecommendationsForMovie(
-          FirebaseAuth.instance.currentUser?.uid ?? '',
+          Supabase.instance.client.auth.currentUser?.id ?? '',
           _movie.id.toString(),
         );
     _syncFullDetails();
@@ -90,7 +90,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen>
   }
 
   Future<void> _loadUserRating() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = Supabase.instance.client.auth.currentUser?.id;
     if (uid == null) return;
     final record = await _userTitlesService.getUserTitle(
       uid,
@@ -484,8 +484,12 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen>
                             child: EmotionRatingSlider(
                               initialRating: _userRating,
                               onRatingChanged: (rating) {
-                                final uid =
-                                    FirebaseAuth.instance.currentUser?.uid;
+                                final uid = Supabase
+                                    .instance
+                                    .client
+                                    .auth
+                                    .currentUser
+                                    ?.id;
                                 if (uid != null) {
                                   _userTitlesService.updateRating(
                                     uid: uid,
@@ -587,7 +591,7 @@ class _MovieDetailsScreenState extends State<MovieDetailsScreen>
   // -------------------------------------------------------------------
 
   Widget _buildRecommendedSection() {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = Supabase.instance.client.auth.currentUser;
     if (user == null || _recommendationsStream == null) {
       return const SizedBox.shrink();
     }

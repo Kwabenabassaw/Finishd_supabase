@@ -1,7 +1,7 @@
 import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:finishd/Widget/user_avatar.dart';
 import 'package:finishd/provider/community_provider.dart';
 import 'package:provider/provider.dart';
@@ -122,11 +122,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       SnackBar(
         content: const Row(
           children: [
-            SizedBox(
-              width: 16,
-              height: 16,
-              child: LogoLoadingScreen(),
-            ),
+            SizedBox(width: 16, height: 16, child: LogoLoadingScreen()),
             SizedBox(width: 12),
             Text('Uploading your post...'),
           ],
@@ -275,34 +271,35 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Builder(builder: (context) {
-                        final user = FirebaseAuth.instance.currentUser;
-                        return UserAvatar(
-                          radius: 24,
-                          profileImageUrl: user?.photoURL,
-                          firstName: user?.displayName ??
-                              user?.email?.split('@').first ??
-                              'User',
-                          userId: user?.uid ?? '',
-                        );
-                      }),
+                      Builder(
+                        builder: (context) {
+                          final user =
+                              Supabase.instance.client.auth.currentUser;
+                          return UserAvatar(
+                            radius: 24,
+                            profileImageUrl: user?.userMetadata?['avatar_url'],
+                            firstName:
+                                user?.userMetadata?['username'] ??
+                                user?.email?.split('@').first ??
+                                'User',
+                            userId: user?.id ?? '',
+                          );
+                        },
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
-
                         child: TextField(
                           controller: _contentController,
-                        
+
                           maxLines: null,
                           style: theme.textTheme.bodyLarge,
                           decoration: InputDecoration(
-                            
-                          contentPadding: EdgeInsets.all(10),
+                            contentPadding: EdgeInsets.all(10),
 
                             hintText:
                                 'Share your thoughts or start a discussion...',
                             hintStyle: TextStyle(color: theme.hintColor),
                             border: InputBorder.none,
-
                           ),
                           onChanged: _extractHashtags,
                         ),
@@ -398,10 +395,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                   color: theme.dividerColor,
                   margin: const EdgeInsets.symmetric(horizontal: 8),
                 ),
-             
-              
+
                 const Spacer(),
-               
               ],
             ),
           ),

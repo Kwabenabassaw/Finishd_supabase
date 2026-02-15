@@ -1,6 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:finishd/LoadingWidget/LogoLoading.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:finishd/Model/Watchprovider.dart';
 import 'package:finishd/Model/user_preferences.dart';
@@ -38,7 +38,7 @@ class _EditStreamingServicesScreenState
 
   Future<void> _loadData() async {
     try {
-      final userId = FirebaseAuth.instance.currentUser?.uid;
+      final userId = Supabase.instance.client.auth.currentUser?.id;
       if (userId == null) {
         setState(() {
           _error = 'Not logged in';
@@ -97,7 +97,7 @@ class _EditStreamingServicesScreenState
   }
 
   Future<void> _saveChanges() async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
+    final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) return;
 
     setState(() => _isSaving = true);
@@ -296,9 +296,8 @@ class _ServiceTile extends StatelessWidget {
                   imageUrl:
                       "https://image.tmdb.org/t/p/w500${service.logoPath}",
                   fit: BoxFit.contain,
-                  placeholder: (_, __) => const Center(
-                    child: LogoLoadingScreen(),
-                  ),
+                  placeholder: (_, __) =>
+                      const Center(child: LogoLoadingScreen()),
                   errorWidget: (_, __, ___) =>
                       const Icon(Icons.tv, color: Colors.grey),
                 ),

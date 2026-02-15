@@ -1,4 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:finishd/Model/movie_list_item.dart';
 import 'package:finishd/services/movie_list_service.dart';
 import 'package:finishd/services/user_titles_service.dart';
@@ -44,7 +44,7 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
   }
 
   Future<void> _loadMovieStatus() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = Supabase.instance.client.auth.currentUser?.id;
     if (uid == null) return;
 
     setState(() => _isLoading = true);
@@ -72,7 +72,7 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
     // Haptic feedback
     HapticFeedback.mediumImpact();
 
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = Supabase.instance.client.auth.currentUser?.id;
     if (uid == null) {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -141,7 +141,7 @@ class _MovieActionDrawerState extends State<MovieActionDrawer> {
   }
 
   Future<void> _updateRating(int rating) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = Supabase.instance.client.auth.currentUser?.id;
     if (uid == null) return;
 
     setState(() {
@@ -380,7 +380,7 @@ void showMovieActionDrawer(
   VoidCallback? onActionComplete,
 }) {
   // Check authentication first
-  final user = FirebaseAuth.instance.currentUser;
+  final user = Supabase.instance.client.auth.currentUser;
   if (user == null) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Please log in to save movies')),

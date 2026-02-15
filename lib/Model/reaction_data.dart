@@ -16,25 +16,25 @@ class ReactionData {
 
   /// Create from Firestore document
   factory ReactionData.fromJson(Map<String, dynamic> json, String odcId) {
+    final String reactionType = json['reaction_type'] ?? 'heart';
     return ReactionData(
-      type: json['type'] ?? 'heart',
-      emoji: json['emoji'] ?? '❤️',
-      timestamp: json['timestamp'] != null
-          ? (json['timestamp'] as dynamic).toDate()
+      timestamp: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
           : DateTime.now(),
-      userId: json['userId'] ?? '',
-      videoId: json['videoId'] ?? '',
+      type: reactionType,
+      emoji: typeToEmoji[reactionType] ?? '❤️', // Derive emoji from type
+      userId: json['user_id'] ?? '',
+      videoId: json['video_id'] ?? '',
     );
   }
 
-  /// Convert to Firestore document
+  /// Convert to JSON for Supabase upsert
   Map<String, dynamic> toJson() {
     return {
-      'type': type,
-      'emoji': emoji,
-      'timestamp': timestamp,
-      'userId': userId,
-      'videoId': videoId,
+      'reaction_type': type,
+      'user_id': userId,
+      'video_id': videoId,
+      // created_at is handled by default constraint on insert
     };
   }
 

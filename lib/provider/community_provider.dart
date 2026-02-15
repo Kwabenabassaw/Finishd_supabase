@@ -4,8 +4,7 @@ import 'package:finishd/Model/trending.dart';
 import 'package:finishd/services/community_service.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:finishd/services/storage_service.dart';
-import 'package:finishd/services/voting_api_client.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'dart:async';
@@ -43,10 +42,6 @@ class CommunityProvider extends ChangeNotifier {
   final CommunityService _communityService = CommunityService();
   final Trending _trending = Trending();
   final StorageService _storageService = StorageService();
-  final VotingApiClient _votingApi = VotingApiClient();
-
-  // Feature flag: Set to true to use new backend, false to use Firestore directly
-  final bool _useVotingBackend = true;
 
   bool _isUploadingMedia = false;
   String? _selectedHashtag;
@@ -79,14 +74,14 @@ class CommunityProvider extends ChangeNotifier {
   String _searchQuery = '';
   Map<String, int> _currentUserVotes = {}; // postId -> vote
   final Map<String, int> _commentVotes = {}; // commentId -> vote
-  
+
   // Real-time listener for posts
   StreamSubscription<List<Map<String, dynamic>>>? _postsSubscription;
-  
+
   // Getters
   List<Community> get myCommunities => _myCommunities;
   bool get isLoadingMyCommunities => _isLoadingMyCommunities;
-  
+
   List<MediaItem> get discoverContent => _discoverContent;
   bool get isLoadingDiscover => _isLoadingDiscover;
   String get discoverFilter => _discoverFilter;
@@ -103,44 +98,50 @@ class CommunityProvider extends ChangeNotifier {
   String get currentSortBy => _currentSortBy;
   String get searchQuery => _searchQuery;
   Map<String, int> get currentUserVotes => _currentUserVotes;
-  
-  String? get currentUid => FirebaseAuth.instance.currentUser?.uid;
+
+  String? get currentUid => Supabase.instance.client.auth.currentUser?.id;
 
   /// Returns sorted and filtered posts (by hashtag if selected)
   List<CommunityPost> get filteredPosts {
     if (_selectedHashtag == null || _selectedHashtag!.isEmpty) {
       return _currentPosts;
     }
-    return _currentPosts.where((post) => post.hashtags.contains(_selectedHashtag)).toList();
+    return _currentPosts
+        .where((post) => post.hashtags.contains(_selectedHashtag))
+        .toList();
   }
 
   /// Returns Trending Communities filtered by search query
   List<Community> get filteredTrendingCommunities {
     if (_searchQuery.isEmpty) return _trendingCommunities;
-    
+
     final query = _searchQuery.toLowerCase();
-    
+
     // Filter by prefix (startsWith)
-    final filtered = _trendingCommunities.where((c) => 
-      c.title.toLowerCase().startsWith(query)
-    ).toList();
-    
+    final filtered = _trendingCommunities
+        .where((c) => c.title.toLowerCase().startsWith(query))
+        .toList();
+
     // Sort by: 1. Popularity (memberCount) DESC, 2. Alphabetical ASC
     filtered.sort((a, b) {
       if (a.memberCount != b.memberCount) {
         return b.memberCount.compareTo(a.memberCount); // Popularity DESC
       }
-      return a.title.toLowerCase().compareTo(b.title.toLowerCase()); // Alpha ASC
+      return a.title.toLowerCase().compareTo(
+        b.title.toLowerCase(),
+      ); // Alpha ASC
     });
-    
+
     return filtered;
   }
-  
+
   /// Returns Recommended Communities filtered by search query
   List<Community> get filteredRecommendedCommunities {
-     if (_searchQuery.isEmpty) return _recommendedCommunities;
-     final query = _searchQuery.toLowerCase();
-     return _recommendedCommunities.where((c) => c.title.toLowerCase().startsWith(query)).toList();
+    if (_searchQuery.isEmpty) return _recommendedCommunities;
+    final query = _searchQuery.toLowerCase();
+    return _recommendedCommunities
+        .where((c) => c.title.toLowerCase().startsWith(query))
+        .toList();
   }
 
   /// Placeholder for trending hashtags in a community
@@ -152,7 +153,8 @@ class CommunityProvider extends ChangeNotifier {
         counts[tag] = (counts[tag] ?? 0) + 1;
       }
     }
-    var sorted = counts.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    var sorted = counts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
     return sorted.take(10).map((e) => e.key).toList();
   }
 
@@ -183,7 +185,9 @@ class CommunityProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final data = await _communityService.discoverCommunities(limit: 10);
-      _trendingCommunities = data.map((json) => Community.fromJson(json)).toList();
+      _trendingCommunities = data
+          .map((json) => Community.fromJson(json))
+          .toList();
     } finally {
       _isLoadingTrending = false;
       notifyListeners();
@@ -196,7 +200,9 @@ class CommunityProvider extends ChangeNotifier {
     try {
       // For now, same as trending or some logic
       final data = await _communityService.discoverCommunities(limit: 10);
-      _recommendedCommunities = data.map((json) => Community.fromJson(json)).toList();
+      _recommendedCommunities = data
+          .map((json) => Community.fromJson(json))
+          .toList();
     } finally {
       _isLoadingRecommended = false;
       notifyListeners();
@@ -259,7 +265,7 @@ class CommunityProvider extends ChangeNotifier {
     try {
       // Use Trending service to search media (to find shows/movies to start a community for)
       final results = await _trending.searchMedia(query);
-      
+
       // Ensure we only update if this is the latest request
       if (_searchState.lastRequestId == requestId) {
         _searchState = _searchState.copyWith(
@@ -331,68 +337,103 @@ class CommunityProvider extends ChangeNotifier {
     // Cancel any existing subscription
     _postsSubscription?.cancel();
 
-    print('🔄 [CommunityProvider] Starting real-time listener for showId: $showId');
-
-    _postsSubscription = _communityService.getPostsStream(showId: showId, limit: 50)
-        .listen(
-      (postsData) {
-        print('📡 [CommunityProvider] Received ${postsData.length} posts from stream');
-        
-        // 1. Process incoming posts into the Map
-        for (final data in postsData) {
-          final post = CommunityPost.fromJson(data);
-          // Insert or update logic: Always take the latest from server
-          _postsMap[post.id] = post;
-        }
-
-        // 2. Re-derive the sorted list
-        _rebuildPostsList();
-        
-        // 3. Load votes for new posts (optimization: only for new ones)
-        // For simplicity in this refactor, we can retry loading votes for visible posts
-        _loadVotesForCurrentPosts(showId);
-
-        notifyListeners();
-      },
-      onError: (error) {
-        print('❌ [CommunityProvider] Error in posts stream: $error');
-      },
+    print(
+      '🔄 [CommunityProvider] Starting real-time listener for showId: $showId',
     );
+
+    _postsSubscription = _communityService
+        .getPostsStream(showId: showId, limit: 50)
+        .listen(
+          (postsData) async {
+            print(
+              '📡 [CommunityProvider] Received ${postsData.length} posts from stream',
+            );
+
+            // 1. Collect Author IDs
+            final List<String> authorIds = [];
+            for (final data in postsData) {
+              if (data['author_id'] != null) {
+                authorIds.add(data['author_id'] as String);
+              }
+            }
+
+            // 2. Fetch Profiles for these authors
+            final profilesMap = await _communityService.getProfiles(authorIds);
+
+            // 3. Process incoming posts and merge with profile data
+            for (final data in postsData) {
+              // Inject author data from profilesMap into the JSON before parsing
+              final authorId = data['author_id'];
+              if (authorId != null && profilesMap.containsKey(authorId)) {
+                final profile = profilesMap[authorId]!;
+                data['author_name'] = profile['username'];
+                data['author_avatar'] = profile['avatar_url'];
+                // print('✅ Hydrated post ${data['id']} with author: ${profile['username']}');
+              } else {
+                print(
+                  '⚠️ Failed to hydrate post ${data['id']} (Author ID: $authorId)',
+                );
+              }
+
+              final post = CommunityPost.fromJson(data);
+              // Insert or update logic: Always take the latest from server
+              _postsMap[post.id] = post;
+            }
+
+            // 4. Re-derive the sorted list
+            _rebuildPostsList();
+
+            // 5. Load votes for new posts (optimization: only for new ones)
+            _loadVotesForCurrentPosts(showId);
+
+            notifyListeners();
+          },
+          onError: (error) {
+            print('❌ [CommunityProvider] Error in posts stream: $error');
+          },
+        );
   }
 
   void _rebuildPostsList() {
     final list = _postsMap.values.toList();
-    
+
     // Check sort order
     if (_currentSortBy == 'top') {
       list.sort((a, b) => b.score.compareTo(a.score));
     } else {
       // Default: createdAt descending (newest first)
-      list.sort((a, b) => (b.createdAt ?? DateTime.now()).compareTo(a.createdAt ?? DateTime.now()));
+      list.sort(
+        (a, b) => (b.createdAt ?? DateTime.now()).compareTo(
+          a.createdAt ?? DateTime.now(),
+        ),
+      );
     }
-    
+
     _currentPosts = list;
   }
 
   Future<void> _loadVotesForCurrentPosts(int showId) async {
     if (_currentPosts.isEmpty) return;
     try {
-        final voteFutures = _currentPosts
-            .where((p) => !_currentUserVotes.containsKey(p.id)) // Only fetch unknown
-            .map((post) async {
-          final vote = await _communityService.getUserVote(post.id, showId);
-          return MapEntry(post.id, vote);
-        });
+      final voteFutures = _currentPosts
+          .where(
+            (p) => !_currentUserVotes.containsKey(p.id),
+          ) // Only fetch unknown
+          .map((post) async {
+            final vote = await _communityService.getUserVote(post.id, showId);
+            return MapEntry(post.id, vote);
+          });
 
-        if (voteFutures.isNotEmpty) {
-            final votes = await Future.wait(voteFutures);
-            _currentUserVotes.addAll(Map.fromEntries(votes));
-            notifyListeners(); // Notify again if votes changed
-        }
+      if (voteFutures.isNotEmpty) {
+        final votes = await Future.wait(voteFutures);
+        _currentUserVotes.addAll(Map.fromEntries(votes));
+        notifyListeners(); // Notify again if votes changed
+      }
     } catch (e) {
-        print('Error loading votes: $e');
+      print('Error loading votes: $e');
     }
   }
+
   /// Stop listening to posts stream
   void _stopPostsStream() {
     _postsSubscription?.cancel();
@@ -525,34 +566,16 @@ class CommunityProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      if (_useVotingBackend) {
-        // Use backend API (Supabase/Node.js)
-        // We send the original 'vote' intent (1 or -1)
-        // The server handles the toggle-off logic if vote == currentVote
-        debugPrint('[CommunityProvider] Using voting backend API...');
-        final result = await _votingApi.voteOnPost(postId, showId, vote);
+      // Use efficient Supabase RPC method directly
+      await _communityService.voteOnPost(
+        postId: postId,
+        showId: showId,
+        vote: newVote,
+      );
 
-        // Update with server values (source of truth)
-        debugPrint('[CommunityProvider] Server response: $result');
-        if (index != -1) {
-          _currentPosts[index] = _currentPosts[index].copyWith(
-            upvotes: result.upvotes,
-            downvotes: result.downvotes,
-            score: result.score,
-          );
-        }
-        _currentUserVotes[postId] = result.userVote ?? 0;
-        notifyListeners();
-      } else {
-        // Fallback to old Firestore method
-        debugPrint('[CommunityProvider] Using Firestore directly (fallback)');
-        final newVote = currentVote == vote ? 0 : vote;
-        await _communityService.voteOnPost(
-          postId: postId,
-          showId: showId,
-          vote: newVote,
-        );
-      }
+      // No need to manually update from server response here;
+      // the real-time stream listener in _listenToPostsStream
+      // will receive the updated post data (upvotes/downvotes/score) automatically.
     } catch (e) {
       // Revert optimistic update on failure
       debugPrint('[CommunityProvider] ❌ Vote failed: $e');
@@ -576,7 +599,33 @@ class CommunityProvider extends ChangeNotifier {
   // --- Comments ---
 
   Stream<List<Map<String, dynamic>>> getCommentsStream(String postId) {
-    return _communityService.getCommentsStream(postId);
+    return _communityService.getCommentsStream(postId).asyncMap((
+      comments,
+    ) async {
+      if (comments.isEmpty) return comments;
+
+      // Collect author IDs
+      final authorIds = comments
+          .map((c) => c['author_id'] as String?)
+          .whereType<String>()
+          .toSet()
+          .toList();
+
+      // Fetch profiles for these authors
+      final profilesMap = await _communityService.getProfiles(authorIds);
+
+      // Inject author data into each comment
+      for (final comment in comments) {
+        final authorId = comment['author_id'] as String?;
+        if (authorId != null && profilesMap.containsKey(authorId)) {
+          final profile = profilesMap[authorId]!;
+          comment['author_name'] = profile['username'];
+          comment['author_avatar'] = profile['avatar_url'];
+        }
+      }
+
+      return comments;
+    });
   }
 
   Future<void> addComment({
@@ -654,7 +703,7 @@ class CommunityProvider extends ChangeNotifier {
     List<String> mediaUrls = [];
     List<String> mediaTypes = [];
 
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = Supabase.instance.client.auth.currentUser?.id;
     if (uid == null) return null;
 
     // Add GIFs directly to media lists
@@ -703,8 +752,20 @@ class CommunityProvider extends ChangeNotifier {
       showTitle: showTitle,
       communityId: showId.toString(),
       authorId: uid,
-      authorName: FirebaseAuth.instance.currentUser?.displayName ?? 'You',
-      authorAvatar: FirebaseAuth.instance.currentUser?.photoURL,
+      authorName:
+          Supabase
+              .instance
+              .client
+              .auth
+              .currentUser
+              ?.userMetadata?['username'] ??
+          'You',
+      authorAvatar: Supabase
+          .instance
+          .client
+          .auth
+          .currentUser
+          ?.userMetadata?['avatar_url'],
       content: content,
       mediaUrls: mediaUrls,
       mediaTypes: mediaTypes,

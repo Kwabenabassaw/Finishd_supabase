@@ -1,4 +1,3 @@
-
 /// Represents a single item in the personalized feed.
 ///
 /// Can be:
@@ -46,6 +45,15 @@ class FeedItem {
   // Genres for frontend personalization scoring
   final List<String>? genres;
 
+  // Creator Video Fields
+  final String? videoUrl;
+  final String? creatorId;
+  final String? creatorName;
+  final String? creatorAvatar;
+  final int? shareCount;
+  final int? likeCount;
+  final int? viewCount;
+
   FeedItem({
     required this.id,
     required this.type,
@@ -73,6 +81,14 @@ class FeedItem {
     this.description,
     this.feedType, // NEW
     this.genres, // NEW: For local personalization scoring
+    // Creator Video Fields
+    this.videoUrl,
+    this.creatorId,
+    this.creatorName,
+    this.creatorAvatar,
+    this.shareCount,
+    this.likeCount,
+    this.viewCount,
   });
 
   factory FeedItem.fromJson(Map<String, dynamic> json) {
@@ -106,6 +122,14 @@ class FeedItem {
       genres: json['genres'] != null
           ? List<String>.from(json['genres'])
           : null, // NEW
+      // Creator Video Fields
+      videoUrl: json['video_url'],
+      creatorId: json['creator_id'],
+      creatorName: json['creator_username'],
+      creatorAvatar: json['creator_avatar'],
+      shareCount: json['share_count'],
+      likeCount: json['like_count'],
+      viewCount: json['view_count'],
     );
   }
 
@@ -137,6 +161,14 @@ class FeedItem {
       'description': description,
       'feedType': feedType, // NEW
       'genres': genres, // NEW
+      // Creator Video Fields
+      'video_url': videoUrl,
+      'creator_id': creatorId,
+      'creator_username': creatorName,
+      'creator_avatar': creatorAvatar,
+      'share_count': shareCount,
+      'like_count': likeCount,
+      'view_count': viewCount,
     };
   }
 
@@ -158,6 +190,9 @@ class FeedItem {
 
   /// Check if this is an image content item
   bool get isImage => type == 'image';
+
+  /// Check if this is a creator video
+  bool get isCreatorVideo => source == 'creator_video' || videoUrl != null;
 
   /// Check if this item has a YouTube video
   bool get hasYouTubeVideo => youtubeKey != null && youtubeKey!.isNotEmpty;

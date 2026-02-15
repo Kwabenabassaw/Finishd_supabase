@@ -187,13 +187,7 @@ class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
               ),
             ),
             const SizedBox(width: 15),
-            const Text(
-              '75%',
-              style: TextStyle(
-               
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            const Text('75%', style: TextStyle(fontWeight: FontWeight.w600)),
           ],
         ),
         const SizedBox(height: 10),
@@ -270,7 +264,7 @@ class _ServiceSelectionScreenState extends State<ServiceSelectionScreen> {
                         const Center(child: CircularProgressIndicator()),
                   );
 
-                  final success = await onboardingProvider.saveToFirestore();
+                  final success = await onboardingProvider.savePreferences();
 
                   Navigator.of(context).pop();
 
@@ -393,13 +387,10 @@ class ServiceLogoTile extends StatelessWidget {
                   imageUrl:
                       "https://image.tmdb.org/t/p/w500${service.logoPath}",
                   fit: BoxFit.cover,
-                  placeholder: (context, url) => const Center(
-                    child: LogoLoadingScreen(),
-                  ),
-                  errorWidget: (context, url, error) => const Icon(
-                    Icons.broken_image,
-                    color: Colors.grey,
-                  ),
+                  placeholder: (context, url) =>
+                      const Center(child: LogoLoadingScreen()),
+                  errorWidget: (context, url, error) =>
+                      const Icon(Icons.broken_image, color: Colors.grey),
                 ),
               ),
             ),

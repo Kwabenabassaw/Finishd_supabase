@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:finishd/Model/user_model.dart';
 import 'package:finishd/services/user_service.dart';
 import 'package:finishd/Model/community_models.dart';
@@ -34,7 +34,8 @@ class SharePostSheet extends StatefulWidget {
 
 class _SharePostSheetState extends State<SharePostSheet> {
   final UserService _userService = UserService();
-  final String _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+  final String _currentUserId =
+      Supabase.instance.client.auth.currentUser?.id ?? '';
   final TextEditingController _searchController = TextEditingController();
 
   List<UserModel> _friends = [];

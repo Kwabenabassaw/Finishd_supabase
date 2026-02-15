@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:finishd/models/feed_item.dart';
 import 'package:finishd/db/objectbox/feed_entities.dart';
 
@@ -20,6 +19,8 @@ class FeedVideo {
   final Map<String, dynamic>? availability;
   final DateTime? lastEnriched;
   final String? imageUrl; // Full image URL for image content
+  final String? videoUrl; // Full video URL for creator content (non-YouTube)
+  final bool isCreator; // Flag for creator content
 
   /// Check if this is an image content item (not a video)
   bool get isImage => type == 'image';
@@ -41,6 +42,8 @@ class FeedVideo {
     this.availability,
     this.lastEnriched,
     this.imageUrl,
+    this.videoUrl,
+    this.isCreator = false,
   });
 
   /// Factory to create from CachedFeedItem (ObjectBox)
@@ -109,6 +112,17 @@ class FeedVideo {
       );
     } else {
       // Firestore/Local structure
+      DateTime? enrichedDate;
+      if (json['lastEnriched'] != null) {
+        if (json['lastEnriched'] is String) {
+          enrichedDate = DateTime.tryParse(json['lastEnriched']);
+        } else if (json['lastEnriched'] is int) {
+          enrichedDate = DateTime.fromMillisecondsSinceEpoch(
+            json['lastEnriched'],
+          );
+        }
+      }
+
       return FeedVideo(
         videoId: json['videoId'] ?? '',
         title: json['title'] ?? '',
@@ -120,13 +134,24 @@ class FeedVideo {
         relatedItemType: json['relatedItemType'],
         feedType: json['feedType'],
         availability: json['availability'] as Map<String, dynamic>?,
-        lastEnriched: json['lastEnriched'] != null
-            ? (json['lastEnriched'] is Timestamp
-                  ? (json['lastEnriched'] as Timestamp).toDate()
-                  : DateTime.parse(json['lastEnriched']))
-            : null,
+        lastEnriched: enrichedDate,
       );
     }
+  }
+
+  /// Factory to create from Supabase 'creator_videos' table
+  factory FeedVideo.fromCreatorJson(Map<String, dynamic> json) {
+    return FeedVideo(
+      videoId: json['id'],
+      title: json['title'] ?? 'New Post',
+      thumbnailUrl: json['thumbnail_url'] ?? '',
+      channelName: json['profiles']?['username'] ?? 'Creator',
+      description: json['description'] ?? '',
+      videoUrl: json['video_url'],
+      isCreator: true,
+      feedType: 'following', // Default to Following for now
+      type: 'creator_video',
+    );
   }
 
   /// Convert to JSON for Firestore caching

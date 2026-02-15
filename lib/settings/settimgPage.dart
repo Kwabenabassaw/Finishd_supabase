@@ -2,6 +2,8 @@ import 'package:finishd/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../provider/theme_provider.dart';
+import '../provider/user_provider.dart';
+import '../screens/creator_application_screen.dart';
 import 'edit_streaming_services.dart';
 import 'edit_genres.dart';
 import 'edit_favorite_content.dart';
@@ -141,7 +143,43 @@ class SettingsScreen extends StatelessWidget {
                   const Divider(height: 1, indent: 20, endIndent: 20),
                   const SizedBox(height: 20),
 
-                  // About Section
+                  // Creator Section - only show for non-creators
+                  Consumer<UserProvider>(
+                    builder: (context, userProvider, _) {
+                      final user = userProvider.currentUser;
+                      final isCreator =
+                          user != null &&
+                          user.role == 'creator' &&
+                          user.creatorStatus == 'approved';
+
+                      // Don't show this section if already a creator
+                      if (isCreator) return const SizedBox.shrink();
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _SectionHeader(title: 'Creator'),
+                          _SettingsTile(
+                            icon: Icons.video_call,
+                            title: 'Apply to be a Creator',
+                            subtitle: 'Share your content on Finishd',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      const CreatorApplicationScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 10),
+                          const Divider(height: 1, indent: 20, endIndent: 20),
+                          const SizedBox(height: 20),
+                        ],
+                      );
+                    },
+                  ),
                   _SectionHeader(title: 'About'),
                   _SettingsTile(
                     icon: Icons.help_outline,

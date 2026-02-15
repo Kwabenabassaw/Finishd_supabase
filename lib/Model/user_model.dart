@@ -1,48 +1,35 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class UserModel {
   final String uid;
   final String email;
   final String username;
   final String firstName;
-  final String? lastName; // Optional - can be null
+  final String? lastName;
   final String bio;
   final String description;
   final String profileImage;
   final int followersCount;
   final int followingCount;
-  final Timestamp? joinedAt;
+  final DateTime? joinedAt;
+  final String role; // 'user', 'creator', 'reviewer', 'admin'
+  final String? creatorStatus; // 'pending', 'approved', 'rejected'
+  final DateTime? creatorVerifiedAt;
 
   UserModel({
     required this.uid,
     required this.email,
     required this.username,
     required this.firstName,
-    this.lastName, // Optional - no longer required
+    this.lastName,
     this.bio = '',
     this.description = '',
     this.profileImage = '',
     this.followersCount = 0,
     this.followingCount = 0,
     this.joinedAt,
+    this.role = 'user',
+    this.creatorStatus,
+    this.creatorVerifiedAt,
   });
-
-  factory UserModel.fromDocument(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return UserModel(
-      uid: doc.id,
-      email: data['email'] ?? '',
-      username: data['username'] ?? '',
-      firstName: data['firstName'] ?? '',
-      lastName: data['lastName'] ?? '',
-      bio: data['bio'] ?? '',
-      description: data['description'] ?? '',
-      profileImage: data['profileImage'] ?? '',
-      followersCount: data['followersCount'] ?? 0,
-      followingCount: data['followingCount'] ?? 0,
-      joinedAt: data['joinedAt'],
-    );
-  }
 
   factory UserModel.fromJson(Map<String, dynamic> data) {
     return UserModel(
@@ -50,13 +37,22 @@ class UserModel {
       email: data['email'] ?? '',
       username: data['username'] ?? '',
       firstName: data['firstName'] ?? '',
-      lastName: data['lastName'] ?? '',
+      lastName: data['lastName'],
       bio: data['bio'] ?? '',
       description: data['description'] ?? '',
       profileImage: data['profileImage'] ?? '',
       followersCount: data['followersCount'] ?? 0,
       followingCount: data['followingCount'] ?? 0,
-      joinedAt: data['joinedAt'],
+      joinedAt: data['joinedAt'] is String
+          ? DateTime.tryParse(data['joinedAt'])
+          : (data['joinedAt'] is DateTime ? data['joinedAt'] : null),
+      role: data['role'] ?? 'user',
+      creatorStatus: data['creator_status'], // DB column name
+      creatorVerifiedAt: data['creator_verified_at'] is String
+          ? DateTime.tryParse(data['creator_verified_at'])
+          : (data['creator_verified_at'] is DateTime
+                ? data['creator_verified_at']
+                : null),
     );
   }
 
@@ -72,7 +68,10 @@ class UserModel {
       'profileImage': profileImage,
       'followersCount': followersCount,
       'followingCount': followingCount,
-      'joinedAt': joinedAt,
+      'joinedAt': joinedAt?.toIso8601String(),
+      'role': role,
+      'creator_status': creatorStatus,
+      'creator_verified_at': creatorVerifiedAt?.toIso8601String(),
     };
   }
 
@@ -87,7 +86,10 @@ class UserModel {
     String? profileImage,
     int? followersCount,
     int? followingCount,
-    Timestamp? joinedAt,
+    DateTime? joinedAt,
+    String? role,
+    String? creatorStatus,
+    DateTime? creatorVerifiedAt,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -101,10 +103,12 @@ class UserModel {
       followersCount: followersCount ?? this.followersCount,
       followingCount: followingCount ?? this.followingCount,
       joinedAt: joinedAt ?? this.joinedAt,
+      role: role ?? this.role,
+      creatorStatus: creatorStatus ?? this.creatorStatus,
+      creatorVerifiedAt: creatorVerifiedAt ?? this.creatorVerifiedAt,
     );
   }
 
-  /// Get display name (firstName + lastName or just firstName)
   String get displayName {
     if (lastName != null && lastName!.trim().isNotEmpty) {
       return '$firstName ${lastName!.trim()}'.trim();
@@ -112,7 +116,6 @@ class UserModel {
     return firstName;
   }
 
-  /// Get initials for avatar fallback
   String get initials {
     if (lastName != null && lastName!.trim().isNotEmpty) {
       return '${firstName[0]}${lastName![0]}'.toUpperCase();

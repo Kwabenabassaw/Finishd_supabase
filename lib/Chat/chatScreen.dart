@@ -13,7 +13,7 @@ import 'package:finishd/services/storage_service.dart';
 import 'package:finishd/MovieDetails/MovieScreen.dart';
 import 'package:finishd/MovieDetails/Tvshowscreen.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:finishd/provider/app_navigation_provider.dart';
 import 'package:finishd/provider/youtube_feed_provider.dart';
 import 'package:provider/provider.dart';
@@ -22,9 +22,9 @@ import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:finishd/Widget/image_preview.dart';
 import 'package:finishd/profile/profileScreen.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:finishd/Widget/gif_picker_sheet.dart';
 import 'package:finishd/models/gif_model.dart';
+import 'package:finishd/Widget/video_player_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   final String chatId;
@@ -39,7 +39,8 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  String get _currentUserId => FirebaseAuth.instance.currentUser?.uid ?? '';
+  String get _currentUserId =>
+      Supabase.instance.client.auth.currentUser?.id ?? '';
   bool _showEmojiPicker = false;
   bool _isUploadingMedia = false;
   final FocusNode _focusNode = FocusNode();
@@ -245,9 +246,9 @@ class _ChatScreenState extends State<ChatScreen> {
       _scrollToBottom();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send GIF: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to send GIF: $e')));
       }
     } finally {
       if (mounted) setState(() => _isUploadingMedia = false);
@@ -397,16 +398,21 @@ class _ChatScreenState extends State<ChatScreen> {
                         child: MessageBubble(
                           text: message.content,
                           isMe: isMe,
-                          timestamp: Timestamp.fromDate(message.createdAt),
+                          timestamp: message.createdAt,
                           isRead: message.isRead,
+                          isPending: message.isPending,
+                          messageStatus: message.status,
                           type: message.type,
                           mediaUrl: message.mediaUrl,
                           videoId: message.videoId,
                           videoTitle: message.videoTitle,
                           videoThumbnail: message.videoThumbnail,
                           videoChannel: message.videoChannel,
+
+                          // ... inside build method
                           onVideoTap: message.isVideoLink
                               ? () {
+                                  // Simplified Youtube logic for brevity
                                   final navProvider = context
                                       .read<AppNavigationProvider>();
                                   final ytProvider = context
@@ -423,6 +429,18 @@ class _ChatScreenState extends State<ChatScreen> {
                                   Navigator.of(
                                     context,
                                   ).popUntil((route) => route.isFirst);
+                                }
+                              : (message.type == 'video' &&
+                                    message.mediaUrl != null)
+                              ? () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => VideoPlayerScreen(
+                                        videoUrl: message.mediaUrl!,
+                                      ),
+                                    ),
+                                  );
                                 }
                               : null,
                           movieId: message.movieId,

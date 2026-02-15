@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import 'package:video_player/video_player.dart'; // NEW
 
 import '../models/feed_item.dart';
 import '../Home/shareSceen.dart';
 import '../services/youtube_video_manager.dart';
+import '../services/api_client.dart'; // NEW
 
 /// Video player for the TMDB-based feed
 /// Handles both TMDB trailers and YouTube BTS/Interview content
@@ -32,8 +34,11 @@ class FeedVideoPlayerV2 extends StatefulWidget {
 
 class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
   YoutubePlayerController? _localController; // Only used if no manager
+  VideoPlayerController? _videoController; // NEW: For Creator Videos (MP4)
   bool _isReady = false;
   bool _isMuted = false;
+  bool _isLiked = false; // Optimistic state
+  int _likeCount = 0;
 
   /// Get the active controller (from manager or local)
   YoutubePlayerController? get _youtubeController {
@@ -46,8 +51,14 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
   @override
   void initState() {
     super.initState();
-    // Only create local controller if no manager provided
-    if (widget.videoManager == null) {
+    _likeCount = widget.item.likeCount ?? 0;
+
+    // 1. Creator Video (MP4)
+    if (widget.item.isCreatorVideo) {
+      _initializeVideoPlayer();
+    }
+    // 2. YouTube Video (TMDB/BTS)
+    else if (widget.videoManager == null) {
       _initializeLocalPlayer();
     }
   }
@@ -61,8 +72,10 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
       if (widget.isActive != oldWidget.isActive) {
         if (widget.isActive) {
           _localController?.play();
+          _videoController?.play();
         } else {
           _localController?.pause();
+          _videoController?.pause();
         }
       }
     }
@@ -73,6 +86,25 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
       if (controller != null && controller.value.isReady && !_isReady) {
         setState(() => _isReady = true);
       }
+    }
+  }
+
+  Future<void> _initializeVideoPlayer() async {
+    if (widget.item.videoUrl == null) return;
+
+    _videoController = VideoPlayerController.networkUrl(
+      Uri.parse(widget.item.videoUrl!),
+    );
+
+    try {
+      await _videoController!.initialize();
+      _videoController!.setLooping(true);
+      if (mounted) {
+        setState(() => _isReady = true);
+        if (widget.isActive) _videoController!.play();
+      }
+    } catch (e) {
+      debugPrint("Error initializing video player: $e");
     }
   }
 
@@ -89,7 +121,6 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
         hideControls: true,
         controlsVisibleAtStart: false,
         enableCaption: false,
-        
       ),
     );
 
@@ -104,6 +135,7 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
   void dispose() {
     // Only dispose local controller; manager handles its own
     _localController?.dispose();
+    _videoController?.dispose();
     super.dispose();
   }
 
@@ -114,27 +146,40 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
       return;
     }
 
-    if (_localController == null) return;
-
     setState(() {
       _isMuted = !_isMuted;
-      if (_isMuted) {
-        _localController!.mute();
-      } else {
-        _localController!.unMute();
+      // 1. YouTube
+      if (_localController != null) {
+        if (_isMuted)
+          _localController!.mute();
+        else
+          _localController!.unMute();
+      }
+      // 2. Creator Video (MP4)
+      if (_videoController != null) {
+        _videoController!.setVolume(_isMuted ? 0 : 1);
       }
     });
   }
 
   void _togglePlayPause() {
-    final controller = _youtubeController;
-    if (controller == null) return;
-
-    if (controller.value.isPlaying) {
-      controller.pause();
-    } else {
-      controller.play();
+    // 1. YouTube
+    final yt = _youtubeController;
+    if (yt != null) {
+      if (yt.value.isPlaying)
+        yt.pause();
+      else
+        yt.play();
     }
+
+    // 2. Creator Video
+    if (_videoController != null && _videoController!.value.isInitialized) {
+      if (_videoController!.value.isPlaying)
+        _videoController!.pause();
+      else
+        _videoController!.play();
+    }
+
     setState(() {});
   }
 
@@ -143,12 +188,24 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
     return VisibilityDetector(
       key: Key('feed-item-${widget.index}'),
       onVisibilityChanged: (info) {
-        if (!mounted || _youtubeController == null) return;
+        if (!mounted) return;
 
-        if (info.visibleFraction > 0.9) {
-          _youtubeController!.play();
-        } else {
-          _youtubeController!.pause();
+        final isVisible = info.visibleFraction > 0.9;
+
+        // 1. YouTube
+        if (_youtubeController != null) {
+          if (isVisible)
+            _youtubeController!.play();
+          else
+            _youtubeController!.pause();
+        }
+        // 2. Creator Video (MP4)
+        else if (_videoController != null &&
+            _videoController!.value.isInitialized) {
+          if (isVisible)
+            _videoController!.play();
+          else
+            _videoController!.pause();
         }
       },
       child: Container(
@@ -157,7 +214,11 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
           fit: StackFit.expand,
           children: [
             // 1. Video Layer
-            if (widget.item.hasYouTubeVideo && _youtubeController != null)
+            if (widget.item.isCreatorVideo &&
+                _videoController != null &&
+                _videoController!.value.isInitialized)
+              _buildCreatorVideoPlayer()
+            else if (widget.item.hasYouTubeVideo && _youtubeController != null)
               _buildVideoPlayer()
             else
               _buildThumbnailOnly(),
@@ -231,26 +292,32 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: widget.item.isBTS || widget.item.isInterview
-                          ? Colors.red.withOpacity(0.8)
-                          : Colors.blue.withOpacity(0.8),
+                      color: widget.item.isCreatorVideo
+                          ? Colors.purple.withOpacity(0.8) // Creator Color
+                          : (widget.item.isBTS || widget.item.isInterview
+                                ? Colors.red.withOpacity(0.8)
+                                : Colors.blue.withOpacity(0.8)),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          widget.item.isBTS || widget.item.isInterview
-                              ? Icons.play_circle_outline
-                              : Icons.movie_outlined,
+                          widget.item.isCreatorVideo
+                              ? Icons.verified
+                              : (widget.item.isBTS || widget.item.isInterview
+                                    ? Icons.play_circle_outline
+                                    : Icons.movie_outlined),
                           color: Colors.white,
                           size: 16,
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          widget.item.isBTS || widget.item.isInterview
-                              ? 'YouTube'
-                              : 'TMDB',
+                          widget.item.isCreatorVideo
+                              ? 'CREATOR'
+                              : (widget.item.isBTS || widget.item.isInterview
+                                    ? 'YouTube'
+                                    : 'TMDB'),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
@@ -265,13 +332,45 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
             ),
 
             // 9. Loading indicator
-            if (!_isReady && widget.item.hasYouTubeVideo)
+            if (!_isReady)
               const Center(
                 child: CircularProgressIndicator(color: Colors.white),
               ),
           ],
         ),
       ),
+    );
+  }
+
+  // Wrapper for MP4 Video Player
+  Widget _buildCreatorVideoPlayer() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            // Blurred poster background
+            ImageFiltered(
+              imageFilter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+              child: CachedNetworkImage(
+                imageUrl: widget.item.thumbnailUrl ?? '',
+                fit: BoxFit.cover,
+                placeholder: (_, __) => Container(color: Colors.black),
+                errorWidget: (_, __, ___) => Container(color: Colors.black),
+              ),
+            ),
+            Container(color: Colors.black.withOpacity(0.5)),
+
+            // Center the video aspect ratio
+            Center(
+              child: AspectRatio(
+                aspectRatio: _videoController!.value.aspectRatio,
+                child: VideoPlayer(_videoController!),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -508,33 +607,79 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
     );
   }
 
+  // --- Actions ---
+
+  Future<void> _handleLike() async {
+    // Optimistic update
+    setState(() {
+      _isLiked = !_isLiked;
+      _likeCount += _isLiked ? 1 : -1;
+    });
+
+    bool success;
+    if (_isLiked) {
+      success = await ApiClient().likeVideo(widget.item.id);
+    } else {
+      success = await ApiClient().unlikeVideo(widget.item.id);
+    }
+
+    if (!success) {
+      // Revert if failed
+      if (mounted) {
+        setState(() {
+          _isLiked = !_isLiked;
+          _likeCount += _isLiked ? 1 : -1;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleShare() async {
+    // Just trigger standard share sheet, but can track intent
+    ApiClient().shareVideo(widget.item.id); // Fire and forget
+    showShareBottomSheet(context);
+  }
+
   Widget _buildActionButtons() {
     return Column(
       children: [
-        _buildActionButton(Icons.favorite_border, "Like", () {}),
+        _buildActionButton(
+          _isLiked ? Icons.favorite : Icons.favorite_border,
+          _likeCount > 0 ? "$_likeCount" : "Like",
+          _handleLike,
+          color: _isLiked ? Colors.red : Colors.white,
+        ),
         const SizedBox(height: 20),
         _buildActionButton(Icons.bookmark_border, "Save", () {}),
         const SizedBox(height: 20),
         GestureDetector(
-          onTap: () => showShareBottomSheet(context),
-          child: _buildActionButton(Icons.share, "Share", null),
+          onTap: _handleShare,
+          child: _buildActionButton(
+            Icons.share,
+            widget.item.shareCount != null
+                ? "${widget.item.shareCount}"
+                : "Share",
+            null,
+          ),
         ),
         const SizedBox(height: 20),
-        // Thumbnail
+        // Thumbnail/Avatar - Display Creator Avatar if available
         ClipRRect(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(24),
           child: CachedNetworkImage(
-            imageUrl: widget.item.fullPosterUrl ?? widget.item.bestThumbnailUrl,
+            imageUrl: widget.item.isCreatorVideo
+                ? (widget.item.creatorAvatar ?? widget.item.bestThumbnailUrl)
+                : (widget.item.fullPosterUrl ?? widget.item.bestThumbnailUrl),
             width: 48,
-            height: 64,
+            height: 48,
             fit: BoxFit.cover,
             placeholder: (_, __) =>
-                Container(width: 48, height: 64, color: Colors.grey[800]),
+                Container(width: 48, height: 48, color: Colors.grey[800]),
             errorWidget: (_, __, ___) => Container(
               width: 48,
-              height: 64,
+              height: 48,
               color: Colors.grey[800],
-              child: const Icon(Icons.movie, color: Colors.white54),
+              child: const Icon(Icons.person, color: Colors.white54),
             ),
           ),
         ),
@@ -542,12 +687,17 @@ class _FeedVideoPlayerV2State extends State<FeedVideoPlayerV2> {
     );
   }
 
-  Widget _buildActionButton(IconData icon, String label, VoidCallback? onTap) {
+  Widget _buildActionButton(
+    IconData icon,
+    String label,
+    VoidCallback? onTap, {
+    Color color = Colors.white,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Column(
         children: [
-          Icon(icon, color: Colors.white, size: 30),
+          Icon(icon, color: color, size: 30),
           const SizedBox(height: 4),
           Text(
             label,

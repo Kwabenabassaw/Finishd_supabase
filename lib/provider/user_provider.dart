@@ -16,20 +16,26 @@ class UserProvider with ChangeNotifier {
   Set<String> _followingIds = {};
   bool _isLoading = false;
   bool _followingLoaded = false;
+  String? _error;
 
   UserModel? get currentUser => _currentUser;
   UserPreferences? get userPreferences => _userPreferences;
   Set<String> get followingIds => _followingIds;
   bool get isLoading => _isLoading;
   bool get followingLoaded => _followingLoaded;
+  String? get error => _error;
 
   // Fetch current user data
   Future<void> fetchCurrentUser(String uid) async {
     _isLoading = true;
+    _error = null; // Reset error
     notifyListeners();
 
     try {
       _currentUser = await _userService.getUser(uid);
+      if (_currentUser == null) {
+        throw Exception('User not found');
+      }
       _userPreferences = await _preferencesService.getUserPreferences(uid);
       // Fetch following IDs with cache (avoid Firestore read on startup)
       final list = await _userService.getFollowingCached(uid);
@@ -37,6 +43,7 @@ class UserProvider with ChangeNotifier {
       _followingLoaded = true;
     } catch (e) {
       print('Error fetching current user: $e');
+      _error = e.toString();
     } finally {
       _isLoading = false;
       notifyListeners();

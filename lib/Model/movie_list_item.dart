@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 /// Model for movies stored in user's lists (watching, watchlist, finished, favorites)
 class MovieListItem {
   final String id;
@@ -9,6 +7,8 @@ class MovieListItem {
   final String genre; // Genre information
   final DateTime addedAt;
   final int? rating; // User rating (1-5)
+  final String? status; // 'watching', 'watchlist', 'finished'
+  final bool isFavorite;
 
   MovieListItem({
     required this.id,
@@ -18,9 +18,11 @@ class MovieListItem {
     this.genre = '',
     required this.addedAt,
     this.rating,
+    this.status,
+    this.isFavorite = false,
   });
 
-  // Convert to JSON for Firestore
+  // Convert to JSON for DB/Storage
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -28,39 +30,50 @@ class MovieListItem {
       'posterPath': posterPath,
       'mediaType': mediaType,
       'genre': genre,
-      'addedAt': Timestamp.fromDate(addedAt),
+      'addedAt': addedAt.toIso8601String(),
       'rating': rating,
+      'status': status,
+      'isFavorite': isFavorite
+          ? 1
+          : 0, // Store as int/bool in local DB if needed
     };
   }
 
-  // Create from Firestore document
-  factory MovieListItem.fromDocument(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  // Create from JSON/Map (Supabase or Local DB)
+  factory MovieListItem.fromJson(Map<String, dynamic> data) {
     return MovieListItem(
-      id: data['id'] as String,
-      title: data['title'] as String,
-      posterPath: data['posterPath'] as String?,
-      mediaType: data['mediaType'] as String,
-      genre: data['genre'] as String? ?? '',
-      addedAt: (data['addedAt'] as Timestamp).toDate(),
-      rating: data['rating'] as int?,
+      id: data['id']?.toString() ?? '',
+      title: data['title'] ?? '',
+      posterPath: data['posterPath'],
+      mediaType: data['mediaType'] ?? 'movie',
+      genre: data['genre'] ?? '',
+      addedAt: data['addedAt'] is String
+          ? DateTime.tryParse(data['addedAt']) ?? DateTime.now()
+          : (data['addedAt'] is int
+                ? DateTime.fromMillisecondsSinceEpoch(data['addedAt'])
+                : DateTime.now()),
+      rating: data['rating'] is int ? data['rating'] : null,
+      status: data['status'],
+      isFavorite: (data['isFavorite'] == 1 || data['isFavorite'] == true),
     );
   }
 
-  // Create from Firestore map (for subcollection queries)
-  factory MovieListItem.fromMap(Map<String, dynamic> data) {
+  // Adapter from Supabase user_titles table row
+  factory MovieListItem.fromSupabase(Map<String, dynamic> data) {
     return MovieListItem(
-      id: data['id'] as String,
-      title: data['title'] as String,
-      posterPath: data['posterPath'] as String?,
-      mediaType: data['mediaType'] as String,
-      genre: data['genre'] as String? ?? '',
-      addedAt: (data['addedAt'] as Timestamp).toDate(),
-      rating: data['rating'] as int?,
+      id: data['title_id'] ?? '',
+      title: data['title'] ?? '',
+      posterPath: data['poster_path'],
+      mediaType: data['media_type'] ?? 'movie',
+      genre: data['genre'] ?? '',
+      addedAt: data['updated_at'] != null
+          ? DateTime.parse(data['updated_at'])
+          : DateTime.now(),
+      rating: data['rating'],
+      status: data['status'],
+      isFavorite: data['is_favorite'] ?? false,
     );
   }
-
-  get addedTime => null;
 
   // Copy with method for updates
   MovieListItem copyWith({
@@ -71,6 +84,8 @@ class MovieListItem {
     String? genre,
     DateTime? addedAt,
     int? rating,
+    String? status,
+    bool? isFavorite,
   }) {
     return MovieListItem(
       id: id ?? this.id,
@@ -80,6 +95,8 @@ class MovieListItem {
       genre: genre ?? this.genre,
       addedAt: addedAt ?? this.addedAt,
       rating: rating ?? this.rating,
+      status: status ?? this.status,
+      isFavorite: isFavorite ?? this.isFavorite,
     );
   }
 }

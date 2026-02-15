@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 /// Type of content being reported
 enum ReportType { communityPost, communityComment, chatMessage }
 
@@ -32,7 +30,7 @@ class ContentSnapshot {
       if (text != null) 'text': text,
       if (mediaUrls != null) 'mediaUrls': mediaUrls,
       if (authorName != null) 'authorName': authorName,
-      if (createdAt != null) 'createdAt': Timestamp.fromDate(createdAt!),
+      if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
     };
   }
 
@@ -44,7 +42,7 @@ class ContentSnapshot {
           : null,
       authorName: json['authorName'],
       createdAt: json['createdAt'] != null
-          ? (json['createdAt'] as Timestamp).toDate()
+          ? DateTime.parse(json['createdAt'])
           : null,
     );
   }
@@ -98,43 +96,57 @@ class Report {
     return {
       'type': type.name,
       'reason': reason.name,
-      'reportedContentId': reportedContentId,
-      'reportedBy': reportedBy,
-      'reportedUserId': reportedUserId,
-      if (communityId != null) 'communityId': communityId,
-      if (chatId != null) 'chatId': chatId,
-      if (additionalInfo != null) 'additionalInfo': additionalInfo,
-      'contentSnapshot': contentSnapshot.toJson(),
-      'reportCount': reportCount,
-      'reportWeight': reportWeight,
+      'reported_content_id': reportedContentId,
+      'reported_by': reportedBy,
+      'reported_user_id': reportedUserId,
+      if (communityId != null) 'community_id': communityId,
+      if (chatId != null) 'chat_id': chatId,
+      if (additionalInfo != null) 'additional_info': additionalInfo,
+      'content_snapshot': contentSnapshot.toJson(),
+      'report_weight': reportWeight,
       'severity': severity,
       'status': status.name,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': Timestamp.fromDate(updatedAt),
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
     };
   }
 
-  factory Report.fromDocument(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory Report.fromJson(Map<String, dynamic> json) {
     return Report(
-      id: doc.id,
-      type: ReportType.values.byName(data['type'] ?? 'communityPost'),
-      reason: ReportReason.values.byName(data['reason'] ?? 'other'),
-      reportedContentId: data['reportedContentId'] ?? '',
-      reportedBy: data['reportedBy'] ?? '',
-      reportedUserId: data['reportedUserId'] ?? '',
-      communityId: data['communityId'],
-      chatId: data['chatId'],
-      additionalInfo: data['additionalInfo'],
+      id: json['id']?.toString() ?? '',
+      type: ReportType.values.byName(json['type'] ?? 'communityPost'),
+      reason: ReportReason.values.byName(json['reason'] ?? 'other'),
+      reportedContentId:
+          json['reported_content_id'] ?? json['reportedContentId'] ?? '',
+      reportedBy: json['reported_by'] ?? json['reportedBy'] ?? '',
+      reportedUserId: json['reported_user_id'] ?? json['reportedUserId'] ?? '',
+      communityId: json['community_id'] ?? json['communityId'],
+      chatId: json['chat_id'] ?? json['chatId'],
+      additionalInfo: json['additional_info'] ?? json['additionalInfo'],
       contentSnapshot: ContentSnapshot.fromJson(
-        data['contentSnapshot'] as Map<String, dynamic>? ?? {},
+        json['content_snapshot'] as Map<String, dynamic>? ??
+            json['contentSnapshot'] as Map<String, dynamic>? ??
+            {},
       ),
-      reportCount: data['reportCount'] ?? 1,
-      reportWeight: (data['reportWeight'] ?? 1.0).toDouble(),
-      severity: data['severity'] ?? 'low',
-      status: ReportStatus.values.byName(data['status'] ?? 'pending'),
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+      reportCount: json['reportCount'] ?? 1,
+      reportWeight: (json['report_weight'] ?? json['reportWeight'] ?? 1.0)
+          .toDouble(),
+      severity: json['severity'] ?? 'low',
+      status: ReportStatus.values.byName(json['status'] ?? 'pending'),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : json['createdAt'] != null
+          ? (json['createdAt'] is String
+                ? DateTime.parse(json['createdAt'])
+                : (json['createdAt'] as dynamic).toDate())
+          : DateTime.now(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : json['updatedAt'] != null
+          ? (json['updatedAt'] is String
+                ? DateTime.parse(json['updatedAt'])
+                : (json['updatedAt'] as dynamic).toDate())
+          : DateTime.now(),
     );
   }
 }

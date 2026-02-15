@@ -1,8 +1,10 @@
 import 'dart:async';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+// import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:finishd/db/objectbox/chat_entities.dart';
 import 'package:finishd/services/chat_sync_service.dart';
+import 'package:finishd/services/chat_service.dart';
 import 'package:finishd/services/user_service.dart';
 import 'package:finishd/Model/user_model.dart';
 
@@ -13,7 +15,8 @@ import 'package:finishd/Model/user_model.dart';
 class ChatProvider with ChangeNotifier {
   final ChatSyncService _syncService = ChatSyncService.instance;
   final UserService _userService = UserService();
-  String get _currentUserId => FirebaseAuth.instance.currentUser?.uid ?? '';
+  String get _currentUserId =>
+      Supabase.instance.client.auth.currentUser?.id ?? '';
 
   // Conversations
   List<LocalConversation> _conversations = [];
@@ -44,14 +47,18 @@ class ChatProvider with ChangeNotifier {
     _subscribeToConversations();
 
     // Listen to user changes to re-sync
-    FirebaseAuth.instance.authStateChanges().listen((user) {
-      if (user != null) {
+    // Listen to user changes to re-sync
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      final AuthChangeEvent event = data.event;
+      final Session? session = data.session;
+
+      if (session?.user != null) {
         print(
-          '👤 [ChatProvider] User signed in: ${user.uid}, syncing chats...',
+          '👤 [ChatProvider] User signed in: ${session!.user.id}, syncing chats...',
         );
         _subscribeToConversations();
         refreshConversations();
-      } else {
+      } else if (event == AuthChangeEvent.signedOut) {
         _conversations = [];
         _messages = [];
         notifyListeners();
@@ -258,16 +265,17 @@ class ChatProvider with ChangeNotifier {
   /// Get pending message count (for retry indicator).
   int get pendingCount => _syncService.pendingMessageCount;
 
-  /// Get chat ID for two users (same logic as ChatService).
-  String getChatId(String userA, String userB) {
-    return userA.compareTo(userB) <= 0 ? '${userA}_$userB' : '${userB}_$userA';
-  }
+  // Legacy ID generation removed. We now use Supabase UUIDs.
+  // String getChatId(String userA, String userB) ...
 
-  /// Create or get a conversation with another user.
+  /// Create or get a conversation with another user (returns UUID)
   Future<String> getOrCreateConversation(String otherUserId) async {
-    final chatId = getChatId(_currentUserId, otherUserId);
+    // We must fetch the real UUID from the server or find it locally if we already synced it.
+    // For now, let's assume we need to ensure it exists on server to get the UUID.
+    final service = ChatService(); // Instantiate local or inject
+    final chatId = await service.createChat(_currentUserId, otherUserId);
 
-    // This will sync or create the conversation
+    // This will sync the conversation metadata and messages
     await _syncService.syncConversation(chatId);
 
     return chatId;

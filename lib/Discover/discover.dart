@@ -13,7 +13,7 @@ import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:finishd/Model/user_preferences.dart';
 import 'package:finishd/services/user_preferences_service.dart';
 import 'package:finishd/services/discover_cache_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:finishd/Discover/provider_content_screen.dart';
 import 'package:finishd/Discover/see_all_screen.dart';
@@ -133,7 +133,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
         () => movieApi.TopRatedTv(),
       );
 
-      final uid = FirebaseAuth.instance.currentUser?.uid;
+      final uid = Supabase.instance.client.auth.currentUser?.id;
       List<int> genresToFetch = [28, 18, 35, 878]; // Default fallbacks
 
       if (uid != null) {
@@ -245,7 +245,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
           ),
         );
         continue;
-            } catch (e) {
+      } catch (e) {
         // Try TV
         try {
           final tv = await movieApi.fetchDetailsTvShow(int.parse(id));

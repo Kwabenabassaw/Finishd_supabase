@@ -16,6 +16,7 @@ import 'package:provider/provider.dart';
 
 import '../provider/youtube_feed_provider.dart';
 import 'youtube_video_item.dart';
+import 'creator_video_item.dart';
 
 class TikTokScrollWrapper extends StatefulWidget {
   const TikTokScrollWrapper({super.key});
@@ -112,7 +113,16 @@ class _TikTokScrollWrapperState extends State<TikTokScrollWrapper> {
           builder: (BuildContext context, int index) {
             // IMPORTANT: Builder is called for ALL visible pages (prev, current, next)
             // Do NOT trigger state changes here - only build the widget
-            // Pass the current page so the item knows if it's active
+            final video = provider.videos[index];
+
+            if (video.isCreator) {
+              return CreatorVideoItem(
+                index: index,
+                video: video,
+                key: ValueKey('creator_${video.videoId}'),
+              );
+            }
+
             return YoutubeVideoItem(
               index: index,
               key: ValueKey('video_$index'),

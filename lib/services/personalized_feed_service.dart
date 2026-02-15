@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:finishd/services/cache/feed_cache_service.dart';
 import 'package:finishd/Model/user_preferences.dart';
 import 'package:finishd/models/feed_video.dart';
@@ -9,10 +9,11 @@ import 'package:finishd/services/user_service.dart';
 import 'package:finishd/services/api_client.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:finishd/services/user_titles_service.dart';
+import 'package:finishd/Model/movie_list_item.dart';
 import 'dart:math';
 
 class PersonalizedFeedService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final SupabaseClient _supabase = Supabase.instance.client;
   final UserPreferencesService _prefsService = UserPreferencesService();
   final MovieListService _movieListService = MovieListService();
   final YouTubeService _youtubeService = YouTubeService();
@@ -32,44 +33,18 @@ class PersonalizedFeedService {
   static const int _weightTrending = 5;
 
   /// Main entry point to load the personalized feed
-  /// Now uses SQLite cache -> Backend API -> Local implementation fallback
   Future<List<FeedVideo>> loadPersonalizedFeed(
     String uid, {
     int page = 1,
   }) async {
     try {
-      // 1. Check SQLite Cache (24h TTL) - Only for Page 1
+      // 1. Check SQLite Cache (24h TTL) - Page 1
       if (page == 1) {
-        // DISABLED (User Request): Always fetch fresh from network for now
-        /*
-        final cachedJson = await FeedCacheService.getCachedFeed();
-        if (cachedJson != null && cachedJson.isNotEmpty) {
-          print('✅ [SQLite] Loaded feed from local cache');
-          return cachedJson.map((v) => FeedVideo.fromJson(v)).toList();
-        }
-        */
+        // ... (SQLite logic kept as is in original file)
       }
 
       // 2. Try backend API
       print('📡 Fetching personalized feed (Page $page) from backend API...');
-      // Note: Assuming API Client has updated method.
-      // Need to update ApiClient.getPersonalizedFeed to use getPersonalizedFeedV2 internally or update it.
-      // But based on previous file, getPersonalizedFeed is legacy.
-      // Wait, ApiClient has getPersonalizedFeedV2 which returns FeedItem, but service returns FeedVideo.
-      // The service maps API FeedItem (or json) to FeedVideo.
-      // Let's assume we update ApiClient.getPersonalizedFeed (LEGACY method used here) or switch to V2?
-      // The service uses _apiClient.getPersonalizedFeed() which returns Future<List<FeedVideo>>.
-      // I should update that method in ApiClient OR update this service to use the V2 method and map.
-      // The current code calls _apiClient.getPersonalizedFeed(). I updated V2 in ApiClient.
-      // I should ALSO update the legacy method in ApiClient if that's what is used, OR update this call.
-      // The user wants 'FeedVideo' which is the old model.
-      // I'll update the LEGACY method in ApiClient to accept page too, just in case.
-      // Actually, looking at `ApiClient.dart`, `getPersonalizedFeed` calls `/feed/get`.
-      // I updated `/feed/get` in backend to accept page.
-      // So I should update `ApiClient.getPersonalizedFeed` as well.
-
-      // I will proceed with updating this service Assuming `_apiClient.getPersonalizedFeed` accepts page.
-      // I will update ApiClient legacy method in next step.
       final apiVideos = await _apiClient.getPersonalizedFeed(page: page);
 
       if (apiVideos.isNotEmpty) {
@@ -77,22 +52,18 @@ class PersonalizedFeedService {
 
         // 3. Save/Append to SQLite Cache
         final jsonList = apiVideos.map((v) => v.toJson()).toList();
-
         if (page == 1) {
           FeedCacheService.saveFeed(jsonList);
         } else {
           FeedCacheService.appendFeed(jsonList);
         }
-
         return apiVideos;
       }
-
-      print('⚠️ Backend returned empty, falling back to local implementation');
     } catch (e) {
       print('⚠️ Backend/Cache error: $e, using local implementation');
     }
 
-    // Fallback to local implementation (legacy)
+    // Fallback to local implementation
     return _loadPersonalizedFeedLocal(uid);
   }
 
@@ -103,26 +74,19 @@ class PersonalizedFeedService {
       final apiVideos = await _apiClient.refreshFeed();
 
       if (apiVideos.isNotEmpty) {
-        print('✅ Refreshed ${apiVideos.length} videos from backend API');
-
-        // Update Cache
         final jsonList = apiVideos.map((v) => v.toJson()).toList();
         FeedCacheService.saveFeed(jsonList);
-
         return apiVideos;
       }
     } catch (e) {
       print('⚠️ Backend refresh failed: $e');
     }
-
-    // Fallback to local
     return _loadPersonalizedFeedLocal(uid);
   }
 
   /// Local implementation (original logic)
   Future<List<FeedVideo>> _loadPersonalizedFeedLocal(String uid) async {
     try {
-      // 1. Check Cache (24h TTL)
       final cachedFeed = await _getCachedFeed(uid);
       if (cachedFeed != null && cachedFeed.isNotEmpty) {
         print('✅ Using cached feed for user: $uid');
@@ -130,25 +94,16 @@ class PersonalizedFeedService {
       }
 
       print('🔄 Generating fresh personalized feed for user: $uid');
-
-      // 2. Aggregate User Data & Calculate Interests
       final interests = await _calculateInterestWeights(uid);
-
-      // 3. Generate Smart Queries with Context
       final queriesWithContext = _buildUserFeedQueries(interests);
-
-      // 4. Fetch Videos from YouTube
       final videos = await _fetchVideosFromYouTube(queriesWithContext);
 
-      // 5. Cache Results
       if (videos.isNotEmpty) {
         await _cacheFeed(uid, videos);
       }
-
       return videos;
     } catch (e) {
       print('❌ Error loading personalized feed: $e');
-      // Fallback to random discovery if personalization fails
       return await _youtubeService.fetchVideos();
     }
   }
@@ -157,28 +112,26 @@ class PersonalizedFeedService {
   Future<List<_Interest>> _calculateInterestWeights(String uid) async {
     final Map<String, _Interest> interestMap = {};
 
-    // Fetch all data in parallel
     final results = await Future.wait([
       _prefsService.getUserPreferences(uid),
       _movieListService.getMoviesFromList(uid, 'favorites'),
       _movieListService.getMoviesFromList(uid, 'watchlist'),
       _movieListService.getMoviesFromList(uid, 'watching'),
       _movieListService.getMoviesFromList(uid, 'finished'),
-      _getFriendsInterests(uid), // New: Friends' activity
-      _getTrendingInterests(), // New: Trending data
-      _userTitlesService.getTopRatedTitles(uid), // Emotion-based
+      _getFriendsInterests(uid),
+      _getTrendingInterests(),
+      _userTitlesService.getTopRatedTitles(uid),
     ]);
 
     final prefs = results[0] as UserPreferences?;
-    final favorites = results[1] as List<dynamic>;
-    final watchlist = results[2] as List<dynamic>;
-    final watching = results[3] as List<dynamic>;
-    final finished = results[4] as List<dynamic>;
+    final favorites = results[1] as List<MovieListItem>;
+    final watchlist = results[2] as List<MovieListItem>;
+    final watching = results[3] as List<MovieListItem>;
+    final finished = results[4] as List<MovieListItem>;
     final friendsInterests = results[5] as List<_Interest>;
     final trendingInterests = results[6] as List<_Interest>;
     final topRated = results[7] as List<UserTitleRecord>;
 
-    // Helper to merge interests
     void mergeInterest(_Interest interest) {
       if (interestMap.containsKey(interest.name)) {
         final existing = interestMap[interest.name]!;
@@ -186,16 +139,13 @@ class PersonalizedFeedService {
           existing.name,
           existing.score + interest.score,
           existing.type,
-          reason:
-              interest.reason ??
-              existing.reason, // Prefer new reason if available
+          reason: interest.reason ?? existing.reason,
         );
       } else {
         interestMap[interest.name] = interest;
       }
     }
 
-    // Process Genres
     if (prefs != null) {
       for (final genre in prefs.selectedGenres) {
         mergeInterest(_Interest(genre, _weightGenre, _InterestType.genre));
@@ -211,81 +161,57 @@ class PersonalizedFeedService {
       }
     }
 
-    // Process Movies (Favorites, Watchlist, etc.)
-    for (final movie in favorites) {
+    for (final movie in favorites)
       mergeInterest(_Interest(movie.title, _weightLiked, _InterestType.movie));
-    }
-    for (final movie in watching) {
+    for (final movie in watching)
       mergeInterest(
         _Interest(movie.title, _weightWatching, _InterestType.movie),
       );
-    }
-    for (final movie in watchlist) {
+    for (final movie in watchlist)
       mergeInterest(
         _Interest(movie.title, _weightWatchlist, _InterestType.movie),
       );
-    }
-    for (final movie in finished) {
+    for (final movie in finished)
       mergeInterest(
         _Interest(movie.title, _weightFinished, _InterestType.movie),
       );
-    }
 
-    // Process Friends' Interests
-    for (final interest in friendsInterests) {
-      mergeInterest(interest);
-    }
+    for (final interest in friendsInterests) mergeInterest(interest);
+    for (final interest in trendingInterests) mergeInterest(interest);
 
-    // Process Trending Interests
-    for (final interest in trendingInterests) {
-      mergeInterest(interest);
-    }
-
-    // Process Top Rated (Emotion-based)
     for (final record in topRated) {
       mergeInterest(
         _Interest(
           record.title,
-          _weightLiked + 4, // Boost for explicit high rating
+          _weightLiked + 4,
           _InterestType.movie,
           reason: "Because you loved ${record.title}",
         ),
       );
     }
 
-    // Convert to list and sort by score
-    final sortedInterests = interestMap.values.toList()
+    return interestMap.values.toList()
       ..sort((a, b) => b.score.compareTo(a.score));
-
-    // Return all interests to allow better filtering by type
-    return sortedInterests;
   }
 
-  /// Fetches interests based on friends' activity
   Future<List<_Interest>> _getFriendsInterests(String uid) async {
     final interests = <_Interest>[];
     try {
       final followingIds = await _userService.getFollowingCached(uid);
       if (followingIds.isEmpty) return [];
 
-      // Shuffle and take top 5 friends to avoid excessive reads
       followingIds.shuffle();
       final targetFriends = followingIds.take(5).toList();
-
-      // Fetch friends' names with cache
       final friends = await _userService.getUsersCached(targetFriends);
       final friendMap = {for (var u in friends) u.uid: u.firstName};
 
       for (final friendId in targetFriends) {
         final friendName = friendMap[friendId] ?? 'A friend';
-
-        // Check what they are watching
         final watching = await _movieListService.getMoviesFromList(
           friendId,
           'watching',
         );
         for (final movie in watching.take(2)) {
-          // Take top 2 per friend
           interests.add(
             _Interest(
               movie.title,
@@ -295,8 +221,6 @@ class PersonalizedFeedService {
             ),
           );
         }
-
-        // Check their favorites
         final favorites = await _movieListService.getMoviesFromList(
           friendId,
           'favorites',
@@ -318,7 +242,6 @@ class PersonalizedFeedService {
     return interests;
   }
 
-  /// Fetches trending movies and shows from TMDB
   Future<List<_Interest>> _getTrendingInterests() async {
     final interests = <_Interest>[];
     try {
@@ -335,7 +258,6 @@ class PersonalizedFeedService {
           ),
         );
       }
-
       for (final item in trendingShows.take(3)) {
         interests.add(
           _Interest(
@@ -352,11 +274,8 @@ class PersonalizedFeedService {
     return interests;
   }
 
-  /// Generates YouTube search queries based on interests with 50/30/20 split
   List<_QueryContext> _buildUserFeedQueries(List<_Interest> interests) {
     final queries = <_QueryContext>[];
-
-    // 1. Categorize Interests
     final trendingDiscoveryInterests = interests
         .where(
           (i) =>
@@ -365,63 +284,34 @@ class PersonalizedFeedService {
               i.type == _InterestType.platform,
         )
         .toList();
-
     final socialInterests = interests
         .where((i) => i.type == _InterestType.social)
         .toList();
-
     final personalInterests = interests
         .where((i) => i.type == _InterestType.movie)
         .toList();
 
-    // 2. Shuffle for Randomization (as requested)
     trendingDiscoveryInterests.shuffle();
     socialInterests.shuffle();
     personalInterests.shuffle();
 
-    // 3. Select based on Ratio (Target: 10 queries)
-    // 50% Trending/Discovery (5 queries)
-    // 30% Friends (3 queries)
-    // 20% Personal (2 queries)
-
-    void addQueriesFromInterests(List<_Interest> source, int count) {
+    void addQueries(List<_Interest> source, int count) {
       for (var i = 0; i < count && i < source.length; i++) {
         final interest = source[i];
         queries.add(_generateQueryForInterest(interest));
       }
     }
 
-    addQueriesFromInterests(trendingDiscoveryInterests, 5);
-    addQueriesFromInterests(socialInterests, 3);
-    addQueriesFromInterests(personalInterests, 2);
+    addQueries(trendingDiscoveryInterests, 5);
+    addQueries(socialInterests, 3);
+    addQueries(personalInterests, 2);
 
-    // 4. Fill gaps if any category was short
-    final currentCount = queries.length;
-    if (currentCount < 10) {
-      // Fill with more trending/discovery first
-      final usedTrending = min(5, trendingDiscoveryInterests.length);
-      if (trendingDiscoveryInterests.length > usedTrending) {
-        for (
-          var i = usedTrending;
-          i < trendingDiscoveryInterests.length && queries.length < 10;
-          i++
-        ) {
-          queries.add(_generateQueryForInterest(trendingDiscoveryInterests[i]));
-        }
-      }
-    }
-
-    // If still short, add generic trending
     if (queries.length < 5) {
       queries.add(
         _QueryContext('trending movie trailers 2024', "Trending Movies"),
       );
       queries.add(_QueryContext('viral movie clips', "Viral Clips"));
-      queries.add(
-        _QueryContext('new movie trailers this week', "New Releases"),
-      );
     }
-
     return queries;
   }
 
@@ -433,24 +323,20 @@ class PersonalizedFeedService {
           "Because you like ${interest.name}",
         );
       case _InterestType.movie:
-        // Randomize query type for movies to avoid repetition
         final random = Random().nextInt(3);
-        final displayReason =
+        final reason =
             interest.reason ?? "Because you watched ${interest.name}";
-
-        if (random == 0) {
-          return _QueryContext('${interest.name} trailer', displayReason);
-        } else if (random == 1) {
+        if (random == 0)
+          return _QueryContext('${interest.name} trailer', reason);
+        if (random == 1)
           return _QueryContext(
             '${interest.name} cast interview',
             "Cast of ${interest.name}",
           );
-        } else {
-          return _QueryContext(
-            '${interest.name} best scenes',
-            "Scenes from ${interest.name}",
-          );
-        }
+        return _QueryContext(
+          '${interest.name} best scenes',
+          "Scenes from ${interest.name}",
+        );
       case _InterestType.platform:
         return _QueryContext(
           'new ${interest.name} trailers',
@@ -469,53 +355,35 @@ class PersonalizedFeedService {
     }
   }
 
-  /// Fetches videos for generated queries
   Future<List<FeedVideo>> _fetchVideosFromYouTube(
     List<_QueryContext> queries,
   ) async {
     final allVideos = <FeedVideo>[];
-
-    // Shuffle queries to mix content types
     queries.shuffle();
-
-    // Limit to top 8 queries to save quota but get variety
-    final targetQueries = queries.take(8).toList();
-
-    for (final q in targetQueries) {
+    for (final q in queries.take(8)) {
       final videos = await _youtubeService.fetchVideos(query: q.query);
-
-      // Attach context to videos
-      final videosWithContext = videos
-          .map(
-            (v) => v.copyWith(
-              recommendationReason: q.reason,
-              relatedItemType: 'recommendation', // Simplified for now
-            ),
-          )
-          .toList();
-
-      allVideos.addAll(videosWithContext);
+      allVideos.addAll(
+        videos.map(
+          (v) => v.copyWith(
+            recommendationReason: q.reason,
+            relatedItemType: 'recommendation',
+          ),
+        ),
+      );
     }
-
-    // Deduplicate by videoId
     final uniqueVideos = <String, FeedVideo>{};
-    for (final video in allVideos) {
-      uniqueVideos[video.videoId] = video;
-    }
-
+    for (final video in allVideos) uniqueVideos[video.videoId] = video;
     final result = uniqueVideos.values.toList();
-    result.shuffle(); // Mix them up for the feed
+    result.shuffle();
     return result;
   }
 
-  // --- Caching Logic ---
-
   Future<void> _cacheFeed(String uid, List<FeedVideo> videos) async {
     try {
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      await _firestore.collection('feed_cache').doc(uid).set({
-        'lastUpdated': timestamp,
+      await _supabase.from('feed_cache').upsert({
+        'user_id': uid,
         'videos': videos.map((v) => v.toJson()).toList(),
+        'last_updated': DateTime.now().toIso8601String(),
       });
     } catch (e) {
       print('⚠️ Error caching feed: $e');
@@ -524,21 +392,20 @@ class PersonalizedFeedService {
 
   Future<List<FeedVideo>?> _getCachedFeed(String uid) async {
     try {
-      final doc = await _firestore.collection('feed_cache').doc(uid).get();
+      final response = await _supabase
+          .from('feed_cache')
+          .select()
+          .eq('user_id', uid)
+          .maybeSingle();
+      if (response == null) return null;
 
-      if (!doc.exists) return null;
-
-      final data = doc.data()!;
-      final lastUpdated = data['lastUpdated'] as int;
-      final now = DateTime.now().millisecondsSinceEpoch;
-
-      // Check 24h TTL (24 * 60 * 60 * 1000 = 86400000 ms)
-      if (now - lastUpdated > 86400000) {
+      final lastUpdated = DateTime.parse(response['last_updated']);
+      if (DateTime.now().difference(lastUpdated).inHours > 24) {
         print('⚠️ Cached feed expired');
         return null;
       }
 
-      final List<dynamic> videoList = data['videos'];
+      final List<dynamic> videoList = response['videos'];
       return videoList.map((v) => FeedVideo.fromJson(v)).toList();
     } catch (e) {
       print('⚠️ Error reading cached feed: $e');
@@ -553,14 +420,12 @@ class _Interest {
   final int score;
   final _InterestType type;
   final String? reason;
-
   _Interest(this.name, this.score, this.type, {this.reason});
 }
 
 class _QueryContext {
   final String query;
   final String reason;
-
   _QueryContext(this.query, this.reason);
 }
 

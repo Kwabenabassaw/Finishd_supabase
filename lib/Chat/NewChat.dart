@@ -3,7 +3,7 @@ import 'package:finishd/Model/user_model.dart';
 import 'package:finishd/provider/chat_provider.dart';
 import 'package:finishd/services/user_service.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 
 class NewChatListScreen extends StatefulWidget {
@@ -15,7 +15,8 @@ class NewChatListScreen extends StatefulWidget {
 
 class _NewChatListScreenState extends State<NewChatListScreen> {
   final UserService _userService = UserService();
-  final String _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+  final String _currentUserId =
+      Supabase.instance.client.auth.currentUser?.id ?? '';
   final TextEditingController _searchController = TextEditingController();
   List<UserModel> _allFriends = [];
   List<UserModel> _filteredFriends = [];

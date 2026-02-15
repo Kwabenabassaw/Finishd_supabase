@@ -1,5 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:finishd/Model/trending.dart';
 import 'package:finishd/Model/user_preferences.dart';
@@ -46,7 +46,7 @@ class _EditFavoriteContentScreenState extends State<EditFavoriteContentScreen> {
 
   Future<void> _loadData() async {
     try {
-      final userId = FirebaseAuth.instance.currentUser?.uid;
+      final userId = Supabase.instance.client.auth.currentUser?.id;
       if (userId == null) {
         setState(() {
           _error = 'Not logged in';
@@ -154,7 +154,7 @@ class _EditFavoriteContentScreenState extends State<EditFavoriteContentScreen> {
   }
 
   Future<void> _saveChanges() async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
+    final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) return;
 
     setState(() => _isSaving = true);

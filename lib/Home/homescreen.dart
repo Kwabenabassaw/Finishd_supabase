@@ -150,35 +150,6 @@ class _HomeScreenState extends State<HomeScreen>
             },
           ),
           ListTile(
-            leading: const Icon(Icons.cloud_sync, color: Colors.orange),
-            title: const Text(
-              "Trigger Backend Cron Job",
-              style: TextStyle(color: Colors.white),
-            ),
-            subtitle: const Text(
-              "Tell server to fetch fresh content from TMDB/YouTube",
-              style: TextStyle(color: Colors.white54),
-            ),
-            onTap: () async {
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Triggering backend job...")),
-              );
-              final success = await provider.triggerBackendRefresh();
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      success
-                          ? "✅ Backend job started!"
-                          : "❌ Failed to start job",
-                    ),
-                  ),
-                );
-              }
-            },
-          ),
-          ListTile(
             leading: const Icon(Icons.delete_sweep, color: Colors.red),
             title: const Text(
               "Clear SQLite Cache & Refresh",

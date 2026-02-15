@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:finishd/Model/user_model.dart';
 import 'package:finishd/services/user_service.dart';
 import 'package:finishd/services/chat_service.dart';
@@ -51,7 +51,8 @@ class ShareToFriendsSheet extends StatefulWidget {
 class _ShareToFriendsSheetState extends State<ShareToFriendsSheet> {
   final UserService _userService = UserService();
   final ChatService _chatService = ChatService();
-  final String _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+  final String _currentUserId =
+      Supabase.instance.client.auth.currentUser?.id ?? '';
   final TextEditingController _searchController = TextEditingController();
 
   List<UserModel> _friends = [];

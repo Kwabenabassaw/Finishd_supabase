@@ -1,6 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:finishd/LoadingWidget/LogoLoading.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:finishd/Model/MovieDetails.dart';
 import 'package:finishd/Model/movie_list_item.dart';
 import 'package:finishd/Model/tvdetail.dart';
@@ -25,7 +25,8 @@ class _WatchlistState extends State<Watchlist>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final MovieListService _movieListService = MovieListService();
-  final String _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+  final String _currentUserId =
+      Supabase.instance.client.auth.currentUser?.id ?? '';
   int _selectedIndex = 0;
 
   @override

@@ -1,6 +1,5 @@
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 
 /// Service to listen for and display moderation notifications.
@@ -11,8 +10,7 @@ class ModerationNotificationHandler {
   static ModerationNotificationHandler get instance => _instance;
   ModerationNotificationHandler._internal();
 
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final SupabaseClient _supabase = Supabase.instance.client;
 
   StreamSubscription? _subscription;
   GlobalKey<NavigatorState>? _navigatorKey;
@@ -25,41 +23,47 @@ class ModerationNotificationHandler {
   /// Start listening for moderation notifications.
   /// Efficient: Only new unread moderation notifications trigger dialogs.
   void startListening() {
-    final user = _auth.currentUser;
+    final user = _supabase.auth.currentUser;
     if (user == null) return;
 
     _subscription?.cancel();
-    _subscription = _db
-        .collection('users')
-        .doc(user.uid)
-        .collection('notifications')
-        .where(
-          'type',
-          whereIn: [
-            'moderation_warning',
-            'account_suspended',
-            'account_banned',
-          ],
-        )
-        .where('isRead', isEqualTo: false)
-        .orderBy('createdAt', descending: true)
+
+    // Listen to INSERTs on the notifications table for this user
+    _subscription = _supabase
+        .from('notifications')
+        .stream(primaryKey: ['id'])
+        .eq('user_id', user.id)
+        .order('created_at', ascending: false)
         .limit(1)
-        .snapshots()
         .listen(
-          _handleNotifications,
+          (List<Map<String, dynamic>> data) {
+            _handleNotifications(data);
+          },
           onError: (e) {
             debugPrint('Moderation notification listener error: $e');
           },
         );
   }
 
-  void _handleNotifications(QuerySnapshot snapshot) {
-    if (snapshot.docs.isEmpty) return;
+  void _handleNotifications(List<Map<String, dynamic>> notifications) {
+    if (notifications.isEmpty) return;
 
-    final doc = snapshot.docs.first;
-    final data = doc.data() as Map<String, dynamic>;
+    final data = notifications.first;
 
-    _showModerationDialog(doc.id, data);
+    // Filter locally for moderation types and unread status
+    // Supabase Stream filters are limited in some SDK versions
+    final type = data['type'] as String?;
+    final isRead = data['is_read'] as bool? ?? false;
+
+    final moderationTypes = [
+      'moderation_warning',
+      'account_suspended',
+      'account_banned',
+    ];
+
+    if (moderationTypes.contains(type) && !isRead) {
+      _showModerationDialog(data['id'], data);
+    }
   }
 
   void _showModerationDialog(String notificationId, Map<String, dynamic> data) {
@@ -135,16 +139,11 @@ class ModerationNotificationHandler {
   }
 
   Future<void> _markNotificationAsRead(String notificationId) async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-
     try {
-      await _db
-          .collection('users')
-          .doc(user.uid)
-          .collection('notifications')
-          .doc(notificationId)
-          .update({'isRead': true});
+      await _supabase
+          .from('notifications')
+          .update({'is_read': true})
+          .eq('id', notificationId);
     } catch (e) {
       debugPrint('Error marking notification as read: $e');
     }

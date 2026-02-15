@@ -1,24 +1,30 @@
+import 'dart:io';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
-import '../models/feed_item.dart';
+import 'package:video_player/video_player.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:finishd/services/video_cache_service.dart';
 import '../models/feed_video.dart';
-import '../services/api_client.dart';
-import '../services/seen_repository.dart';
+import '../models/feed_type.dart';
 
-/// YouTube Feed Provider (TikTok-style with Three Tabs)
+/// YouTube Feed Provider (Now supports Creator Uploads via Supabase)
 ///
 /// Production-ready controller management for vertical video feed.
+/// Handles both YouTube videos and Supabase Storage MP4s.
 ///
 /// Key Features:
 /// - 3-Controller Window Strategy (prev, current, next)
 /// - Three-tab support (Trending, Following, For You)
 /// - Muted autoplay for browser/OS policy compliance
-/// - Error recovery for restricted videos (100, 101, 105, 150)
 /// - Memory-efficient disposal of out-of-window controllers
 class YoutubeFeedProvider extends ChangeNotifier {
   // --- State ---
   final Map<int, YoutubePlayerController> _controllers = {};
+  final Map<int, VideoPlayerController> _mp4Controllers = {}; // NEW: For MP4s
+  final Map<int, bool> _mp4Initialized =
+      {}; // Track initialization state used for UI
+
   final Map<int, String> _controllerVideoIds =
       {}; // Track which video ID is in which controller
   final Set<int> _initializing = {};
@@ -51,34 +57,13 @@ class YoutubeFeedProvider extends ChangeNotifier {
   };
 
   // Preload window configuration
-  static const int _preloadNextCount = 3;
+  static const int _preloadNextCount = 2; // Reduced for memory safety with MP4s
   static const int _preloadPrevCount = 1;
-
-  // Restricted error codes that should trigger video removal
-  static const _restrictedErrorCodes = {2, 100, 101, 105, 150};
-
-  // API Client
-  final ApiClient _apiClient = ApiClient();
 
   // ============================================================================
   // FEED BACKEND
   // ============================================================================
-  // The app now uses the Generator & Hydrator backend exclusively.
-  // Legacy ObjectBox synchronization for feed videos has been removed.
-
-  /// Tab-specific cursors for pagination with new feed backend
-  final Map<FeedType, String?> _cursorsByType = {
-    FeedType.trending: null,
-    FeedType.following: null,
-    FeedType.forYou: null,
-  };
-
-  /// Track if we have more items to load per tab
-  final Map<FeedType, bool> _hasMoreByType = {
-    FeedType.trending: true,
-    FeedType.following: true,
-    FeedType.forYou: true,
-  };
+  // Direct Supabase integration. No external API client.
 
   /// Track page counts for UI display (debug menu)
   final Map<FeedType, int> _pageCountsByType = {
@@ -86,10 +71,6 @@ class YoutubeFeedProvider extends ChangeNotifier {
     FeedType.following: 1,
     FeedType.forYou: 1,
   };
-
-  /// Analytics event queue for batched sending
-  final List<Map<String, dynamic>> _pendingAnalyticsEvents = [];
-  Timer? _analyticsFlushTimer;
 
   // --- Getters ---
   List<FeedVideo> get videos => _feedsByType[_activeFeedType] ?? [];
@@ -101,19 +82,22 @@ class YoutubeFeedProvider extends ChangeNotifier {
   bool get hasError => _hasError;
   String? get errorMessage => _errorMessage;
   FeedType get activeFeedType => _activeFeedType;
-  int get currentPage => _pageCountsByType[_activeFeedType] ?? 1; // NEW
+  int get currentPage => _pageCountsByType[_activeFeedType] ?? 1;
 
   /// Get controller for specific index (null if not in window)
   YoutubePlayerController? getController(int index) => _controllers[index];
+  VideoPlayerController? getMp4Controller(int index) => _mp4Controllers[index];
+  bool isMp4Initialized(int index) => _mp4Initialized[index] ?? false;
 
-  /// Check if controller exists for index
-  bool hasController(int index) => _controllers.containsKey(index);
+  /// Check if ANY controller exists for index
+  bool hasController(int index) =>
+      _controllers.containsKey(index) || _mp4Controllers.containsKey(index);
 
   // ==========================================================================
   // INITIALIZATION
   // ==========================================================================
 
-  /// Initialize provider - uses the new Generator & Hydrator backend
+  /// Initialize provider - fetch feed from Supabase
   Future<void> initialize() async {
     if (_isLoading) return;
 
@@ -122,11 +106,8 @@ class YoutubeFeedProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      debugPrint('[YTFeed] 🚀 Initializing with NEW feed backend');
+      debugPrint('[YTFeed] 🚀 Initializing with Supabase backend');
       await _fetchTabFeed(_activeFeedType, limit: 100);
-
-      // Start analytics flush timer
-      _startAnalyticsFlushTimer();
     } catch (e) {
       debugPrint('[YTFeed] ❌ Error initializing: $e');
       _hasError = true;
@@ -137,84 +118,51 @@ class YoutubeFeedProvider extends ChangeNotifier {
     }
   }
 
-  /// Internal: Fetch feed for a specific tab from backend
-  Future<void> _fetchTabFeed(FeedType type, {int limit = 40}) async {
+  /// Internal: Fetch feed for a specific tab from Supabase
+  Future<void> _fetchTabFeed(FeedType type, {int limit = 20}) async {
     try {
-      debugPrint('[YTFeed] 📥 Fetching $type feed...');
+      debugPrint('[YTFeed] 📥 Fetching $type feed from Supabase...');
 
-      final response = await _apiClient.getFeedV3(
-        feedType: type,
-        limit: limit,
-        cursor: _cursorsByType[type],
-      );
-
-      // Store cursor for next pagination call
-      if (response.nextCursor != null) {
-        _pageCountsByType[type] = (_pageCountsByType[type] ?? 1) + 1;
-      }
-      _cursorsByType[type] = response.nextCursor;
-      _hasMoreByType[type] = response.hasMore;
-
-      // Get seen IDs for local filtering (only used for For You)
-      final seenIds = SeenRepository.instance.getSeenIds();
-
-      // DEBUG: Log raw feed count
-      debugPrint(
-        '[YTFeed] 📦 Raw feed items from backend: ${response.feed.length}',
-      );
-
-      // Filter: Keep items with valid content (video OR image)
-      final validItems = response.feed
-          .where(
-            (item) =>
-                (item.youtubeKey != null && item.youtubeKey!.isNotEmpty) ||
-                (item.isImage &&
-                    item.imageUrl != null &&
-                    item.imageUrl!.isNotEmpty),
+      // Build Query
+      dynamic query = Supabase.instance.client
+          .from('creator_videos')
+          .select(
+            '*, profiles!creator_videos_creator_id_fkey(username, avatar_url)',
           )
-          .toList();
-      debugPrint(
-        '[YTFeed] 🎬 Valid items (videos: ${validItems.where((i) => !i.isImage).length}, images: ${validItems.where((i) => i.isImage).length})',
-      );
+          .eq('status', 'approved')
+          .filter('deleted_at', 'is', null);
 
-      // Apply seen filter ONLY for "For You" feed, not for Trending
-      List<FeedItem> filteredItems;
-      if (type == FeedType.forYou) {
-        filteredItems = validItems
-            .where((item) => item.isImage || !seenIds.contains(item.youtubeKey))
-            .toList();
-        debugPrint(
-          '[YTFeed] 👁️ For You after seen filter: ${filteredItems.length} (seen: ${seenIds.length})',
-        );
-      } else {
-        // Trending and Following: no seen filter
-        filteredItems = validItems;
-      }
-
-      // Convert to FeedVideo
-      final feedVideos = filteredItems
-          .map((item) => FeedVideo.fromFeedItem(item))
-          .toList();
-
-      // Shuffle trending feed for variety on each load
+      // Filtering/Ordering based on feed type
       if (type == FeedType.trending) {
-        feedVideos.shuffle();
+        query = query.order('engagement_score', ascending: false);
+      } else if (type == FeedType.following) {
+        // Ideally filter by following, but for now just show all (or implement following logic)
+        // Since 'following' logic requires joins, we might just show latest for now
+        query = query.order('created_at', ascending: false);
+      } else {
+        // For You (default)
+        // Using created_at for now, maybe random or Algo later
+        query = query.order('created_at', ascending: false);
       }
 
-      debugPrint('[YTFeed] ✅ Got ${feedVideos.length} videos for $type');
+      final response = await query.limit(limit);
 
-      // Update the feed list
-      if (_cursorsByType[type] == null || _feedsByType[type]!.isEmpty) {
-        // Initial fetch or fresh start
-        _feedsByType[type] = feedVideos;
+      List<FeedVideo> newVideos = (response as List)
+          .map((json) => FeedVideo.fromCreatorJson(json))
+          .toList();
+
+      debugPrint('[YTFeed] 📸 Got ${newVideos.length} videos from Supabase');
+
+      // Update state
+      if (_feedsByType[type]!.isEmpty) {
+        _feedsByType[type] = newVideos;
       } else {
-        // Append
-        _feedsByType[type]!.addAll(feedVideos);
+        _feedsByType[type]!.addAll(newVideos);
       }
 
       // If active tab and we have content, ensure playback
       if (type == _activeFeedType && _feedsByType[type]!.isNotEmpty) {
-        if (!_controllers.containsKey(_currentIndex)) {
+        if (!hasController(_currentIndex)) {
           _updateControllerWindow(_currentIndex);
           _waitForControllerAndPlay(_currentIndex);
         }
@@ -224,52 +172,6 @@ class YoutubeFeedProvider extends ChangeNotifier {
       if (_feedsByType[type]!.isEmpty) {
         rethrow;
       }
-    }
-  }
-
-  // ==========================================================================
-  // ANALYTICS TRACKING (New Backend)
-  // ==========================================================================
-
-  void _startAnalyticsFlushTimer() {
-    _analyticsFlushTimer?.cancel();
-    _analyticsFlushTimer = Timer.periodic(
-      const Duration(seconds: 30),
-      (_) => _flushAnalyticsEvents(),
-    );
-  }
-
-  /// Track a view event for analytics and mark as seen
-  void trackViewEvent(String itemId, {int? durationMs}) {
-    // Mark as seen in local ObjectBox (for deduplication)
-    SeenRepository.instance.markSeen(itemId, viewDurationMs: durationMs ?? 0);
-
-    if (_pendingAnalyticsEvents.length > 50) return; // Prevent memory bloat
-
-    _pendingAnalyticsEvents.add({
-      'eventType': 'view',
-      'itemId': itemId,
-      'timestamp': DateTime.now().toIso8601String(),
-      if (durationMs != null) 'durationWatched': durationMs,
-    });
-
-    debugPrint('[YTFeed] 📊 Queued view event for $itemId (marked seen)');
-  }
-
-  /// Flush pending analytics events to backend
-  Future<void> _flushAnalyticsEvents() async {
-    if (_pendingAnalyticsEvents.isEmpty) return;
-
-    final events = List<Map<String, dynamic>>.from(_pendingAnalyticsEvents);
-    _pendingAnalyticsEvents.clear();
-
-    try {
-      await _apiClient.trackAnalyticsEvents(events: events);
-      debugPrint('[YTFeed] ✅ Flushed ${events.length} analytics events');
-    } catch (e) {
-      debugPrint('[YTFeed] ❌ Analytics flush failed: $e');
-      // Re-queue events on failure
-      _pendingAnalyticsEvents.addAll(events);
     }
   }
 
@@ -313,7 +215,85 @@ class YoutubeFeedProvider extends ChangeNotifier {
     }
   }
 
-  // REMOVED _loadFromNetwork - logic is now in FeedSyncService
+  // ==========================================================================
+  // PUBLIC METHODS (UI Helpers)
+  // ==========================================================================
+
+  /// Refresh the current feed (re-fetch from start)
+  Future<void> refresh() async {
+    debugPrint('[YTFeed] 🔄 Refreshing current feed: ${_activeFeedType.value}');
+
+    // 1. Pause & dispose everything
+    _pauseController(_currentIndex);
+    _disposeAllControllers();
+
+    // 2. Clear current feed data
+    _feedsByType[_activeFeedType] = [];
+    _currentIndex = 0;
+    _isLoading = true;
+    _hasError = false;
+    _errorMessage = null;
+    notifyListeners();
+
+    // 3. Re-fetch
+    try {
+      await _fetchTabFeed(_activeFeedType, limit: 100);
+    } catch (e) {
+      _hasError = true;
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Inject a video from Chat/Link and play it immediately
+  void injectAndPlayVideo({
+    required String videoId,
+    String? title,
+    String? thumbnail,
+    String? channel,
+  }) {
+    final video = FeedVideo(
+      videoId: videoId,
+      videoUrl: 'https://www.youtube.com/watch?v=$videoId',
+      title: title ?? 'Shared Video',
+      description: '',
+      thumbnailUrl: thumbnail ?? '',
+      channelName: channel ?? 'Unknown',
+      isCreator: false,
+    );
+
+    // Insert at top of current feed
+    List<FeedVideo>? currentList = _feedsByType[_activeFeedType];
+    if (currentList == null) {
+      currentList = [];
+      _feedsByType[_activeFeedType] = currentList;
+    }
+
+    currentList.insert(0, video);
+
+    // Reset to top and play
+    _currentIndex = 0;
+    _disposeAllControllers(); // Reset state
+    _updateControllerWindow(0);
+    _waitForControllerAndPlay(0);
+
+    notifyListeners();
+  }
+
+  // Public load more method
+  Future<void> loadMore() async {
+    if (_isLoadingMore) return;
+    _isLoadingMore = true;
+    notifyListeners();
+
+    // TODO: Implement proper pagination
+    // For now we just wait to simulate
+    await Future.delayed(const Duration(milliseconds: 500));
+    _isLoadingMore = false;
+    notifyListeners();
+  }
 
   // ==========================================================================
   // PAGE CHANGE HANDLER (Core Logic)
@@ -350,8 +330,6 @@ class YoutubeFeedProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Robustly waits for a controller to be created AND READY, then plays it.
-  /// Checks every 100ms up to 15 times (1.5 seconds total).
   void _waitForControllerAndPlay(int index) {
     if (_isDisposed || _isLifecyclePaused) return;
 
@@ -364,9 +342,21 @@ class YoutubeFeedProvider extends ChangeNotifier {
         return;
       }
 
-      final controller = _controllers[index];
-      // CRITICAL: Check both existence AND readiness
-      if (controller != null && controller.value.isReady) {
+      bool ready = false;
+
+      // Check MP4
+      final mp4Ctrl = _mp4Controllers[index];
+      if (mp4Ctrl != null && mp4Ctrl.value.isInitialized) {
+        ready = true;
+      }
+
+      // Check YouTube
+      final ytCtrl = _controllers[index];
+      if (ytCtrl != null && ytCtrl.value.isReady) {
+        ready = true;
+      }
+
+      if (ready) {
         timer.cancel();
         _pendingTimers.remove(timer);
         debugPrint(
@@ -375,23 +365,15 @@ class YoutubeFeedProvider extends ChangeNotifier {
         _playWithRetry(index);
       } else {
         checks++;
-        // Use a shorter timeout (1.5s) to avoid leaving user hanging
-        // If it's not ready by then, we force play and hope queueing works.
-        if (checks >= 15) {
+        if (checks >= 30) {
+          // 3 seconds timeout for MP4/Network
           timer.cancel();
-          _pendingTimers.remove(timer); // FIX Bug #1: Prevent memory leak
+          _pendingTimers.remove(timer);
           debugPrint(
-            '[YTFeed] ❌ Timed out waiting for controller READY at index $index',
+            '[YTFeed] ❌ Timed out waiting for controller at index $index',
           );
-
-          // Fallback: Try playing anyway if controller exists, sometimes isReady is flaky?
-          if (controller != null) {
-            debugPrint(
-              '[YTFeed] ⚠️ Force playing non-ready controller at index $index',
-            );
-            // Pass attempt=1 to bypass the "wait for ready" check in _playWithRetry
-            _playWithRetry(index, 1);
-          }
+          // Try playing anyway
+          _playWithRetry(index, 1);
         }
       }
     });
@@ -401,22 +383,32 @@ class YoutubeFeedProvider extends ChangeNotifier {
   /// Plays the video at index with retry mechanism
   void _playWithRetry(int index, [int attempt = 0]) {
     if (_isDisposed || _currentIndex != index || _isLifecyclePaused) {
-      debugPrint(
-        '[YTFeed] 🛑 Play blocked: Disposed=$_isDisposed, IndexMatch=${_currentIndex == index}, LifecyclePaused=$_isLifecyclePaused',
-      );
       return;
     }
-    if (attempt >= 10) {
-      debugPrint('[YTFeed] ⚠️ Failed to play index $index after 10 attempts');
+    if (attempt >= 5) return;
+
+    // Try MP4 first
+    final mp4Ctrl = _mp4Controllers[index];
+    if (mp4Ctrl != null) {
+      if (!mp4Ctrl.value.isInitialized) {
+        Future.delayed(
+          const Duration(milliseconds: 200),
+          () => _playWithRetry(index, attempt + 1),
+        );
+        return;
+      }
+
+      _silenceOthers(index);
+      mp4Ctrl.setVolume(_isMuted ? 0 : 1);
+      mp4Ctrl.play();
+      mp4Ctrl.setLooping(true);
       return;
     }
 
+    // Try YouTube
     final controller = _controllers[index];
-
     if (controller != null) {
-      // If not ready yet, wait and retry
       if (!controller.value.isReady && attempt == 0) {
-        // FIX Bug #5: Add exponential backoff
         Future.delayed(
           Duration(milliseconds: 200 + (attempt * 100)),
           () => _playWithRetry(index, attempt + 1),
@@ -424,65 +416,29 @@ class YoutubeFeedProvider extends ChangeNotifier {
         return;
       }
 
-      debugPrint('[YTFeed] ▶️ Playing index $index (attempt $attempt)');
-
-      // Safety: Pause any other controllers
-      for (var entry in _controllers.entries) {
-        if (entry.key != index) {
-          entry.value.pause();
-        }
-      }
-
-      // Mute/Unmute
-      if (_isMuted) {
+      _silenceOthers(index);
+      if (_isMuted)
         controller.mute();
-      } else {
+      else
         controller.unMute();
-      }
-
       controller.play();
+      return;
+    }
 
-      // Verify success after a small delay to allow engine to react
-      Future.delayed(Duration(milliseconds: 400 + (attempt * 100)), () {
-        if (_isDisposed || _currentIndex != index) return;
+    // No controller found yet
+    debugPrint('[YTFeed] ⏳ Controller missing for $index, retrying...');
+    Future.delayed(
+      const Duration(milliseconds: 200),
+      () => _playWithRetry(index, attempt + 1),
+    );
+  }
 
-        final currentController = _controllers[index];
-        if (currentController != null) {
-          final state = currentController.value.playerState;
-
-          // Successful states
-          final isWorking =
-              state == PlayerState.playing || state == PlayerState.buffering;
-
-          if (!isWorking) {
-            // If it's still cued or unknown, it hasn't actually started yet.
-            // We should retry playing.
-            debugPrint(
-              '[YTFeed] ⚠️ Video at $index state: $state (not playing yet), retrying... (attempt $attempt)',
-            );
-            // Re-call play just in case the first one was ignored
-            currentController.play();
-            _playWithRetry(index, attempt + 1);
-          } else {
-            debugPrint('[YTFeed] 🚀 Success: Video at $index is $state');
-
-            // NEW: Auto-unmute when it starts playing
-            if (_isMuted && !_isLifecyclePaused) {
-              debugPrint('[YTFeed] 🔊 Auto-unmuting since playback started');
-              _isMuted = false;
-              currentController.unMute();
-              notifyListeners();
-            }
-          }
-        }
-      });
-    } else {
-      // FIX Bug #5: Add exponential backoff for missing controller
-      final delay = Duration(milliseconds: 200 + (attempt * 150));
-      debugPrint(
-        '[YTFeed] ⏳ Controller missing for $index, retrying in ${delay.inMilliseconds}ms...',
-      );
-      Future.delayed(delay, () => _playWithRetry(index, attempt + 1));
+  void _silenceOthers(int activeIndex) {
+    for (var entry in _controllers.entries) {
+      if (entry.key != activeIndex) entry.value.pause();
+    }
+    for (var entry in _mp4Controllers.entries) {
+      if (entry.key != activeIndex) entry.value.pause();
     }
   }
 
@@ -490,135 +446,178 @@ class YoutubeFeedProvider extends ChangeNotifier {
   // 3-CONTROLLER WINDOW STRATEGY (Memory Management)
   // ==========================================================================
 
-  /// Maintains only 3 controllers: [current-1, current, current+1]
-  /// Disposes any controller outside this window immediately.
   void _updateControllerWindow(int centerIndex) {
     if (_isDisposed || videos.isEmpty) return;
 
-    // Define the preload window
-    // We keep prev, current, and multiple nexts to ensure smooth scroll transitions
-    // while strictly controlling which one plays audio.
     final windowIndices = <int>{};
-
-    // Always include current
     windowIndices.add(centerIndex);
-
-    // Preload next videos
-    for (int i = 1; i <= _preloadNextCount; i++) {
+    for (int i = 1; i <= _preloadNextCount; i++)
       windowIndices.add(centerIndex + i);
-    }
-
-    // Preload previous videos
-    for (int i = 1; i <= _preloadPrevCount; i++) {
+    for (int i = 1; i <= _preloadPrevCount; i++)
       windowIndices.add(centerIndex - i);
-    }
 
-    // Filter valid indices
     final validWindow = windowIndices
         .where((i) => i >= 0 && i < videos.length)
         .toSet();
 
-    // 1. DISPOSE controllers outside the window
-    final toDispose = _controllers.keys
+    // 1. DISPOSE
+    final toDisposeYt = _controllers.keys
         .where((key) => !validWindow.contains(key))
         .toList();
+    for (final index in toDisposeYt) _disposeController(index);
 
-    for (final index in toDispose) {
-      debugPrint('[YTFeed] 🗑️ Disposing controller at index $index');
-      _disposeController(index);
-    }
+    final toDisposeMp4 = _mp4Controllers.keys
+        .where((key) => !validWindow.contains(key))
+        .toList();
+    for (final index in toDisposeMp4) _disposeController(index);
 
-    // 2. CREATE missing controllers in window
+    // 2. CREATE
     for (final index in validWindow) {
-      if (!_controllers.containsKey(index) && !_initializing.contains(index)) {
+      if (!hasController(index) && !_initializing.contains(index)) {
         _createController(index);
       }
     }
 
-    debugPrint('[YTFeed] 🎮 Active controllers: ${_controllers.keys.toList()}');
+    // 3. PRELOAD NEXT
+    _preloadNextVideos(centerIndex);
+  }
+
+  void _preloadNextVideos(int currentIndex) {
+    // Start AFTER the controller window to avoid redundant work.
+    // Window covers [current - _preloadPrevCount, current + _preloadNextCount].
+    final start = currentIndex + _preloadNextCount + 1;
+    final end = start + 2; // Preload 2 videos beyond the window
+
+    for (int i = start; i < end && i < videos.length; i++) {
+      final video = videos[i];
+      if (video.videoUrl != null && !video.videoUrl!.contains('youtube.com')) {
+        String url = video.videoUrl!;
+        if (url.isNotEmpty && !url.startsWith('http')) {
+          // Must resolve signed URL first — fire-and-forget
+          Supabase.instance.client.storage
+              .from('creator-videos')
+              .createSignedUrl(url, 60 * 60)
+              .then((signedUrl) {
+                VideoCacheService().preload(signedUrl);
+              })
+              .catchError((e) {
+                debugPrint('[YTFeed] ❌ Preload sign failed for index $i: $e');
+              });
+        } else if (url.startsWith('http')) {
+          VideoCacheService().preload(url);
+        }
+      }
+    }
   }
 
   // ==========================================================================
   // CONTROLLER LIFECYCLE
   // ==========================================================================
 
-  /// Creates a YoutubePlayerController with MUTED AUTOPLAY
-  void _createController(int index) {
+  void _createController(int index) async {
     if (index < 0 || index >= videos.length) return;
-    if (_controllers.containsKey(index)) return;
+    if (hasController(index)) return;
     if (_isDisposed) return;
 
+    // Use a lock to prevent duplicate creations for same index
+    if (_initializing.contains(index)) return;
     _initializing.add(index);
 
     final video = videos[index];
-    final videoId = video.videoId;
-
-    if (videoId.isEmpty) {
-      debugPrint('[YTFeed] ⚠️ Empty videoId at index $index');
-
-      _initializing.remove(index);
-      return;
-    }
-
-    debugPrint(
-      '[YTFeed] 🎬 Creating controller for index $index: ${video.title}',
-    );
 
     try {
-      final controller = YoutubePlayerController(
-        initialVideoId: videoId,
-        flags: const YoutubePlayerFlags(
-          autoPlay: false,
-          mute: true, // Start muted for pre-loading smoothness
-          loop: true,
-          disableDragSeek: true,
-          enableCaption: false,
-          hideControls: true,
-          hideThumbnail: true,
-          forceHD: false,
-          useHybridComposition: false,
-          controlsVisibleAtStart: false,
-        ),
-      );
+      // 1. MP4 / Creator Video / Supabase Storage
+      if (video.isCreator ||
+          (video.videoUrl != null &&
+              !video.videoUrl!.contains('youtube.com'))) {
+        String url = video.videoUrl ?? '';
 
-      // Add listener for error detection
-      controller.addListener(() {
-        if (_isDisposed) return;
-        _handleControllerUpdate(index, controller);
-      });
+        // Resolve Signed URL if needed
+        if (url.isNotEmpty && !url.startsWith('http')) {
+          try {
+            url = await Supabase.instance.client.storage
+                .from('creator-videos')
+                .createSignedUrl(url, 60 * 60);
+          } catch (e) {
+            debugPrint('[YTFeed] Failed to sign URL: $e');
+          }
+        }
 
-      _controllers[index] = controller;
-      _controllerVideoIds[index] = videoId;
-      _initializing.remove(index);
+        if (url.isEmpty) throw Exception("Empty Video URL");
 
-      // Apply current mute state immediately to new controller
-      if (!_isMuted) {
-        controller.unMute();
+        // ---------------------------------------------------------------------
+        // CACHING LOGIC — Non-blocking
+        // Check cache instantly. If hit → play from file (fast).
+        // If miss → stream from network NOW, cache in background.
+        // ---------------------------------------------------------------------
+        VideoPlayerController? controller;
+        final cachedFile = await VideoCacheService().getCachedFileOnly(url);
+
+        if (cachedFile != null) {
+          debugPrint('[YTFeed] ⚡️ Playing from CACHE: $index');
+          controller = VideoPlayerController.file(cachedFile);
+        } else {
+          debugPrint('[YTFeed] 📡 Streaming NETWORK: $index');
+          controller = VideoPlayerController.networkUrl(Uri.parse(url));
+          // Cache in background (fire-and-forget)
+          VideoCacheService().preload(url);
+        }
+
+        await controller.initialize();
+
+        if (_isDisposed) {
+          controller.dispose();
+          return;
+        }
+
+        _mp4Controllers[index] = controller;
+        _mp4Initialized[index] = true;
+
+        // Start muted
+        controller.setVolume(0);
+        controller.setLooping(true);
+      } else {
+        // 2. YouTube Video
+        if (video.videoId.isEmpty) throw Exception("Empty YouTube ID");
+
+        final controller = YoutubePlayerController(
+          initialVideoId: video.videoId,
+          flags: const YoutubePlayerFlags(
+            autoPlay: false,
+            mute: true,
+            loop: true,
+            disableDragSeek: true,
+            enableCaption: false,
+            hideControls: true,
+            hideThumbnail: true,
+          ),
+        );
+
+        controller.addListener(() {
+          if (_isDisposed) return;
+          _handleControllerUpdate(index, controller);
+        });
+
+        _controllers[index] = controller;
+        _controllerVideoIds[index] = video.videoId;
+
+        if (!_isMuted) controller.unMute();
       }
 
-      debugPrint('[YTFeed] ✅ Controller ready for index $index');
       notifyListeners();
     } catch (e) {
       debugPrint('[YTFeed] ❌ Error creating controller for index $index: $e');
+    } finally {
       _initializing.remove(index);
     }
   }
 
-  /// Handle controller state changes (including errors)
-  /// CRITICAL: Only notify on actual errors, not every frame update!
   void _handleControllerUpdate(int index, YoutubePlayerController controller) {
-    // Only check for YouTube player errors - don't notify on every update!
-    final errorCode = controller.value.errorCode;
-    if (errorCode != 0) {
-      debugPrint('[YTFeed] ❌ Player error at index $index: code $errorCode');
-
-      // If it's a permanent restriction error, remove the video
-      if (_restrictedErrorCodes.contains(errorCode)) {
-        removeRestrictedVideo(index);
-      }
+    if (controller.value.errorCode != 0) {
+      debugPrint(
+        '[YTFeed] ❌ Player error at index $index: ${controller.value.errorCode}',
+      );
     }
-    // NOTE: Do NOT call notifyListeners() here!
-    // It was causing infinite rebuilds and the self-scrolling bug
   }
 
   // ==========================================================================
@@ -631,82 +630,39 @@ class YoutubeFeedProvider extends ChangeNotifier {
 
     final video = videos[index];
     final duration = DateTime.now().difference(_videoStartTime!).inMilliseconds;
-
     debugPrint('[YTFeed] 📊 Engagement for ${video.videoId}: ${duration}ms');
 
-    // 1. Mark as SEEN for deduplication (critical for not showing again)
-    SeenRepository.instance.markSeen(video.videoId, viewDurationMs: duration);
-    debugPrint('[YTFeed] ✅ Marked as seen: ${video.videoId}');
-
-    // 3. Update Session Bias
-    if (video.relatedItemId != null) {
-      // In a real app, we'd look up the genre of the item.
-      // For now, we'll just log it.
-      debugPrint('[YTFeed] 🧠 User watched genre signal from ${video.title}');
-    }
-
-    _videoStartTime = null;
+    // We can insert into `video_engagement_events` here using Supabase if we want
+    // But for now just print logs as per "remove external API"
   }
 
   /// Dispose a single controller
   void _disposeController(int index) {
-    final controller = _controllers.remove(index);
+    // Dispose YouTube
+    final ytController = _controllers.remove(index);
     _controllerVideoIds.remove(index);
-    if (controller != null) {
-      controller.pause();
-      controller.dispose();
+    if (ytController != null) {
+      ytController.pause();
+      ytController.dispose();
     }
+
+    // Dispose MP4
+    final mp4Controller = _mp4Controllers.remove(index);
+    _mp4Initialized.remove(index);
+    if (mp4Controller != null) {
+      mp4Controller.pause();
+      mp4Controller.dispose();
+    }
+
     _initializing.remove(index);
   }
 
   /// Dispose all controllers (used when switching tabs)
   void _disposeAllControllers() {
-    debugPrint('[YTFeed] 🗑️ Disposing all ${_controllers.length} controllers');
-    for (final index in _controllers.keys.toList()) {
+    debugPrint('[YTFeed] 🗑️ Disposing all controllers');
+    for (final index in _controllers.keys.toList()) _disposeController(index);
+    for (final index in _mp4Controllers.keys.toList())
       _disposeController(index);
-    }
-  }
-
-  // ==========================================================================
-  // ERROR RECOVERY - Remove Restricted Videos
-  // ==========================================================================
-
-  /// Removes a restricted video and scrolls to next
-  /// Called when YouTube returns error 100, 101, 105, or 150
-  void removeRestrictedVideo(int index) {
-    if (_isDisposed) return;
-    final feedList = _feedsByType[_activeFeedType]!;
-    if (index < 0 || index >= feedList.length) return;
-
-    final video = feedList[index];
-    debugPrint(
-      '[YTFeed] ❌ Removing restricted video at $index: ${video.videoId}',
-    );
-
-    // 1. Dispose the controller
-    _disposeController(index);
-
-    // 2. Remove the video from list
-    feedList.removeAt(index);
-
-    // 3. Adjust current index if needed
-    if (feedList.isEmpty) {
-      _currentIndex = 0;
-    } else if (index <= _currentIndex) {
-      _currentIndex = (_currentIndex - 1).clamp(0, feedList.length - 1);
-    }
-
-    // 4. Update the window with new indices
-    _updateControllerWindow(_currentIndex);
-
-    // 5. Play the new current video
-    Future.delayed(const Duration(milliseconds: 200), () {
-      if (!_isDisposed && feedList.isNotEmpty) {
-        _playController(_currentIndex);
-      }
-    });
-
-    notifyListeners();
   }
 
   // ==========================================================================
@@ -714,23 +670,21 @@ class YoutubeFeedProvider extends ChangeNotifier {
   // ==========================================================================
 
   void _playController(int index) {
-    if (_isLifecyclePaused) {
-      debugPrint('[YTFeed] 🛑 Valid play command blocked by lifecycle pause');
-      return;
-    }
-    final controller = _controllers[index];
-    if (controller != null) {
-      debugPrint('[YTFeed] ▶️ Playing index $index');
-      controller.play();
-    }
+    if (_isLifecyclePaused) return;
+
+    final yt = _controllers[index];
+    if (yt != null) yt.play();
+
+    final mp4 = _mp4Controllers[index];
+    if (mp4 != null) mp4.play();
   }
 
   void _pauseController(int index) {
-    final controller = _controllers[index];
-    if (controller != null) {
-      debugPrint('[YTFeed] ⏸️ Pausing index $index');
-      controller.pause();
-    }
+    final yt = _controllers[index];
+    if (yt != null) yt.pause();
+
+    final mp4 = _mp4Controllers[index];
+    if (mp4 != null) mp4.pause();
   }
 
   /// Public: Play video at index
@@ -742,9 +696,8 @@ class YoutubeFeedProvider extends ChangeNotifier {
   /// Pause all videos (for app lifecycle)
   void pauseAll() {
     _isLifecyclePaused = true;
-    for (final controller in _controllers.values) {
-      controller.pause();
-    }
+    for (final c in _controllers.values) c.pause();
+    for (final c in _mp4Controllers.values) c.pause();
   }
 
   /// Resume current video (for app lifecycle)
@@ -764,186 +717,26 @@ class YoutubeFeedProvider extends ChangeNotifier {
     // Only affect current controller
     final controller = _controllers[_currentIndex];
     if (controller != null) {
-      if (_isMuted) {
+      if (_isMuted)
         controller.mute();
-        debugPrint('[YTFeed] 🔇 Muted');
-      } else {
+      else
         controller.unMute();
-        debugPrint('[YTFeed] 🔊 Unmuted');
-      }
+    }
+
+    final mp4Controller = _mp4Controllers[_currentIndex];
+    if (mp4Controller != null) {
+      mp4Controller.setVolume(_isMuted ? 0 : 1);
     }
 
     notifyListeners();
   }
-
-  /// Set mute state explicitly
-  void setMuted(bool muted) {
-    _isMuted = muted;
-
-    final controller = _controllers[_currentIndex];
-    if (controller != null) {
-      if (muted) {
-        controller.mute();
-      } else {
-        controller.unMute();
-      }
-    }
-
-    notifyListeners();
-  }
-
-  // ==========================================================================
-  // PAGINATION
-  // ==========================================================================
-
-  /// Load more videos (next page) for the active feed type
-  Future<void> loadMore() async {
-    if (_isLoadingMore) return;
-
-    // Check feed limit (200 items per tab)
-    if (videos.length >= 200) {
-      debugPrint('[YTFeed] ⚠️ Reached tab limit (${videos.length} items).');
-      return;
-    }
-
-    // Cursor check
-    if (_cursorsByType[_activeFeedType] == null) {
-      if (!_hasMoreByType[_activeFeedType]!) {
-        debugPrint('[YTFeed] 🏁 No more content for $_activeFeedType');
-      }
-      return;
-    }
-
-    _isLoadingMore = true;
-    notifyListeners();
-
-    try {
-      await _fetchTabFeed(_activeFeedType, limit: 10);
-    } catch (e) {
-      debugPrint('[YTFeed] ❌ Error loading more: $e');
-    } finally {
-      _isLoadingMore = false;
-      notifyListeners();
-    }
-  }
-
-  // ==========================================================================
-  // REFRESH
-  // ==========================================================================
-
-  /// Force refresh - clear everything and reload
-  Future<void> refresh() async {
-    // 1. Dispose all controllers
-    _disposeAllControllers();
-    _initializing.clear();
-
-    _currentIndex = 0;
-    _hasError = false;
-    _errorMessage = null;
-
-    // 2. Reset list and cursor for current tab
-    _feedsByType[_activeFeedType] = [];
-    _cursorsByType[_activeFeedType] = null;
-    _pageCountsByType[_activeFeedType] = 1;
-    _hasMoreByType[_activeFeedType] = true;
-
-    // 3. Re-initialize
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      await _fetchTabFeed(_activeFeedType, limit: 100);
-    } catch (e) {
-      _hasError = true;
-      _errorMessage = e.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  /// Trigger backend refresh (cron job)
-  Future<bool> triggerBackendRefresh() async {
-    try {
-      return await _apiClient.triggerBackendRefresh();
-    } catch (e) {
-      debugPrint('[YTFeed] ❌ Error triggering backend refresh: $e');
-      return false;
-    }
-  }
-
-  // ==========================================================================
-  // FEED MANIPULATION (Remote Trigger)
-  // ==========================================================================
-
-  void injectAndPlayVideo({
-    required String videoId,
-    String? title,
-    String? thumbnail,
-    String? channel,
-  }) {
-    if (_isDisposed) return;
-
-    final feedList = _feedsByType[_activeFeedType]!;
-    final index = feedList.indexWhere((v) => v.videoId == videoId);
-
-    if (index != -1) {
-      debugPrint(
-        '[YTFeed] 📌 Video already in list at index $index, jumping...',
-      );
-      _jumpToPageController.add(index);
-    } else {
-      debugPrint('[YTFeed] 📥 Injecting new shared video: $videoId');
-
-      final newVideo = FeedVideo(
-        videoId: videoId,
-        title: title ?? 'Shared Video',
-        thumbnailUrl: thumbnail ?? '',
-        channelName: channel ?? '',
-        description: 'Shared from chat',
-      );
-
-      // Insert it right after the current index so it's the next video
-      final insertIndex = (_currentIndex + 1).clamp(0, feedList.length);
-      feedList.insert(insertIndex, newVideo);
-
-      // Wait for list update then jump
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (!_isDisposed) {
-          _jumpToPageController.add(insertIndex);
-        }
-      });
-    }
-    notifyListeners();
-  }
-
-  // ==========================================================================
-  // CONVERSION HELPERS
-  // ==========================================================================
-
-  // ==========================================================================
-  // CLEANUP
-  // ==========================================================================
 
   @override
   void dispose() {
-    debugPrint('[YTFeed] 🧹 Disposing YoutubeFeedProvider');
     _isDisposed = true;
-
-    // Cancel all pending timers to prevent memory leaks
-    for (final timer in _pendingTimers) {
-      timer.cancel();
-    }
-    _pendingTimers.clear();
-
-    for (final controller in _controllers.values) {
-      controller.dispose();
-    }
-    _controllers.clear();
-    _initializing.clear();
+    _disposeAllControllers();
+    _pendingTimers.forEach((t) => t.cancel());
     _jumpToPageController.close();
-
-    // Do NOT dispose SeenRepository as it is a singleton for the app lifecycle.
     super.dispose();
   }
 }

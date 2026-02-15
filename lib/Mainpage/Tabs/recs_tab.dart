@@ -1,5 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:finishd/Model/movie_list_item.dart';
 import 'package:finishd/Model/recommendation_model.dart';
@@ -24,7 +24,8 @@ class RecsTab extends StatefulWidget {
 class _RecsTabState extends State<RecsTab> {
   final RecommendationService _recommendationService = RecommendationService();
   final UserService _userService = UserService();
-  final String _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+  final String _currentUserId =
+      Supabase.instance.client.auth.currentUser?.id ?? '';
   final Trending _api = Trending();
 
   @override

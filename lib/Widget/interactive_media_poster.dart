@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:finishd/Model/trending.dart';
 import 'package:finishd/Model/movie_list_item.dart';
 import 'package:finishd/services/movie_list_service.dart';
@@ -118,7 +118,7 @@ class InteractiveMediaPoster extends StatelessWidget {
   }
 
   Future<void> _handleAction(BuildContext context, String action) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = Supabase.instance.client.auth.currentUser?.id;
     if (uid == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please log in to save movies')),
@@ -307,7 +307,7 @@ Future<void> _handleActionStatic(
   MediaItem item,
   String action,
 ) async {
-  final uid = FirebaseAuth.instance.currentUser?.uid;
+  final uid = Supabase.instance.client.auth.currentUser?.id;
   if (uid == null) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

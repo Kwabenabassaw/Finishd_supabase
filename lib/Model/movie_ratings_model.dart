@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 /// Model class for movie ratings from multiple sources
 /// Supports IMDb, Rotten Tomatoes, and Metacritic ratings
 class MovieRatings {
@@ -21,9 +19,8 @@ class MovieRatings {
     required this.lastUpdated,
   });
 
-  /// Creates a MovieRatings instance from Firestore document
-  factory MovieRatings.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  /// Creates a MovieRatings instance from JSON (Supabase/Map)
+  factory MovieRatings.fromJson(Map<String, dynamic> data) {
     return MovieRatings(
       imdbId: data['imdbId'] ?? '',
       imdbRating: data['imdbRating'] ?? 'N/A',
@@ -31,8 +28,10 @@ class MovieRatings {
       metacritic: data['metacritic'] ?? 'N/A',
       imdbVotes: data['imdbVotes'] ?? '0',
       awards: data['awards'] ?? '',
-      lastUpdated:
-          (data['lastUpdated'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      lastUpdated: data['lastUpdated'] != null
+          ? (DateTime.tryParse(data['lastUpdated'].toString()) ??
+                DateTime.now())
+          : DateTime.now(),
     );
   }
 
@@ -76,8 +75,8 @@ class MovieRatings {
     );
   }
 
-  /// Converts MovieRatings to Firestore-compatible map
-  Map<String, dynamic> toFirestore() {
+  /// Converts MovieRatings to JSON map
+  Map<String, dynamic> toJson() {
     return {
       'imdbId': imdbId,
       'imdbRating': imdbRating,
@@ -85,7 +84,7 @@ class MovieRatings {
       'metacritic': metacritic,
       'imdbVotes': imdbVotes,
       'awards': awards,
-      'lastUpdated': Timestamp.fromDate(lastUpdated),
+      'lastUpdated': lastUpdated.toIso8601String(),
     };
   }
 

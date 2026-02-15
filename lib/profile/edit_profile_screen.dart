@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:finishd/Model/user_model.dart';
 import 'package:finishd/Widget/user_avatar.dart';
 import 'package:finishd/provider/user_provider.dart';

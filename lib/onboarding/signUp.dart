@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:finishd/onboarding/widgets/button.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -25,9 +27,57 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
+  StreamSubscription<AuthState>? _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    // Listen for auth state changes (for OAuth flow)
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((
+      data,
+    ) {
+      debugPrint('🔑 SignUp: Auth state changed: ${data.event}');
+      if (data.event == AuthChangeEvent.signedIn && data.session != null) {
+        _handleSuccessfulSignIn(data.session!.user.id);
+      }
+    });
+  }
+
+  Future<void> _handleSuccessfulSignIn(String userId) async {
+    if (!mounted) return;
+
+    debugPrint('🔑 SignUp: Handling successful sign-in for $userId');
+
+    final authService = Provider.of<AuthService>(context, listen: false);
+
+    // Check moderation status before allowing access
+    if (await _checkModerationAndNavigate(authService)) return;
+
+    // Check if user has completed onboarding
+    final onboardingCompleted = await authService.hasCompletedOnboarding(
+      userId,
+    );
+
+    if (!onboardingCompleted) {
+      // New or incomplete user — send to onboarding
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(context, 'genre', (route) => false);
+      }
+      return;
+    }
+
+    // Initialize UserProvider
+    Provider.of<UserProvider>(context, listen: false).fetchCurrentUser(userId);
+
+    // Navigate to homepage
+    if (mounted) {
+      Navigator.pushNamedAndRemoveUntil(context, 'homepage', (route) => false);
+    }
+  }
 
   @override
   void dispose() {
+    _authSubscription?.cancel();
     _firstNameController.dispose();
     _lastNameController.dispose();
     _emailController.dispose();
@@ -41,7 +91,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     final user = authService.currentUser;
     if (user == null) return false;
 
-    final status = await authService.checkUserModerationStatus(user.uid);
+    final status = await authService.checkUserModerationStatus(user.id);
     if (status != null && mounted) {
       Navigator.pushReplacement(
         context,
@@ -89,6 +139,35 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
         // If new user, go to onboarding
         if (result['isNewUser'] == true) {
+          final authResponse = result['credential'] as AuthResponse;
+          if (authResponse.session == null) {
+            // Email verification required
+            if (mounted) {
+              await showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => AlertDialog(
+                  title: const Text('Verification Required'),
+                  content: const Text(
+                    'Please check your email to verify your account before continuing.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context); // Close dialog
+                        Navigator.pushReplacementNamed(
+                          context,
+                          '/login',
+                        ); // Go to login
+                      },
+                      child: const Text('OK'),
+                    ),
+                  ],
+                ),
+              );
+              return;
+            }
+          }
           Navigator.pushReplacementNamed(context, 'genre');
         } else {
           // Existing user - check if they completed onboarding
@@ -98,7 +177,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               Provider.of<UserProvider>(
                 context,
                 listen: false,
-              ).fetchCurrentUser(authService.currentUser!.uid);
+              ).fetchCurrentUser(authService.currentUser!.id);
             }
             // Onboarding complete, go to homepage
             TextInput.finishAutofillContext(); // Trigger Credential Save
@@ -124,37 +203,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Future<void> _signUpWithGoogle() async {
     setState(() => _isLoading = true);
     try {
-      final result = await Provider.of<AuthService>(
-        context,
-        listen: false,
-      ).signInWithGoogle();
-      if (result == null) {
-        // User canceled
-        setState(() => _isLoading = false);
-        return;
-      }
+      await Provider.of<AuthService>(context, listen: false).signInWithGoogle();
 
+      // With Supabase Deep Link flow, the app will open a browser.
       if (mounted) {
-        final authService = Provider.of<AuthService>(context, listen: false);
-
-        // Check moderation status before allowing access
-        if (await _checkModerationAndNavigate(authService)) return;
-
-        // Check if new user or if existing user hasn't completed onboarding
-        if (result['isNewUser'] == true ||
-            result['onboardingCompleted'] != true) {
-          Navigator.pushReplacementNamed(context, 'genre');
-        } else {
-          // Initialize UserProvider with following IDs
-          if (authService.currentUser != null) {
-            Provider.of<UserProvider>(
-              context,
-              listen: false,
-            ).fetchCurrentUser(authService.currentUser!.uid);
-          }
-          // Existing user with completed onboarding
-          Navigator.pushReplacementNamed(context, 'homepage');
-        }
+        setState(() => _isLoading = false);
       }
     } catch (e) {
       if (mounted) {
@@ -171,21 +224,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
     setState(() => _isLoading = true);
     try {
       await Provider.of<AuthService>(context, listen: false).signInWithApple();
-      if (mounted) {
-        final authService = Provider.of<AuthService>(context, listen: false);
-
-        // Check moderation status before allowing access
-        if (await _checkModerationAndNavigate(authService)) return;
-
-        // Initialize UserProvider with following IDs
-        if (authService.currentUser != null) {
-          Provider.of<UserProvider>(
-            context,
-            listen: false,
-          ).fetchCurrentUser(authService.currentUser!.uid);
-        }
-        Navigator.pushReplacementNamed(context, 'homepage');
-      }
+      // Apple OAuth also uses deep link callback, handled by _handleSuccessfulSignIn
+      if (mounted) setState(() => _isLoading = false);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(

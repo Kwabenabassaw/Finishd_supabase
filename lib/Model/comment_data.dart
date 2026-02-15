@@ -22,21 +22,42 @@ class CommentData {
     this.replyCount = 0,
   });
 
-  /// Create from Firestore document
-  factory CommentData.fromJson(Map<String, dynamic> json, String docId) {
+  /// Create from JSON (Supabase/Postgres)
+  factory CommentData.fromJson(Map<String, dynamic> json, [String? docId]) {
+    // Extract profile data from joined relation (if present)
+    final profiles = json['profiles'] as Map<String, dynamic>?;
+    final resolvedUserName =
+        profiles?['username'] ?? json['userName'] ?? 'Anonymous';
+    final resolvedUserAvatar = profiles?['avatar_url'] ?? json['userAvatar'];
+
     return CommentData(
-      id: docId,
-      text: json['text'] ?? '',
-      userId: json['userId'] ?? '',
-      userName: json['userName'] ?? 'Anonymous',
-      userAvatar: json['userAvatar'],
-      videoId: json['videoId'] ?? '',
-      timestamp: json['timestamp'] != null
-          ? (json['timestamp'] as dynamic).toDate()
+      id: docId ?? json['id']?.toString() ?? '',
+      text: json['content'] ?? json['text'] ?? '',
+      userId: json['author_id'] ?? json['userId'] ?? '',
+      userName: resolvedUserName,
+      userAvatar: resolvedUserAvatar,
+      videoId: json['video_id'] ?? json['videoId'] ?? '',
+      timestamp: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : json['timestamp'] != null
+          ? (json['timestamp'] is String
+                ? DateTime.parse(json['timestamp'])
+                : (json['timestamp'] as dynamic).toDate())
           : DateTime.now(),
-      parentId: json['parentId'],
-      replyCount: json['replyCount'] ?? 0,
+      parentId: json['parent_id'] ?? json['parentId'],
+      replyCount: json['reply_count'] ?? json['replyCount'] ?? 0,
     );
+  }
+
+  /// Convert to JSON (Supabase/Postgres)
+  Map<String, dynamic> toSupabase() {
+    return {
+      'content': text,
+      'author_id': userId,
+      'video_id': videoId,
+      'parent_id': parentId,
+      // reply_count and created_at handled by Postgres
+    };
   }
 
   /// Convert to Firestore document

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../db/objectbox/feed_entities.dart';
 import '../db/objectbox/objectbox_store.dart';
 import '../objectbox.g.dart';
@@ -95,7 +95,7 @@ class ContentLakeRepository {
   /// Call this during provider initialization.
   Future<void> loadUserGenres() async {
     try {
-      final userId = FirebaseAuth.instance.currentUser?.uid;
+      final userId = Supabase.instance.client.auth.currentUser?.id;
       if (userId == null) {
         print('[ContentLakeRepo] No user logged in, using default genres');
         return;
@@ -121,7 +121,7 @@ class ContentLakeRepository {
   /// Call this during provider initialization.
   Future<void> loadListDerivedGenres() async {
     try {
-      final userId = FirebaseAuth.instance.currentUser?.uid;
+      final userId = Supabase.instance.client.auth.currentUser?.id;
       if (userId == null) {
         print('[ContentLakeRepo] No user logged in, skipping list genres');
         return;

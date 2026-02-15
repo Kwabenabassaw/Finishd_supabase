@@ -1,44 +1,44 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:finishd/Model/user_preferences.dart';
 
 class UserPreferencesService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final SupabaseClient _supabase = Supabase.instance.client;
 
-  /// Save all user preferences to Firestore
+  /// Save all user preferences to Supabase (profiles table)
   Future<void> saveUserPreferences(
     String userId,
     UserPreferences preferences,
   ) async {
     try {
-      final userRef = _firestore.collection('users').doc(userId);
-
-      await userRef.update({
-        'preferences': preferences.toJson(),
-        'onboardingCompleted': true,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    } on FirebaseException catch (e) {
-      throw 'Failed to save preferences: ${e.message}';
+      await _supabase
+          .from('profiles')
+          .update({
+            'preferences': preferences.toJson(),
+            // 'onboarding_completed': true, // Assuming column exists or handled elsewhere
+          })
+          .eq('id', userId);
     } catch (e) {
-      throw 'An unexpected error occurred while saving preferences.';
+      throw 'Failed to save preferences: $e';
     }
   }
 
-  /// Get user preferences from Firestore
+  /// Get user preferences from Supabase
   Future<UserPreferences?> getUserPreferences(String userId) async {
     try {
-      final userRef = _firestore.collection('users').doc(userId);
-      final doc = await userRef.get();
+      final response = await _supabase
+          .from('profiles')
+          .select('preferences')
+          .eq('id', userId)
+          .maybeSingle();
 
-      if (!doc.exists || doc.data()?['preferences'] == null) {
+      if (response == null || response['preferences'] == null) {
         return null;
       }
 
-      return UserPreferences.fromJson(doc.data()!['preferences']);
-    } on FirebaseException catch (e) {
-      throw 'Failed to load preferences: ${e.message}';
+      return UserPreferences.fromJson(response['preferences']);
     } catch (e) {
-      throw 'An unexpected error occurred while loading preferences.';
+      print('Error loading preferences: $e');
+      return null;
     }
   }
 
@@ -48,75 +48,68 @@ class UserPreferencesService {
     List<String> genres,
     List<int> genreIds,
   ) async {
-    try {
-      final userRef = _firestore.collection('users').doc(userId);
+    // In Supabase, partial JSON updates using jsonb_set are complex via client SDK directly.
+    // Easier to fetch, merge, and update, or just update the specific fields if we struct them inside JSON.
+    // For simplicity/reliability: Fetch -> Merge -> Save
 
-      await userRef.update({
-        'preferences.selectedGenres': genres,
-        'preferences.selectedGenreIds': genreIds,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    } on FirebaseException catch (e) {
-      throw 'Failed to update genres: ${e.message}';
+    // OPTIMIZATION: We can pass the FULL new preferences object from the Provider instead of doing partial updates here.
+    // But adhering to the interface:
+    try {
+      final current = await getUserPreferences(userId) ?? UserPreferences();
+      final updated = current.copyWith(
+        selectedGenres: genres,
+        selectedGenreIds: genreIds,
+      );
+      await saveUserPreferences(userId, updated);
     } catch (e) {
-      throw 'An unexpected error occurred while updating genres.';
+      throw 'Failed to update genres: $e';
     }
   }
 
   /// Update only streaming providers
   Future<void> updateStreamingProviders(
     String userId,
-    List<Map<String, dynamic>> providers,
+    List<Map<String, dynamic>> providersRaw,
   ) async {
     try {
-      final userRef = _firestore.collection('users').doc(userId);
-
-      await userRef.update({
-        'preferences.streamingProviders': providers,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    } on FirebaseException catch (e) {
-      throw 'Failed to update streaming providers: ${e.message}';
+      final providers = providersRaw
+          .map((p) => SelectedProvider.fromJson(p))
+          .toList();
+      final current = await getUserPreferences(userId) ?? UserPreferences();
+      final updated = current.copyWith(streamingProviders: providers);
+      await saveUserPreferences(userId, updated);
     } catch (e) {
-      throw 'An unexpected error occurred while updating streaming providers.';
+      throw 'Failed to update streaming providers: $e';
     }
   }
 
   /// Update selected movies
   Future<void> updateSelectedMovies(
     String userId,
-    List<Map<String, dynamic>> movies,
+    List<Map<String, dynamic>> moviesRaw,
   ) async {
     try {
-      final userRef = _firestore.collection('users').doc(userId);
-
-      await userRef.update({
-        'preferences.selectedMovies': movies,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    } on FirebaseException catch (e) {
-      throw 'Failed to update movies: ${e.message}';
+      final movies = moviesRaw.map((m) => SelectedMedia.fromJson(m)).toList();
+      final current = await getUserPreferences(userId) ?? UserPreferences();
+      final updated = current.copyWith(selectedMovies: movies);
+      await saveUserPreferences(userId, updated);
     } catch (e) {
-      throw 'An unexpected error occurred while updating movies.';
+      throw 'Failed to update movies: $e';
     }
   }
 
   /// Update selected shows
   Future<void> updateSelectedShows(
     String userId,
-    List<Map<String, dynamic>> shows,
+    List<Map<String, dynamic>> showsRaw,
   ) async {
     try {
-      final userRef = _firestore.collection('users').doc(userId);
-
-      await userRef.update({
-        'preferences.selectedShows': shows,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    } on FirebaseException catch (e) {
-      throw 'Failed to update shows: ${e.message}';
+      final shows = showsRaw.map((s) => SelectedMedia.fromJson(s)).toList();
+      final current = await getUserPreferences(userId) ?? UserPreferences();
+      final updated = current.copyWith(selectedShows: shows);
+      await saveUserPreferences(userId, updated);
     } catch (e) {
-      throw 'An unexpected error occurred while updating shows.';
+      throw 'Failed to update shows: $e';
     }
   }
 }

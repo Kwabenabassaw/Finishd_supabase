@@ -2,8 +2,10 @@ import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:finishd/provider/community_provider.dart';
+import 'package:finishd/provider/user_provider.dart';
 import 'package:finishd/Community/post_detail_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DeepLinkService {
   static final DeepLinkService _instance = DeepLinkService._internal();
@@ -36,11 +38,79 @@ class DeepLinkService {
   void _handleUri(Uri uri) async {
     debugPrint('Deep Link Received: $uri');
 
+    // Handle OAuth login callback (finishd://login-callback#access_token=...)
+    if (uri.host == 'login-callback' || uri.path.contains('login-callback')) {
+      await _handleOAuthCallback(uri);
+      return;
+    }
+
     // Structure: https://finishd-admin.vercel.app/post/{postId}
     // pathSegments: ['post', 'POST_ID']
     if (uri.pathSegments.length >= 2 && uri.pathSegments[0] == 'post') {
       final postId = uri.pathSegments[1];
       _navigateToPost(postId);
+    }
+  }
+
+  /// Handle OAuth callback to complete authentication
+  Future<void> _handleOAuthCallback(Uri uri) async {
+    debugPrint('🔑 OAuth Callback Received: $uri');
+
+    try {
+      // The access_token is typically in the fragment (#access_token=...)
+      // Convert fragment to query parameters for Supabase to parse
+      final fragment = uri.fragment;
+      debugPrint('🔑 Fragment: $fragment');
+
+      if (fragment.isNotEmpty) {
+        // Reconstruct URI with fragment as query parameters
+        final callbackUri = Uri.parse('${uri.scheme}://${uri.host}?$fragment');
+        debugPrint('🔑 Parsing OAuth session from: $callbackUri');
+
+        // Let Supabase extract the session from the URL
+        final response = await Supabase.instance.client.auth.getSessionFromUrl(
+          callbackUri,
+        );
+
+        debugPrint(
+          '✅ OAuth session established for user: ${response.session.user.email}',
+        );
+
+        // Navigate to home page after successful OAuth
+        final navigatorState = _navigatorKey.currentState;
+        final context = _navigatorKey.currentContext;
+
+        debugPrint('🔑 Navigator state: $navigatorState');
+        debugPrint('🔑 Context: $context');
+
+        if (navigatorState != null && context != null) {
+          // Initialize user data
+          final userId = response.session.user.id;
+          debugPrint('🔑 Initializing user: $userId');
+
+          Provider.of<UserProvider>(
+            context,
+            listen: false,
+          ).fetchCurrentUser(userId);
+
+          debugPrint('🔑 Navigating to homepage...');
+
+          // Use pushNamedAndRemoveUntil to clear the stack and go to homepage
+          navigatorState.pushNamedAndRemoveUntil(
+            'homepage',
+            (route) => false, // Remove all previous routes
+          );
+
+          debugPrint('✅ Navigation to homepage triggered');
+        } else {
+          debugPrint('❌ Navigator state or context is null');
+        }
+      } else {
+        debugPrint('❌ No fragment in OAuth callback URL');
+      }
+    } catch (e, stack) {
+      debugPrint('❌ Error handling OAuth callback: $e');
+      debugPrint('❌ Stack: $stack');
     }
   }
 

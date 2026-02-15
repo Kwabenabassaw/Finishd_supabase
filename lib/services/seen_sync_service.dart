@@ -1,28 +1,20 @@
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:finishd/services/seen_repository.dart';
 
-/// Background sync service for seen items between ObjectBox and Firestore.
-///
-/// - Uploads pending items every 1 hour (or when threshold reached)
-/// - Downloads full history on new device/reinstall
+/// Background sync service for seen items between ObjectBox and Supabase.
 class SeenSyncService {
   static SeenSyncService? _instance;
   Timer? _syncTimer;
 
-  /// Sync interval (1 hour as per user request)
   static const Duration syncInterval = Duration(hours: 1);
-
-  /// Batch upload threshold (upload earlier if this many items pending)
   static const int batchThreshold = 50;
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final SupabaseClient _supabase = Supabase.instance.client;
   final SeenRepository _seenRepo = SeenRepository.instance;
 
   SeenSyncService._internal();
 
-  /// Get singleton instance
   static SeenSyncService get instance {
     _instance ??= SeenSyncService._internal();
     return _instance!;
@@ -32,38 +24,29 @@ class SeenSyncService {
   // Periodic Sync
   // ===========================================================================
 
-  /// Start background sync timer
   void startPeriodicSync() {
-    // Cancel existing timer if any
     _syncTimer?.cancel();
-
-    // Start new periodic timer
     _syncTimer = Timer.periodic(syncInterval, (_) => _runSync());
-
     print(
       '[SeenSync] Started periodic sync (every ${syncInterval.inMinutes} min)',
     );
   }
 
-  /// Stop background sync
   void stopPeriodicSync() {
     _syncTimer?.cancel();
     _syncTimer = null;
     print('[SeenSync] Stopped periodic sync');
   }
 
-  /// Run sync (called by timer or manually)
   Future<void> _runSync() async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
+    final userId = _supabase.auth.currentUser?.id;
     if (userId == null) {
       print('[SeenSync] Skipping sync - no user logged in');
       return;
     }
-
     await uploadPending(userId);
   }
 
-  /// Check if should sync early (threshold reached)
   void checkBatchThreshold() {
     final pending = _seenRepo.pendingSync;
     if (pending.length >= batchThreshold) {
@@ -73,10 +56,9 @@ class SeenSyncService {
   }
 
   // ===========================================================================
-  // Upload to Firestore
+  // Upload to Supabase
   // ===========================================================================
 
-  /// Upload pending seen items to Firestore
   Future<void> uploadPending(String userId) async {
     final pending = _seenRepo.pendingSync;
 
@@ -85,88 +67,81 @@ class SeenSyncService {
       return;
     }
 
-    print('[SeenSync] Uploading ${pending.length} items to Firestore...');
+    print('[SeenSync] Uploading ${pending.length} items to Supabase...');
 
     try {
       final items = _seenRepo.getItemsForSync(pending);
-      final batch = _firestore.batch();
 
-      final collection = _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('seenVideos');
-
-      for (final item in items) {
-        final docRef = collection.doc(item['videoId']);
-        batch.set(docRef, {
-          'videoId': item['videoId'],
-          'seenAt': Timestamp.fromDate(item['seenAt']),
-          'lastSeenAt': Timestamp.fromDate(item['lastSeenAt']),
-          'viewDurationMs': item['viewDurationMs'],
+      // Batch upsert in Supabase
+      final List<Map<String, dynamic>> upsertData = items.map((item) {
+        return {
+          'user_id': userId,
+          'video_id': item['videoId'],
+          'seen_at': (item['seenAt'] as DateTime).toIso8601String(),
+          'last_seen_at': (item['lastSeenAt'] as DateTime).toIso8601String(),
+          'view_duration_ms': item['viewDurationMs'],
           'liked': item['liked'],
           'suppressed': item['suppressed'],
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-      }
+          'updated_at': DateTime.now().toIso8601String(),
+        };
+      }).toList();
 
-      await batch.commit();
+      await _supabase.from('seen_history').upsert(upsertData);
 
       // Clear pending on success
       _seenRepo.clearPendingSync();
 
-      print('[SeenSync] ✅ Uploaded ${items.length} items to Firestore');
+      print('[SeenSync] ✅ Uploaded ${items.length} items to Supabase');
     } catch (e) {
       print('[SeenSync] ❌ Upload failed: $e');
     }
   }
 
   // ===========================================================================
-  // Download from Firestore
+  // Download from Supabase
   // ===========================================================================
 
-  /// Download full history from Firestore (for new device/reinstall)
   Future<void> downloadFullHistory(String userId) async {
-    print('[SeenSync] Downloading seen history from Firestore...');
+    print('[SeenSync] Downloading seen history from Supabase...');
 
     try {
-      final snapshot = await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('seenVideos')
-          .limit(5000) // Cap at 5000 for performance
-          .get();
+      final response = await _supabase
+          .from('seen_history')
+          .select()
+          .eq('user_id', userId)
+          .limit(5000); // Cap at 5000 for performance
 
-      if (snapshot.docs.isEmpty) {
-        print('[SeenSync] No history found in Firestore');
+      if (response.isEmpty) {
+        print('[SeenSync] No history found in Supabase');
         return;
       }
 
-      final items = snapshot.docs.map((doc) {
-        final data = doc.data();
+      final items = (response as List).map((data) {
         return {
-          'videoId': data['videoId'] as String?,
-          'seenAt': (data['seenAt'] as Timestamp?)?.toDate(),
-          'lastSeenAt': (data['lastSeenAt'] as Timestamp?)?.toDate(),
-          'viewDurationMs': data['viewDurationMs'] as int?,
+          'videoId': data['video_id'] as String?,
+          'seenAt': DateTime.tryParse(data['seen_at'] ?? ''),
+          'lastSeenAt': DateTime.tryParse(data['last_seen_at'] ?? ''),
+          'viewDurationMs': data['view_duration_ms'] as int?,
           'liked': data['liked'] as bool?,
           'suppressed': data['suppressed'] as bool?,
         };
       }).toList();
 
-      await _seenRepo.addFromFirestore(items);
+      await _seenRepo.addFromFirestore(
+        items,
+      ); // Re-use method (renaming would be better but keeping signature)
 
-      print('[SeenSync] ✅ Downloaded ${items.length} items from Firestore');
+      print('[SeenSync] ✅ Downloaded ${items.length} items from Supabase');
     } catch (e) {
       print('[SeenSync] ❌ Download failed: $e');
     }
   }
 
-  /// Sync on login (upload pending + download if empty)
   Future<void> syncOnLogin() async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
+    final userId = _supabase.auth.currentUser?.id;
     if (userId == null) return;
 
-    // If local is empty, download from Firestore first
+    // If local is empty, download from Supabase first
     if (_seenRepo.isEmpty) {
       await downloadFullHistory(userId);
     }

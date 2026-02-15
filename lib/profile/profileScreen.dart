@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'package:cached_network_image/cached_network_image.dart';
+
 import 'package:finishd/LoadingWidget/LogoLoading.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:finishd/Model/movie_item.dart';
 import 'package:finishd/Model/movie_list_item.dart';
 import 'package:finishd/Model/user_model.dart';
@@ -17,6 +17,8 @@ import 'package:finishd/Chat/chatScreen.dart';
 import 'package:finishd/services/chat_service.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:finishd/profile/creator_video_grid.dart'; // Import Creator Grid
+import 'package:finishd/Widget/error_dialog.dart';
 
 // --- Main Profile Screen Widget ---
 class ProfileScreen extends StatefulWidget {
@@ -28,9 +30,8 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _ProfileScreenState extends State<ProfileScreen> {
+  // Use DefaultTabController, so we remove manual TabController
 
   // FIX Issue 5: Make services class fields instead of creating new instances
   final UserService _userService = UserService();
@@ -38,7 +39,8 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   bool _isFollowing = false;
   bool _isCheckingFollow = true;
-  final String _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+  final String _currentUserId =
+      Supabase.instance.client.auth.currentUser?.id ?? '';
 
   // FIX Bug 2: Store follower/following counts in state to avoid redundant calls
   int _followersCount = 0;
@@ -51,18 +53,20 @@ class _ProfileScreenState extends State<ProfileScreen>
   List<MovieListItem> _watchlistMovies = [];
   bool _isLoadingMovies = true;
 
-  // Stream subscriptions for cleanup
-  StreamSubscription? _finishedSub;
-  StreamSubscription? _watchingSub;
-  StreamSubscription? _watchlistSub;
+  // Stream subscription for unified user titles (single realtime connection)
+  StreamSubscription? _titlesSub;
+
+  Stream<UserModel?>? _userStream;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
     _checkFollowStatus();
     _loadFollowCounts();
     _subscribeToMovieLists();
+
+    // Initialize user stream once
+    _userStream = _userService.getUserStream(widget.uid);
 
     // Fetch user preferences if viewing own profile
     if (_currentUserId == widget.uid) {
@@ -75,81 +79,34 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  // FIX Bug 3: Subscribe to all movie lists with single state update
-  // FIX: Use hybrid caching only for own profile; direct Firestore for others
+  // Subscribe to all movie lists with a single realtime connection
   void _subscribeToMovieLists() {
-    final bool isOwnProfile = _currentUserId == widget.uid;
-
-    // For own profile: use hybrid (SQLite cache + real-time updates)
-    // For other profiles: use direct Firestore stream (cache is user-specific)
-    if (isOwnProfile) {
-      _finishedSub = _movieListService
-          .streamMoviesFromListHybrid(widget.uid, 'finished')
-          .listen((movies) {
+    _titlesSub = _movieListService
+        .streamAllUserTitlesHybrid(widget.uid)
+        .listen(
+          (allMovies) {
             if (mounted) {
               setState(() {
-                _finishedMovies = movies;
+                _finishedMovies = allMovies
+                    .where((m) => m.status == 'finished')
+                    .toList();
+                _watchingMovies = allMovies
+                    .where((m) => m.status == 'watching')
+                    .toList();
+                _watchlistMovies = allMovies
+                    .where((m) => m.status == 'watchlist')
+                    .toList();
                 _isLoadingMovies = false;
               });
             }
-          });
-
-      _watchingSub = _movieListService
-          .streamMoviesFromListHybrid(widget.uid, 'watching')
-          .listen((movies) {
+          },
+          onError: (e) {
+            debugPrint('Error in movie list stream: $e');
             if (mounted) {
-              setState(() {
-                _watchingMovies = movies;
-                _isLoadingMovies = false;
-              });
+              setState(() => _isLoadingMovies = false);
             }
-          });
-
-      _watchlistSub = _movieListService
-          .streamMoviesFromListHybrid(widget.uid, 'watchlist')
-          .listen((movies) {
-            if (mounted) {
-              setState(() {
-                _watchlistMovies = movies;
-                _isLoadingMovies = false;
-              });
-            }
-          });
-    } else {
-      // Other users' profiles: stream directly from Firestore
-      _finishedSub = _movieListService
-          .streamMoviesFromList(widget.uid, 'finished')
-          .listen((movies) {
-            if (mounted) {
-              setState(() {
-                _finishedMovies = movies;
-                _isLoadingMovies = false;
-              });
-            }
-          });
-
-      _watchingSub = _movieListService
-          .streamMoviesFromList(widget.uid, 'watching')
-          .listen((movies) {
-            if (mounted) {
-              setState(() {
-                _watchingMovies = movies;
-                _isLoadingMovies = false;
-              });
-            }
-          });
-
-      _watchlistSub = _movieListService
-          .streamMoviesFromList(widget.uid, 'watchlist')
-          .listen((movies) {
-            if (mounted) {
-              setState(() {
-                _watchlistMovies = movies;
-                _isLoadingMovies = false;
-              });
-            }
-          });
-    }
+          },
+        );
   }
 
   // FIX Bug 2: Load follower/following counts once
@@ -238,7 +195,12 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   // FIX Issue 6: Proper refresh that reloads data
   Future<void> _refreshProfile() async {
-    setState(() => _isLoadingCounts = true);
+    // Re-initialize user stream to retry connection
+    setState(() {
+      _userStream = _userService.getUserStream(widget.uid);
+      _isLoadingCounts = true;
+    });
+
     await _loadFollowCounts();
 
     // Force refresh movie lists (bypasses cache)
@@ -251,6 +213,18 @@ class _ProfileScreenState extends State<ProfileScreen>
     } catch (e) {
       debugPrint('Error refreshing movie lists: $e');
     }
+  }
+
+  void _showErrorPopup() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ErrorDialog.show(
+        context,
+        message: 'Could not load profile. Please check your connection.',
+        onRetry: () {
+          _refreshProfile();
+        },
+      );
+    });
   }
 
   // FIX Bug 1: Safe conversion from MovieListItem to MovieItem
@@ -275,11 +249,8 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   @override
   void dispose() {
-    _tabController.dispose();
-    // Clean up stream subscriptions
-    _finishedSub?.cancel();
-    _watchingSub?.cancel();
-    _watchlistSub?.cancel();
+    // Clean up stream subscription
+    _titlesSub?.cancel();
     super.dispose();
   }
 
@@ -318,253 +289,296 @@ class _ProfileScreenState extends State<ProfileScreen>
         ],
       ),
       body: StreamBuilder<UserModel?>(
-        stream: _userService.getUserStream(widget.uid),
+        stream: _userStream,
         builder: (context, userSnapshot) {
           if (userSnapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: LogoLoadingScreen());
           }
 
           if (userSnapshot.hasError) {
-            return Center(child: Text('Error loading profile'));
+            _showErrorPopup();
+            return const Center(child: LogoLoadingScreen());
           }
 
           final user = userSnapshot.data;
 
           if (user == null) {
-            return const Center(child: Text('User not found'));
+            _showErrorPopup();
+            return const Center(child: LogoLoadingScreen());
           }
 
-          return RefreshIndicator(
-            onRefresh: _refreshProfile,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight,
-                    ),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 10),
-                        // User Avatar - FIX Issue 7: Null-safe image check
-                        UserAvatar(
-                          profileImageUrl: user.profileImage,
-                          firstName: user.firstName,
-                          lastName: user.lastName,
-                          username: user.username,
-                          userId: user.uid,
-                          radius: 50,
-                          showBorder: true,
-                        ),
-                        const SizedBox(height: 10),
-                        // User Name
-                        Text(
-                          user.username.isNotEmpty
-                              ? '${user.firstName} ${user.lastName}'
-                              : 'No Name',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        // First Name
-                        Text(
-                          user.username,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
+          // Determine if Creator
+          final isCreator =
+              user.role == 'creator' && user.creatorStatus == 'approved';
+          final tabCount = isCreator ? 4 : 3;
 
-                        // Stats Row - Using counts from state (properly loaded)
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _buildStatColumn(
-                              "FinishD",
-                              finishedMovieItems.length,
-                            ),
-                            _buildStatColumn(
-                              "Followers",
-                              _followersCount,
-                              isLoading: _isLoadingCounts,
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => UserListScreen(
-                                      title: 'Followers',
-                                      uid: widget.uid,
-                                      isFollowers: true,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                            _buildStatColumn(
-                              "Following",
-                              _followingCount,
-                              isLoading: _isLoadingCounts,
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => UserListScreen(
-                                      title: 'Following',
-                                      uid: widget.uid,
-                                      isFollowers: false,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Edit Profile or Follow Button
-                        if (isCurrentUser)
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      EditProfileScreen(user: user),
-                                ),
-                              );
-                            },
-                            icon: const Icon(
-                              Icons.person_add_alt_1,
-                              color: Colors.white,
-                            ),
-                            label: const Text(
-                              'Edit Profile',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              fixedSize: const Size(200, 40),
-                              backgroundColor: const Color.fromARGB(
-                                255,
-                                3,
-                                130,
-                                7,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 30,
-                                vertical: 10,
-                              ),
-                            ),
-                          )
-                        else
+          return DefaultTabController(
+            length: tabCount,
+            child: RefreshIndicator(
+              onRefresh: _refreshProfile,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
+                      ),
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 10),
+                          // User Avatar - FIX Issue 7: Null-safe image check
+                          UserAvatar(
+                            profileImageUrl: user.profileImage,
+                            firstName: user.firstName,
+                            lastName: user.lastName,
+                            username: user.username,
+                            userId: user.uid,
+                            radius: 50,
+                            showBorder: true,
+                          ),
+                          const SizedBox(height: 10),
+                          // User Name + Badge
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              ElevatedButton(
-                                onPressed: _isCheckingFollow
-                                    ? null
-                                    : _toggleFollow,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _isFollowing
-                                      ? Colors.grey.shade300
-                                      : const Color.fromARGB(255, 3, 130, 7),
-                                  foregroundColor: _isFollowing
-                                      ? Colors.black
-                                      : Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 40,
-                                    vertical: 10,
-                                  ),
+                              Text(
+                                user.username.isNotEmpty
+                                    ? '${user.firstName} ${user.lastName}'
+                                    : 'No Name',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                child: _isCheckingFollow
-                                    ? const SizedBox(
-                                        width: 25,
-                                        height: 20,
-                                        child: LogoLoadingScreen(),
-                                      )
-                                    : Text(
-                                        _isFollowing ? 'Friends' : 'Add Friend',
-                                      ),
                               ),
-                              if (_isFollowing) ...[
-                                const SizedBox(width: 5),
-                                IconButton(
-                                  onPressed: () async {
-                                    final chatService = ChatService();
-                                    final chatId = await chatService.createChat(
-                                      _currentUserId,
-                                      widget.uid,
-                                    );
-                                    if (context.mounted) {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => ChatScreen(
-                                            chatId: chatId,
-                                            otherUser: user,
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                  },
-                                  icon: Icon(
-                                    FontAwesomeIcons.message,
-                                    color: isDark ? Colors.white : Colors.black,
-                                  ),
+                              if (isCreator) ...[
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.verified,
+                                  color: Colors.blue,
+                                  size: 16,
                                 ),
                               ],
                             ],
                           ),
-                        const SizedBox(height: 15),
-
-                        // Bio Text
-                        if (user.bio.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            child: Text(
-                              user.bio,
-                              style: const TextStyle(fontSize: 16),
-                              textAlign: TextAlign.center,
+                          // Username
+                          Text(
+                            user.username,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
                             ),
                           ),
-                        const SizedBox(height: 25),
+                          const SizedBox(height: 10),
 
-                        // Tabs for content
-                        _buildTabBar(),
-                        // FIX Issue 4: Use proportional height instead of magic numbers
-                        SizedBox(
-                          height: constraints.maxHeight * 0.5,
-                          child: TabBarView(
-                            controller: _tabController,
+                          // Stats Row - Using counts from state (properly loaded)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
-                              _isLoadingMovies
-                                  ? const Center(child: LogoLoadingScreen())
-                                  : MoviePosterGrid(movies: finishedMovieItems),
-                              _isLoadingMovies
-                                  ? const Center(child: LogoLoadingScreen())
-                                  : MoviePosterGrid(movies: watchingMovieItems),
-                              _isLoadingMovies
-                                  ? const Center(child: LogoLoadingScreen())
-                                  : MoviePosterGrid(
-                                      movies: watchlistMovieItems,
+                              _buildStatColumn(
+                                "FinishD",
+                                finishedMovieItems.length,
+                              ),
+                              _buildStatColumn(
+                                "Followers",
+                                _followersCount,
+                                isLoading: _isLoadingCounts,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => UserListScreen(
+                                        title: 'Followers',
+                                        uid: widget.uid,
+                                        isFollowers: true,
+                                      ),
                                     ),
+                                  );
+                                },
+                              ),
+                              _buildStatColumn(
+                                "Following",
+                                _followingCount,
+                                isLoading: _isLoadingCounts,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => UserListScreen(
+                                        title: 'Following',
+                                        uid: widget.uid,
+                                        isFollowers: false,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+
+                              if (isCreator)
+                                // Only show Likes stat if creator (can implement later, stick to design request if it mandates)
+                                // Image shows 1.4M Likes. We don't have it yet. Skip or mock?
+                                // Let's skip to keep logic clean.
+                                Container(),
                             ],
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 20),
+
+                          // Edit Profile or Follow Button
+                          if (isCurrentUser)
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        EditProfileScreen(user: user),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(
+                                Icons.person_add_alt_1,
+                                color: Colors.white,
+                              ),
+                              label: const Text(
+                                'Edit Profile',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                fixedSize: const Size(200, 40),
+                                backgroundColor: const Color.fromARGB(
+                                  255,
+                                  3,
+                                  130,
+                                  7,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 30,
+                                  vertical: 10,
+                                ),
+                              ),
+                            )
+                          else
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                ElevatedButton(
+                                  onPressed: _isCheckingFollow
+                                      ? null
+                                      : _toggleFollow,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _isFollowing
+                                        ? Colors.grey.shade300
+                                        : const Color.fromARGB(255, 3, 130, 7),
+                                    foregroundColor: _isFollowing
+                                        ? Colors.black
+                                        : Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 40,
+                                      vertical: 10,
+                                    ),
+                                  ),
+                                  child: _isCheckingFollow
+                                      ? const SizedBox(
+                                          width: 25,
+                                          height: 20,
+                                          child: LogoLoadingScreen(),
+                                        )
+                                      : Text(
+                                          _isFollowing
+                                              ? 'Friends'
+                                              : 'Add Friend',
+                                        ),
+                                ),
+                                if (_isFollowing) ...[
+                                  const SizedBox(width: 5),
+                                  IconButton(
+                                    onPressed: () async {
+                                      final chatService = ChatService();
+                                      final chatId = await chatService
+                                          .createChat(
+                                            _currentUserId,
+                                            widget.uid,
+                                          );
+                                      if (context.mounted) {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => ChatScreen(
+                                              chatId: chatId,
+                                              otherUser: user,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    icon: Icon(
+                                      FontAwesomeIcons.message,
+                                      color: isDark
+                                          ? Colors.white
+                                          : Colors.black,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          const SizedBox(height: 15),
+
+                          // Bio Text
+                          if (user.bio.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                              ),
+                              child: Text(
+                                user.bio,
+                                style: const TextStyle(fontSize: 16),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          const SizedBox(height: 25),
+
+                          // Tabs for content
+                          _buildTabBar(isCreator),
+                          // FIX Issue 4: Use proportional height instead of magic numbers
+                          SizedBox(
+                            height: constraints.maxHeight * 0.5,
+                            child: TabBarView(
+                              children: [
+                                _isLoadingMovies
+                                    ? const Center(child: LogoLoadingScreen())
+                                    : MoviePosterGrid(
+                                        movies: finishedMovieItems,
+                                      ),
+
+                                if (isCreator)
+                                  CreatorVideoGrid(userId: user.uid),
+
+                                _isLoadingMovies
+                                    ? const Center(child: LogoLoadingScreen())
+                                    : MoviePosterGrid(
+                                        movies: watchingMovieItems,
+                                      ),
+                                _isLoadingMovies
+                                    ? const Center(child: LogoLoadingScreen())
+                                    : MoviePosterGrid(
+                                        movies: watchlistMovieItems,
+                                      ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           );
         },
@@ -601,22 +615,22 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildTabBar() {
+  Widget _buildTabBar(bool isCreator) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16.0),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: Colors.grey.shade700)),
       ),
       child: TabBar(
-        controller: _tabController,
         indicatorColor: Colors.green.shade900,
         unselectedLabelColor: Colors.grey,
         labelStyle: const TextStyle(fontWeight: FontWeight.bold),
         unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
-        tabs: const [
-          Tab(text: 'FinishD'),
-          Tab(text: 'Watching'),
-          Tab(text: 'Watch Later'),
+        tabs: [
+          const Tab(text: 'FinishD'),
+          if (isCreator) const Tab(text: 'Clips'),
+          const Tab(text: 'Watching'),
+          const Tab(text: 'Watch Later'),
         ],
       ),
     );

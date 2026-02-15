@@ -1,14 +1,22 @@
-import 'package:firebase_ai/firebase_ai.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 
 class VertexAiService {
   late final GenerativeModel _model;
 
   VertexAiService() {
-    // Initialize using Firebase AI Logic SDK with Gemini Developer API
-    // This uses the recommended googleAI() backend for the no-cost Spark plan
-    _model = FirebaseAI.googleAI().generativeModel(
-      model: 'gemini-2.5-flash',
-      tools: [Tool.googleSearch()],
+    // Initialize using Google Generative AI SDK
+    // Using hardcoded key as requested for migration
+    const apiKey = 'AIzaSyBRKUORBWfivcUSL9augk0q9FNYzE2x3rE';
+
+    _model = GenerativeModel(
+      model: 'gemini-1.5-flash',
+      apiKey: apiKey,
+      generationConfig: GenerationConfig(
+        temperature: 0.7,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 1024,
+      ),
       systemInstruction: Content.system(
         'You are the Finishd AI Movie Assistant. Your goal is to help users understand the movie they are currently viewing. '
         'You have access to specific movie metadata. You must stay in character as a helpful movie expert. '
@@ -16,18 +24,10 @@ class VertexAiService {
         'Keep responses concise and well-formatted using markdown.',
       ),
       safetySettings: [
-        SafetySetting(HarmCategory.harassment, HarmBlockThreshold.medium, null),
-        SafetySetting(HarmCategory.hateSpeech, HarmBlockThreshold.medium, null),
-        SafetySetting(
-          HarmCategory.sexuallyExplicit,
-          HarmBlockThreshold.medium,
-          null,
-        ),
-        SafetySetting(
-          HarmCategory.dangerousContent,
-          HarmBlockThreshold.medium,
-          null,
-        ),
+        SafetySetting(HarmCategory.harassment, HarmBlockThreshold.medium),
+        SafetySetting(HarmCategory.hateSpeech, HarmBlockThreshold.medium),
+        SafetySetting(HarmCategory.sexuallyExplicit, HarmBlockThreshold.medium),
+        SafetySetting(HarmCategory.dangerousContent, HarmBlockThreshold.medium),
       ],
     );
   }

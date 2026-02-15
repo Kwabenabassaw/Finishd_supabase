@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Local cache for user preferences to enable offline personalization.
 ///
@@ -54,57 +53,144 @@ class UserPreferencesCache {
     }
   }
 
-  /// Sync preferences from Firestore and cache locally
+  /// Sync preferences from Supabase and cache locally
   Future<UserPreferences> syncFromFirestore(String userId) async {
     try {
       // Auto-detect user ID if empty string passed
       String effectiveUserId = userId;
       if (userId.isEmpty) {
-        final currentUser = FirebaseAuth.instance.currentUser;
+        final currentUser = Supabase.instance.client.auth.currentUser;
         if (currentUser == null) {
           return UserPreferences.empty();
         }
-        effectiveUserId = currentUser.uid;
+        effectiveUserId = currentUser.id;
       }
 
-      final db = FirebaseFirestore.instance;
-      final userDoc = await db.collection('users').doc(effectiveUserId).get();
+      final supabase = Supabase.instance.client;
 
-      if (!userDoc.exists) {
-        return UserPreferences.empty();
+      // 1. Fetch User Profile for explicit genres
+      final profileResponse = await supabase
+          .from('profiles')
+          .select('preferences')
+          .eq('id', effectiveUserId)
+          .maybeSingle();
+
+      List<String> selectedGenres = [];
+      if (profileResponse != null && profileResponse['preferences'] != null) {
+        final prefsMap = profileResponse['preferences'];
+        if (prefsMap is Map && prefsMap['selectedGenres'] != null) {
+          selectedGenres = List<String>.from(prefsMap['selectedGenres']);
+        }
       }
-
-      final data = userDoc.data()!;
-      final prefsData = data['preferences'] as Map<String, dynamic>? ?? {};
-
-      // Extract preferred genres from onboarding selection
-      final selectedGenres = List<String>.from(
-        prefsData['selectedGenres'] ?? [],
-      );
 
       print('[PrefsCache] syncing for user: $effectiveUserId');
-      print('[PrefsCache] selectedGenres: ${selectedGenres.length}');
 
-      // Get watched TMDB IDs from various collections
-      final watchedIds = await _getWatchedTmdbIds(effectiveUserId);
+      // 2. Fetch User Titles (Watching, Finished, Favorites, Watchlist)
+      // We can fetch all in one query for efficiency
+      final userTitlesResponse = await supabase
+          .from('user_titles')
+          .select()
+          .eq('user_id', effectiveUserId);
 
-      // Get watchlist IDs
-      final watchlistIds = await _getCollectionIds(
-        effectiveUserId,
-        'watchlist',
-      );
+      final List<Map<String, dynamic>> userTitles =
+          List<Map<String, dynamic>>.from(userTitlesResponse);
 
-      // Get recommendation IDs (movies recommended to user — signals interest)
-      final recommendedIds = await _getRecommendedMovieIds(effectiveUserId);
+      final watchedIds = <int>[];
+      final watchlistIds = <int>[];
+      final favoriteIds = <int>[];
+      final finishedIds = <int>[];
+      final watchingIds = <int>[];
+
+      // Extract IDs based on status/favorite
+      for (final title in userTitles) {
+        final tmdbId = int.tryParse(title['title_id']?.toString() ?? '');
+        if (tmdbId == null || tmdbId == 0) continue;
+
+        final status = title['status'] as String?;
+        final isFavorite = title['is_favorite'] as bool? ?? false;
+
+        if (status == 'watching') {
+          watchingIds.add(tmdbId);
+          watchedIds.add(tmdbId); // Watching counts as watched/engaged
+        } else if (status == 'finished') {
+          finishedIds.add(tmdbId);
+          watchedIds.add(tmdbId);
+        } else if (status == 'watchlist') {
+          watchlistIds.add(tmdbId);
+        }
+
+        if (isFavorite) {
+          favoriteIds.add(tmdbId);
+          if (!watchedIds.contains(tmdbId)) watchedIds.add(tmdbId);
+        }
+      }
+
+      // 3. Fetch Recommendations
+      final recommendationsResponse = await supabase
+          .from('recommendations')
+          .select('movie_id')
+          .eq('to_user_id', effectiveUserId)
+          .limit(50);
+
+      final recommendedIds = (recommendationsResponse as List)
+          .map((r) => int.tryParse(r['movie_id'].toString()) ?? 0)
+          .where((id) => id > 0)
+          .toList();
 
       // Merge watchlist and recommended IDs
       final combinedWatchlist = {...watchlistIds, ...recommendedIds}.toList();
 
-      // Get liked video IDs
-      final likedVideos = await _getLikedVideoIds(effectiveUserId);
+      // 4. Fetch Liked Videos (Reactions)
+      final likesResponse = await supabase
+          .from('video_reactions')
+          .select('video_id')
+          .eq('user_id', effectiveUserId)
+          .eq('reaction_type', 'like');
 
-      // Calculate genre weights from watch history
-      final genreWeights = await _calculateGenreWeights(effectiveUserId);
+      final likedVideos = (likesResponse as List)
+          .map((r) => r['video_id'] as String)
+          .toList();
+
+      // 5. Calculate Genre Weights (Client-side aggregation logic reused)
+      // Since 'user_titles' has a 'genre' column (string or json), we can use it.
+      // Assuming 'genre' column in user_titles is a comma-separated string or simple string.
+
+      final genreScores = <String, double>{};
+
+      // Helper to process weights
+      void addWeights(List<Map<String, dynamic>> items, double multiplier) {
+        for (final item in items) {
+          final genreField = item['genre'];
+          if (genreField != null) {
+            final genres = _extractGenres(genreField);
+            for (final g in genres) {
+              genreScores[g] = (genreScores[g] ?? 0) + multiplier;
+            }
+          }
+        }
+      }
+
+      // Filter lists from the fetched userTitles
+      final favoritesList = userTitles
+          .where((t) => t['is_favorite'] == true)
+          .toList();
+      final finishedList = userTitles
+          .where((t) => t['status'] == 'finished')
+          .toList();
+      final watchingList = userTitles
+          .where((t) => t['status'] == 'watching')
+          .toList();
+      final watchlistList = userTitles
+          .where((t) => t['status'] == 'watchlist')
+          .toList();
+
+      addWeights(favoritesList, 2.0);
+      addWeights(finishedList, 1.5);
+      addWeights(watchingList, 1.0);
+      addWeights(watchlistList, 0.5);
+
+      // Normalize weights
+      final genreWeights = _normalizeWeights(genreScores);
 
       print(
         '[PrefsCache] Final sync: ${selectedGenres.length} genres, '
@@ -112,16 +198,10 @@ class UserPreferencesCache {
         '${genreWeights.length} weighted genres',
       );
 
-      if (genreWeights.isNotEmpty) {
-        print(
-          '[PrefsCache] Top weights: ${genreWeights.entries.take(3).map((e) => "${e.key}:${e.value.toStringAsFixed(2)}").join(", ")}',
-        );
-      }
-
       final prefs = UserPreferences(
         genreWeights: genreWeights,
         preferredGenres: selectedGenres,
-        dislikedGenres: [], // Can be extended with user settings
+        dislikedGenres: [],
         watchedTmdbIds: watchedIds,
         watchlistTmdbIds: combinedWatchlist,
         likedVideoIds: likedVideos,
@@ -134,213 +214,39 @@ class UserPreferencesCache {
       return prefs;
     } catch (e) {
       print('[PrefsCache] Error syncing: $e');
-      // Return cached or empty on error
       return _cached ?? UserPreferences.empty();
     }
   }
 
-  /// Calculate genre weights from user's watch history
-  /// Weight multipliers:
-  /// - favorites: 2.0
-  /// - finished: 1.5
-  /// - watching: 1.0
-  /// - watchlist: 0.5
-  Future<Map<String, double>> _calculateGenreWeights(String userId) async {
-    final db = FirebaseFirestore.instance;
-    final genreScores = <String, double>{};
-
-    // Weight multipliers by collection
-    final collectionWeights = {
-      'favorites': 2.0,
-      'finished': 1.5,
-      'watching': 1.0,
-      'watchlist': 0.5,
-    };
-
-    for (final entry in collectionWeights.entries) {
-      final collectionName = entry.key;
-      final multiplier = entry.value;
-
-      try {
-        final docs = await db
-            .collection('users')
-            .doc(userId)
-            .collection(collectionName)
-            .limit(100)
-            .get();
-
-        for (final doc in docs.docs) {
-          final data = doc.data();
-
-          // Extract genres from the document
-          final genres = _extractGenresFromItem(data);
-
-          for (final genre in genres) {
-            genreScores[genre] = (genreScores[genre] ?? 0) + multiplier;
-          }
-        }
-      } catch (e) {
-        print('[PrefsCache] Error reading $collectionName for weights: $e');
-      }
+  // Helper to extract genres from Supabase 'genre' field
+  List<String> _extractGenres(dynamic genreField) {
+    if (genreField == null) return [];
+    if (genreField is String) {
+      return genreField
+          .split(',')
+          .map((g) => g.trim())
+          .where((g) => g.isNotEmpty)
+          .toList();
     }
-
-    if (genreScores.isEmpty) {
-      return {};
+    // Handle JSON array if applicable
+    if (genreField is List) {
+      return genreField.map((g) => g.toString()).toList();
     }
+    return [];
+  }
 
-    // Normalize to [0.0, 1.0]
-    final maxScore = genreScores.values.reduce((a, b) => a > b ? a : b);
+  Map<String, double> _normalizeWeights(Map<String, double> scores) {
+    if (scores.isEmpty) return {};
+    final maxScore = scores.values.reduce((a, b) => a > b ? a : b);
     final normalized = <String, double>{};
-
-    final sortedEntries = genreScores.entries.toList()
+    final sortedEntries = scores.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-
     for (final entry in sortedEntries) {
       normalized[entry.key] = double.parse(
         (entry.value / maxScore).toStringAsFixed(3),
       );
     }
-
     return normalized;
-  }
-
-  /// Extract genre names from an item document
-  List<String> _extractGenresFromItem(Map<String, dynamic> data) {
-    final genres = <String>[];
-
-    // Try 'genres' field (list)
-    if (data['genres'] != null) {
-      final raw = data['genres'];
-      if (raw is List) {
-        for (final g in raw) {
-          if (g is String) {
-            genres.add(g);
-          } else if (g is Map && g['name'] != null) {
-            genres.add(g['name'].toString());
-          }
-        }
-      }
-    }
-
-    // Try 'genre' field (string, possibly comma-separated)
-    if (data['genre'] != null && data['genre'] is String) {
-      final genreStr = data['genre'] as String;
-      for (final g in genreStr.split(',')) {
-        final trimmed = g.trim();
-        if (trimmed.isNotEmpty && !genres.contains(trimmed)) {
-          genres.add(trimmed);
-        }
-      }
-    }
-
-    return genres;
-  }
-
-  Future<List<int>> _getWatchedTmdbIds(String userId) async {
-    return _getCollectionIds(userId, ['watching', 'finished', 'favorites']);
-  }
-
-  Future<List<int>> _getCollectionIds(
-    String userId,
-    dynamic collectionOrList,
-  ) async {
-    final ids = <int>[];
-    final db = FirebaseFirestore.instance;
-    final collections = collectionOrList is List
-        ? collectionOrList
-        : [collectionOrList];
-
-    for (final collection in collections) {
-      try {
-        final docs = await db
-            .collection('users')
-            .doc(userId)
-            .collection(collection.toString())
-            .limit(100)
-            .get();
-
-        print('[PrefsCache] Found ${docs.docs.length} items in $collection');
-
-        for (final doc in docs.docs) {
-          // MovieListItem stores TMDB ID as 'id' field (string), not 'tmdbId'
-          // The document ID is also the TMDB ID
-          final data = doc.data();
-          final idValue = data['id'] ?? data['tmdbId'] ?? doc.id;
-
-          if (idValue != null) {
-            final parsedId = idValue is int
-                ? idValue
-                : int.tryParse(idValue.toString());
-            if (parsedId != null && parsedId > 0) {
-              ids.add(parsedId);
-            }
-          }
-        }
-      } catch (e) {
-        print('[PrefsCache] Error reading $collection: $e');
-        // Continue on collection errors
-      }
-    }
-
-    print(
-      '[PrefsCache] Total IDs from ${collections.join(",")}: ${ids.length}',
-    );
-    return ids;
-  }
-
-  /// Get TMDB IDs from recommendations received by the user
-  Future<List<int>> _getRecommendedMovieIds(String userId) async {
-    final ids = <int>[];
-    final db = FirebaseFirestore.instance;
-
-    try {
-      // Recommendations are stored at root level /recommendations
-      final docs = await db
-          .collection('recommendations')
-          .where('toUserId', isEqualTo: userId)
-          .limit(50)
-          .get();
-
-      print('[PrefsCache] Found ${docs.docs.length} recommendations for user');
-
-      for (final doc in docs.docs) {
-        final movieId = doc.data()['movieId'];
-        if (movieId != null) {
-          final parsedId = movieId is int
-              ? movieId
-              : int.tryParse(movieId.toString());
-          if (parsedId != null && parsedId > 0) {
-            ids.add(parsedId);
-          }
-        }
-      }
-    } catch (e) {
-      print('[PrefsCache] Error reading recommendations: $e');
-    }
-
-    return ids;
-  }
-
-  Future<List<String>> _getLikedVideoIds(String userId) async {
-    final ids = <String>[];
-    final db = FirebaseFirestore.instance;
-
-    try {
-      final docs = await db
-          .collection('users')
-          .doc(userId)
-          .collection('liked_videos')
-          .limit(100)
-          .get();
-
-      for (final doc in docs.docs) {
-        ids.add(doc.id);
-      }
-    } catch (e) {
-      // Ignore errors
-    }
-
-    return ids;
   }
 
   /// Check if cache needs refresh

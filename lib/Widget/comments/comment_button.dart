@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:finishd/services/comment_service.dart';
 import 'package:finishd/Widget/comments/comment_sheet.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 /// TikTok-style comment button
 ///
@@ -73,8 +72,8 @@ class _CommentButtonState extends State<CommentButton> {
           Transform(
             alignment: Alignment.center,
             transform: Matrix4.rotationY(3.14159), // Flip horizontally
-            child: FaIcon(
-              FontAwesomeIcons.solidCommentDots,
+            child: Icon(
+              Icons.chat_bubble,
               color: widget.color ?? Colors.white,
               size: widget.size + 4,
               shadows: const [Shadow(color: Colors.black54, blurRadius: 4)],

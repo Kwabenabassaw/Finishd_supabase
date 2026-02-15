@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:finishd/Model/movie_ratings_model.dart';
 import 'package:finishd/services/cache/ratings_cache_service.dart';
 import 'package:http/http.dart' as http;
@@ -43,15 +43,11 @@ class RatingsService {
       final freshRatings = await fetchFromApi(tmdbId);
 
       // 3. Save to SQLite Cache
-      // Convert Timestamp to int for JSON compatibility
-      final mapToSave = freshRatings.toFirestore();
-      if (mapToSave['lastUpdated'] is Timestamp) {
-        mapToSave['lastUpdated'] =
-            (mapToSave['lastUpdated'] as Timestamp).millisecondsSinceEpoch;
-      } else if (mapToSave['lastUpdated'] is DateTime) {
-        mapToSave['lastUpdated'] =
-            (mapToSave['lastUpdated'] as DateTime).millisecondsSinceEpoch;
-      }
+      // Convert DateTime to int (milliseconds) for JSON/SQLite compatibility
+      final mapToSave = freshRatings.toJson();
+      // overwriting the string ISO format with milliseconds for consistency with cache expectations
+      mapToSave['lastUpdated'] =
+          freshRatings.lastUpdated.millisecondsSinceEpoch;
 
       await RatingsCacheService.saveRatings(tmdbId.toString(), mapToSave);
 

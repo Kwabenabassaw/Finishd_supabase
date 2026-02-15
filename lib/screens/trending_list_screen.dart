@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-// Reusing FeedVideo or create a Movie model if available
-// Assuming you have a MovieDetails or similar screen to navigate to
-// import 'package:finishd/MovieDetails/MovieDetailsScreen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class TrendingListScreen extends StatelessWidget {
   final String? date;
@@ -20,13 +17,12 @@ class TrendingListScreen extends StatelessWidget {
         backgroundColor: Colors.black,
       ),
       backgroundColor: Colors.black,
-      body: FutureBuilder<DocumentSnapshot>(
-        future: FirebaseFirestore.instance
-            .collection('notifications')
-            .doc('daily_trending')
-            .collection('dates')
-            .doc(queryDate)
-            .get(),
+      body: FutureBuilder<Map<String, dynamic>?>(
+        future: Supabase.instance.client
+            .from('daily_trending')
+            .select()
+            .eq('date', queryDate)
+            .maybeSingle(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -41,7 +37,8 @@ class TrendingListScreen extends StatelessWidget {
             );
           }
 
-          if (!snapshot.hasData || !snapshot.data!.exists) {
+          final data = snapshot.data;
+          if (data == null) {
             return const Center(
               child: Text(
                 'No trending movies found for this date.',
@@ -50,7 +47,6 @@ class TrendingListScreen extends StatelessWidget {
             );
           }
 
-          final data = snapshot.data!.data() as Map<String, dynamic>;
           final List<dynamic> movies = data['movies'] ?? [];
 
           return ListView.builder(

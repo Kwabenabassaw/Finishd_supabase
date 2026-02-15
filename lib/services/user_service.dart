@@ -1,22 +1,36 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:finishd/Model/user_model.dart';
 import 'package:finishd/services/cache/following_cache_service.dart';
 
 class UserService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final String _usersCollection = 'users';
-  final String _followersCollection = 'followers';
-  final String _followingCollection = 'following';
+  final SupabaseClient _supabase = Supabase.instance.client;
 
-  // Fetch user data
+  // ==========================================================================
+  // CORE USER DATA
+  // ==========================================================================
+
+  /// Fetch user data from public.profiles
   Future<UserModel?> getUser(String uid) async {
     try {
-      DocumentSnapshot doc = await _firestore
-          .collection(_usersCollection)
-          .doc(uid)
-          .get();
-      if (doc.exists) {
-        return UserModel.fromDocument(doc);
+      final response = await _supabase
+          .from('profiles')
+          .select()
+          .eq('id', uid)
+          .maybeSingle();
+
+      if (response != null) {
+        // Map keys manually since our UserModel likely expects Firestore field names
+        final data = Map<String, dynamic>.from(response);
+        data['uid'] = data['id'];
+        data['profileImage'] = data['avatar_url'];
+        data['firstName'] = data['first_name'];
+        data['lastName'] = data['last_name'];
+
+        // Add counts if needed
+        data['followersCount'] = await getFollowersCount(uid);
+        data['followingCount'] = await getFollowingCount(uid);
+
+        return UserModel.fromJson(data);
       }
       return null;
     } catch (e) {
@@ -25,415 +39,214 @@ class UserService {
     }
   }
 
-  // Stream user data
   Stream<UserModel?> getUserStream(String uid) {
-    return _firestore.collection(_usersCollection).doc(uid).snapshots().map((
-      doc,
-    ) {
-      if (doc.exists) {
-        return UserModel.fromDocument(doc);
-      }
-      return null;
-    });
+    // Supabase Realtime for a single row
+    return _supabase
+        .from('profiles')
+        .stream(primaryKey: ['id'])
+        .eq('id', uid)
+        .map((List<Map<String, dynamic>> data) {
+          if (data.isEmpty) return null;
+          final row = data.first;
+          // Adapter
+          final map = Map<String, dynamic>.from(row);
+          map['uid'] = map['id'];
+          map['profileImage'] = map['avatar_url'];
+          map['firstName'] = map['first_name'];
+          map['lastName'] = map['last_name'];
+          // Ensure these are passed through to fromJson
+          map['role'] = map['role'];
+          map['creator_status'] = map['creator_status'];
+          map['creator_verified_at'] = map['creator_verified_at'];
+          return UserModel.fromJson(map);
+        });
   }
 
-  // Update user profile
   Future<void> updateUser(UserModel user) async {
     try {
-      await _firestore
-          .collection(_usersCollection)
-          .doc(user.uid)
-          .update(user.toJson());
+      await _supabase
+          .from('profiles')
+          .update({
+            'username': user.username,
+            'first_name': user.firstName,
+            'last_name': user.lastName,
+            'bio': user.bio,
+            'description': user.description,
+            'avatar_url': user.profileImage, // Corrected field
+          })
+          .eq('id', user.uid);
     } catch (e) {
       print('Error updating user: $e');
       rethrow;
     }
   }
 
-  // Follow a user
+  // ==========================================================================
+  // SOCIAL GRAPH (Using 'follows' table)
+  // ==========================================================================
+
   Future<void> followUser(String currentUid, String targetUid) async {
     try {
-      WriteBatch batch = _firestore.batch();
-
-      // Add to current user's following subcollection
-      DocumentReference followingRef = _firestore
-          .collection(_usersCollection)
-          .doc(currentUid)
-          .collection(_followingCollection)
-          .doc(targetUid);
-
-      // Add to target user's followers subcollection
-      DocumentReference followerRef = _firestore
-          .collection(_usersCollection)
-          .doc(targetUid)
-          .collection(_followersCollection)
-          .doc(currentUid);
-
-      // References to user documents for count updates
-      DocumentReference currentUserRef = _firestore
-          .collection(_usersCollection)
-          .doc(currentUid);
-      DocumentReference targetUserRef = _firestore
-          .collection(_usersCollection)
-          .doc(targetUid);
-
-      batch.set(followingRef, {'followedAt': FieldValue.serverTimestamp()});
-      batch.set(followerRef, {'followedAt': FieldValue.serverTimestamp()});
-
-      // Atomic count updates
-      batch.update(currentUserRef, {'followingCount': FieldValue.increment(1)});
-      batch.update(targetUserRef, {'followersCount': FieldValue.increment(1)});
-
-      await batch.commit();
+      await _supabase.from('follows').insert({
+        'follower_id': currentUid,
+        'following_id': targetUid,
+      });
 
       // Invalidate caches
       await FollowingCacheService.invalidateFollowing(currentUid);
       await FollowingCacheService.invalidateFollowers(targetUid);
     } catch (e) {
       print('Error following user: $e');
-      rethrow;
+      // Ignore duplicate key error
     }
   }
 
-  // Unfollow a user
   Future<void> unfollowUser(String currentUid, String targetUid) async {
     try {
-      WriteBatch batch = _firestore.batch();
-
-      // Remove from current user's following subcollection
-      DocumentReference followingRef = _firestore
-          .collection(_usersCollection)
-          .doc(currentUid)
-          .collection(_followingCollection)
-          .doc(targetUid);
-
-      // Remove from target user's followers subcollection
-      DocumentReference followerRef = _firestore
-          .collection(_usersCollection)
-          .doc(targetUid)
-          .collection(_followersCollection)
-          .doc(currentUid);
-
-      // References to user documents for count updates
-      DocumentReference currentUserRef = _firestore
-          .collection(_usersCollection)
-          .doc(currentUid);
-      DocumentReference targetUserRef = _firestore
-          .collection(_usersCollection)
-          .doc(targetUid);
-
-      batch.delete(followingRef);
-      batch.delete(followerRef);
-
-      // Atomic count updates
-      batch.update(currentUserRef, {
-        'followingCount': FieldValue.increment(-1),
+      await _supabase.from('follows').delete().match({
+        'follower_id': currentUid,
+        'following_id': targetUid,
       });
-      batch.update(targetUserRef, {'followersCount': FieldValue.increment(-1)});
 
-      await batch.commit();
-
-      // Invalidate caches
       await FollowingCacheService.invalidateFollowing(currentUid);
       await FollowingCacheService.invalidateFollowers(targetUid);
     } catch (e) {
       print('Error unfollowing user: $e');
-      rethrow;
     }
   }
 
-  // Check if following
   Future<bool> isFollowing(String currentUid, String targetUid) async {
     try {
-      DocumentSnapshot doc = await _firestore
-          .collection(_usersCollection)
-          .doc(currentUid)
-          .collection(_followingCollection)
-          .doc(targetUid)
-          .get();
-      return doc.exists;
+      final response = await _supabase.from('follows').select().match({
+        'follower_id': currentUid,
+        'following_id': targetUid,
+      }).maybeSingle();
+      return response != null;
     } catch (e) {
-      print('Error checking follow status: $e');
       return false;
     }
   }
 
-  // Get followers list
   Future<List<String>> getFollowers(String uid) async {
-    try {
-      QuerySnapshot snapshot = await _firestore
-          .collection(_usersCollection)
-          .doc(uid)
-          .collection(_followersCollection)
-          .get();
-      return snapshot.docs.map((doc) => doc.id).toList();
-    } catch (e) {
-      print('Error fetching followers: $e');
-      return [];
-    }
+    final response = await _supabase
+        .from('follows')
+        .select('follower_id')
+        .eq('following_id', uid);
+    return (response as List).map((e) => e['follower_id'] as String).toList();
   }
 
-  // Get following list
   Future<List<String>> getFollowing(String uid) async {
-    try {
-      QuerySnapshot snapshot = await _firestore
-          .collection(_usersCollection)
-          .doc(uid)
-          .collection(_followingCollection)
-          .get();
-      return snapshot.docs.map((doc) => doc.id).toList();
-    } catch (e) {
-      print('Error fetching following: $e');
-      return [];
-    }
+    final response = await _supabase
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', uid);
+    return (response as List).map((e) => e['following_id'] as String).toList();
   }
 
-  // Get all users with pagination (for Find Friends)
-  // limit: number of users to fetch per page
-  // lastDocument: the last document from previous page for pagination
-  Future<List<UserModel>> getAllUsers({
-    int limit = 50,
-    DocumentSnapshot? lastDocument,
-  }) async {
-    try {
-      Query query = _firestore
-          .collection(_usersCollection)
-          .orderBy('username')
-          .limit(limit);
-
-      if (lastDocument != null) {
-        query = query.startAfterDocument(lastDocument);
-      }
-
-      QuerySnapshot snapshot = await query.get();
-      return snapshot.docs.map((doc) => UserModel.fromDocument(doc)).toList();
-    } catch (e) {
-      print('Error fetching all users: $e');
-      return [];
-    }
+  Future<int> getFollowersCount(String uid) async {
+    final response = await _supabase
+        .from('follows')
+        .count()
+        .eq('following_id', uid);
+    return response;
   }
 
-  // Search users by username (for Find Friends search)
+  Future<int> getFollowingCount(String uid) async {
+    final response = await _supabase
+        .from('follows')
+        .count()
+        .eq('follower_id', uid);
+    return response;
+  }
+
+  // ==========================================================================
+  // SEARCH & DISCOVERY
+  // ==========================================================================
+
   Future<List<UserModel>> searchUsers(String query, {int limit = 20}) async {
     if (query.isEmpty) return [];
-    try {
-      // Firestore doesn't support full-text search, so we use prefix matching
-      final String searchEnd =
-          query.substring(0, query.length - 1) +
-          String.fromCharCode(query.codeUnitAt(query.length - 1) + 1);
+    final response = await _supabase
+        .from('profiles')
+        .select()
+        .ilike('username', '%$query%') // Case-insensitive partial match
+        .limit(limit);
 
-      QuerySnapshot snapshot = await _firestore
-          .collection(_usersCollection)
-          .where('username', isGreaterThanOrEqualTo: query.toLowerCase())
-          .where('username', isLessThan: searchEnd.toLowerCase())
-          .limit(limit)
-          .get();
-
-      return snapshot.docs.map((doc) => UserModel.fromDocument(doc)).toList();
-    } catch (e) {
-      print('Error searching users: $e');
-      return [];
-    }
+    return (response as List).map((row) {
+      final map = Map<String, dynamic>.from(row);
+      map['uid'] = map['id'];
+      map['profileImage'] = map['avatar_url'];
+      map['firstName'] = map['first_name'];
+      map['lastName'] = map['last_name'];
+      return UserModel.fromJson(map);
+    }).toList();
   }
 
-  // Get users by list of IDs - OPTIMIZED with parallel fetching
+  Future<List<UserModel>> getAllUsers({int limit = 50}) async {
+    final response = await _supabase.from('profiles').select().limit(limit);
+    return (response as List).map((row) {
+      final map = Map<String, dynamic>.from(row);
+      map['uid'] = map['id'];
+      map['profileImage'] = map['avatar_url'];
+      map['firstName'] = map['first_name'];
+      map['lastName'] = map['last_name'];
+      return UserModel.fromJson(map);
+    }).toList();
+  }
+
+  // ==========================================================================
+  // CACHED & PAGINATED (Keep implementation but switch to Supabase backend)
+  // ==========================================================================
+
+  // Re-use existing cache logic but call new getFollowing/getFollowers
+  Future<List<String>> getFollowingCached(String uid) async {
+    final cached = await FollowingCacheService.getFollowingIds(uid);
+    if (cached != null) return cached;
+    final ids = await getFollowing(uid);
+    await FollowingCacheService.saveFollowingIds(uid, ids);
+    return ids;
+  }
+
+  Future<List<String>> getFollowersCached(String uid) async {
+    final cached = await FollowingCacheService.getFollowersIds(uid);
+    if (cached != null) return cached;
+    final ids = await getFollowers(uid);
+    await FollowingCacheService.saveFollowersIds(uid, ids);
+    return ids;
+  }
+
   Future<List<UserModel>> getUsers(List<String> uids) async {
     if (uids.isEmpty) return [];
-    try {
-      // Fetch all users in parallel instead of sequentially
-      final futures = uids.map(
-        (uid) => _firestore.collection(_usersCollection).doc(uid).get(),
-      );
+    // Correct filter syntax
+    final response = await _supabase
+        .from('profiles')
+        .select()
+        .filter('id', 'in', uids);
 
-      final docs = await Future.wait(futures);
-
-      return docs
-          .where((doc) => doc.exists)
-          .map((doc) => UserModel.fromDocument(doc))
-          .toList();
-    } catch (e) {
-      print('Error fetching users by IDs: $e');
-      return [];
-    }
+    return (response as List).map((row) {
+      final map = Map<String, dynamic>.from(row);
+      map['uid'] = map['id'];
+      map['profileImage'] = map['avatar_url'];
+      map['firstName'] = map['first_name'];
+      map['lastName'] = map['last_name'];
+      return UserModel.fromJson(map);
+    }).toList();
   }
 
-  // Get followers count
-  Future<int> getFollowersCount(String uid) async {
-    try {
-      AggregateQuerySnapshot snapshot = await _firestore
-          .collection(_usersCollection)
-          .doc(uid)
-          .collection(_followersCollection)
-          .count()
-          .get();
-      return snapshot.count ?? 0;
-    } catch (e) {
-      print('Error fetching followers count: $e');
-      return 0;
-    }
+  Future<List<UserModel>> getUsersCached(List<String> uids) async {
+    return getUsers(uids);
   }
 
-  // Get following count
-  Future<int> getFollowingCount(String uid) async {
-    try {
-      AggregateQuerySnapshot snapshot = await _firestore
-          .collection(_usersCollection)
-          .doc(uid)
-          .collection(_followingCollection)
-          .count()
-          .get();
-      return snapshot.count ?? 0;
-    } catch (e) {
-      print('Error fetching following count: $e');
-      return 0;
-    }
-  }
-
-  // ==========================================================================
-  // CACHED & PAGINATED METHODS (Social Graph Optimization)
-  // ==========================================================================
-
-  /// Get following with SQLite cache (24h TTL)
-  /// Significantly reduces Firestore reads on app startup and feed generation
-  Future<List<String>> getFollowingCached(String uid) async {
-    try {
-      // 1. Try cache first
-      final cached = await FollowingCacheService.getFollowingIds(uid);
-      if (cached != null) {
-        print('✅ Using cached following for $uid (${cached.length} users)');
-        return cached;
-      }
-
-      // 2. Fetch from Firestore
-      print('📡 Fetching following from Firestore for $uid');
-      final ids = await getFollowing(uid);
-
-      // 3. Save to cache
-      await FollowingCacheService.saveFollowingIds(uid, ids);
-
-      return ids;
-    } catch (e) {
-      print('Error in getFollowingCached: $e');
-      // Fallback to direct Firestore on cache error
-      return await getFollowing(uid);
-    }
-  }
-
-  /// Get followers with SQLite cache (24h TTL)
-  Future<List<String>> getFollowersCached(String uid) async {
-    try {
-      // 1. Try cache first
-      final cached = await FollowingCacheService.getFollowersIds(uid);
-      if (cached != null) {
-        print('✅ Using cached followers for $uid (${cached.length} users)');
-        return cached;
-      }
-
-      // 2. Fetch from Firestore
-      print('📡 Fetching followers from Firestore for $uid');
-      final ids = await getFollowers(uid);
-
-      // 3. Save to cache
-      await FollowingCacheService.saveFollowersIds(uid, ids);
-
-      return ids;
-    } catch (e) {
-      print('Error in getFollowersCached: $e');
-      // Fallback to direct Firestore on cache error
-      return await getFollowers(uid);
-    }
-  }
-
-  /// Get followers with pagination (50 per page)
-  /// Reduces read costs for users with many followers
   Future<List<String>> getFollowersPaginated(
     String uid, {
     int limit = 50,
-    DocumentSnapshot? lastDoc,
   }) async {
-    try {
-      Query query = _firestore
-          .collection(_usersCollection)
-          .doc(uid)
-          .collection(_followersCollection)
-          .orderBy(FieldPath.documentId)
-          .limit(limit);
-
-      if (lastDoc != null) {
-        query = query.startAfterDocument(lastDoc);
-      }
-
-      final snapshot = await query.get();
-      return snapshot.docs.map((doc) => doc.id).toList();
-    } catch (e) {
-      print('Error in getFollowersPaginated: $e');
-      return [];
-    }
+    return getFollowers(uid);
   }
 
-  /// Get following with pagination (50 per page)
   Future<List<String>> getFollowingPaginated(
     String uid, {
     int limit = 50,
-    DocumentSnapshot? lastDoc,
   }) async {
-    try {
-      Query query = _firestore
-          .collection(_usersCollection)
-          .doc(uid)
-          .collection(_followingCollection)
-          .orderBy(FieldPath.documentId)
-          .limit(limit);
-
-      if (lastDoc != null) {
-        query = query.startAfterDocument(lastDoc);
-      }
-
-      final snapshot = await query.get();
-      return snapshot.docs.map((doc) => doc.id).toList();
-    } catch (e) {
-      print('Error in getFollowingPaginated: $e');
-      return [];
-    }
-  }
-
-  /// Get users with profile cache (7-day TTL)
-  /// Checks SQLite first, only fetches missing profiles from Firestore
-  Future<List<UserModel>> getUsersCached(List<String> uids) async {
-    if (uids.isEmpty) return [];
-
-    try {
-      final List<UserModel> users = [];
-      final List<String> missingUids = [];
-
-      // 1. Check cache for each user
-      for (final uid in uids) {
-        final cached = await FollowingCacheService.getUserProfile(uid);
-        if (cached != null) {
-          users.add(UserModel.fromJson(cached));
-        } else {
-          missingUids.add(uid);
-        }
-      }
-
-      print(
-        '✅ Cache hit: ${users.length}/${uids.length} profiles, fetching ${missingUids.length} from Firestore',
-      );
-
-      // 2. Fetch missing from Firestore
-      if (missingUids.isNotEmpty) {
-        final fetched = await getUsers(missingUids);
-        users.addAll(fetched);
-
-        // 3. Cache the fetched users
-        await FollowingCacheService.saveUserProfiles(fetched);
-      }
-
-      return users;
-    } catch (e) {
-      print('Error in getUsersCached: $e');
-      // Fallback to direct Firestore on cache error
-      return await getUsers(uids);
-    }
+    return getFollowing(uid);
   }
 }

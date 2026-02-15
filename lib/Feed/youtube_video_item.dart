@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import 'package:video_player/video_player.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/feed_video.dart';
 import '../provider/youtube_feed_provider.dart';
@@ -36,7 +37,10 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
     });
     HapticFeedback.mediumImpact();
     // Trigger like logic here if not already liked
-    // ...
+    final provider = context.read<YoutubeFeedProvider>();
+    if (widget.index < provider.videos.length) {
+      // Ideally trigger like via ApiClient or provider, but for now strict UI feedback
+    }
 
     Future.delayed(const Duration(milliseconds: 800), () {
       if (mounted) setState(() => _showHeart = false);
@@ -73,94 +77,96 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
       );
     }
 
-    return Container(
-      color: Colors.black,
-      child: GestureDetector(
-        onDoubleTapDown: _onDoubleTap,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // 1. Video Player Layer (Scoped)
-            _VideoPlayerLayer(index: widget.index, video: video),
+    return RepaintBoundary(
+      child: Container(
+        color: Colors.black,
+        child: GestureDetector(
+          onDoubleTapDown: _onDoubleTap,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // 1. Video Player Layer (Scoped)
+              _VideoPlayerLayer(index: widget.index, video: video),
 
-            // 2. Gradient overlays for text readability
-            const _GradientOverlay(),
+              // 2. Gradient overlays for text readability
+              const _GradientOverlay(),
 
-            // 3. Play/Pause gesture area
-            _PlayPauseGesture(index: widget.index),
+              // 3. Play/Pause gesture area
+              _PlayPauseGesture(index: widget.index),
 
-            // 4. Metadata (Restored)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 100, // Leave room for action buttons
-              child: SafeArea(
-                top: false,
-                right: false,
-                child: Padding(
-                  padding: const EdgeInsets.only(
-                    left: 16.0,
-                    bottom: 20.0,
-                    right: 16.0,
-                  ),
-                  child: _VideoMetadata(video: video),
-                ),
-              ),
-            ),
-
-            // 5. Action Buttons (Bottom Right) - Now Reactive
-            Positioned(
-              bottom: 0,
-              right: 0,
-              child: SafeArea(
-                top: false,
-                left: false,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 20.0, right: 10.0),
-                  // Use Selector to reactively update isActive
-                  child: Selector<YoutubeFeedProvider, bool>(
-                    selector: (_, provider) =>
-                        provider.currentIndex == widget.index,
-                    builder: (context, isActive, _) {
-                      return _ActionButtons(video: video, isActive: isActive);
-                    },
-                  ),
-                ),
-              ),
-            ),
-
-            // 6. PROMINENT Mute Button (Top Right) - Scoped
-            Positioned(
-              top: 0,
-              right: 0,
-              child: SafeArea(
-                bottom: false,
-                left: false,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 16.0, right: 16.0),
-                  child: const _MuteButton(),
-                ),
-              ),
-            ),
-
-            // 7. Play icon overlay (Scoped)
-            Center(child: _PlayIconOverlay(index: widget.index)),
-
-            // 8. Error indicator (Scoped)
-            Positioned(
-              top: 140,
-              left: 16,
-              child: SafeArea(child: _ErrorIndicator(index: widget.index)),
-            ),
-
-            // 9. Double Tap Heart Animation
-            if (_showHeart)
+              // 4. Metadata (Restored)
               Positioned(
-                left: _heartPos.dx - 40,
-                top: _heartPos.dy - 40,
-                child: _HeartAnimation(),
+                bottom: 0,
+                left: 0,
+                right: 100, // Leave room for action buttons
+                child: SafeArea(
+                  top: false,
+                  right: false,
+                  child: Padding(
+                    padding: const EdgeInsets.only(
+                      left: 16.0,
+                      bottom: 20.0,
+                      right: 16.0,
+                    ),
+                    child: _VideoMetadata(video: video),
+                  ),
+                ),
               ),
-          ],
+
+              // 5. Action Buttons (Bottom Right) - Now Reactive
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: SafeArea(
+                  top: false,
+                  left: false,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 20.0, right: 10.0),
+                    // Use Selector to reactively update isActive
+                    child: Selector<YoutubeFeedProvider, bool>(
+                      selector: (_, provider) =>
+                          provider.currentIndex == widget.index,
+                      builder: (context, isActive, _) {
+                        return _ActionButtons(video: video, isActive: isActive);
+                      },
+                    ),
+                  ),
+                ),
+              ),
+
+              // 6. PROMINENT Mute Button (Top Right) - Scoped
+              Positioned(
+                top: 0,
+                right: 0,
+                child: SafeArea(
+                  bottom: false,
+                  left: false,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 16.0, right: 16.0),
+                    child: const _MuteButton(),
+                  ),
+                ),
+              ),
+
+              // 7. Play icon overlay (Scoped)
+              Center(child: _PlayIconOverlay(index: widget.index)),
+
+              // 8. Error indicator (Scoped)
+              Positioned(
+                top: 140,
+                left: 16,
+                child: SafeArea(child: _ErrorIndicator(index: widget.index)),
+              ),
+
+              // 9. Double Tap Heart Animation
+              if (_showHeart)
+                Positioned(
+                  left: _heartPos.dx - 40,
+                  top: _heartPos.dy - 40,
+                  child: _HeartAnimation(),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -182,17 +188,24 @@ class _VideoPlayerLayer extends StatelessWidget {
     // This ensures we rebuild when this video becomes the active one
     return Selector<
       YoutubeFeedProvider,
-      ({YoutubePlayerController? controller, bool isCurrent})
+      ({
+        YoutubePlayerController? ytController,
+        VideoPlayerController? mp4Controller,
+        bool isCurrent,
+      })
     >(
       selector: (_, provider) => (
-        controller: provider.getController(index),
+        ytController: provider.getController(index),
+        mp4Controller: provider.getMp4Controller(index),
         isCurrent: provider.currentIndex == index,
       ),
       builder: (context, data, child) {
-        if (data.controller != null) {
+        if (data.mp4Controller != null) {
+          return _buildMp4Player(context, data.mp4Controller!, data.isCurrent);
+        } else if (data.ytController != null) {
           return _buildPlayer(
             context,
-            data.controller!,
+            data.ytController!,
             data.isCurrent,
             video.videoId,
           );
@@ -201,8 +214,30 @@ class _VideoPlayerLayer extends StatelessWidget {
         }
       },
       shouldRebuild: (prev, next) =>
-          prev.controller != next.controller ||
+          prev.ytController != next.ytController ||
+          prev.mp4Controller != next.mp4Controller ||
           prev.isCurrent != next.isCurrent,
+    );
+  }
+
+  Widget _buildMp4Player(
+    BuildContext context,
+    VideoPlayerController controller,
+    bool isCurrent,
+  ) {
+    if (!controller.value.isInitialized) return _buildLoadingState();
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Center(
+          child: AspectRatio(
+            aspectRatio: controller.value.aspectRatio,
+            child: VideoPlayer(controller),
+          ),
+        ),
+        // Placeholder until first frame logic could go here if needed
+      ],
     );
   }
 
@@ -247,12 +282,6 @@ class _VideoPlayerLayer extends StatelessWidget {
                   thumbnail: const SizedBox.shrink(),
                   onEnded: (_) => controller.play(),
                   onReady: () {
-                    // NOTE: JavaScript injection is not supported by youtube_player_flutter package
-                    // UI customization is handled by YoutubePlayerFlags instead:
-                    // - hideControls: true
-                    // - hideThumbnail: true
-                    // - controlsVisibleAtStart: false
-                    // These flags are set in youtube_feed_provider.dart:_createController()
                     debugPrint(
                       '[YTVideoItem] ✅ Player ready for: ${video.videoId}',
                     );
@@ -434,6 +463,16 @@ class _PlayPauseGesture extends StatelessWidget {
       child: GestureDetector(
         onTap: () {
           final provider = context.read<YoutubeFeedProvider>();
+
+          final mp4Ctrl = provider.getMp4Controller(index);
+          if (mp4Ctrl != null && mp4Ctrl.value.isInitialized) {
+            if (mp4Ctrl.value.isPlaying)
+              provider.pause(index);
+            else
+              provider.play(index);
+            return;
+          }
+
           final controller = provider.getController(index);
           if (controller != null) {
             if (controller.value.isPlaying) {
@@ -494,10 +533,18 @@ class _PlayIconOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return Selector<YoutubeFeedProvider, bool>(
       selector: (_, provider) {
-        final controller = provider.getController(index);
         final isCurrent = provider.currentIndex == index;
-        return isCurrent &&
-            controller != null &&
+        if (!isCurrent) return false;
+
+        // MP4
+        final mp4 = provider.getMp4Controller(index);
+        if (mp4 != null && mp4.value.isInitialized) {
+          return !mp4.value.isPlaying;
+        }
+
+        // YouTube
+        final controller = provider.getController(index);
+        return controller != null &&
             controller.value.playerState == PlayerState.paused;
       },
       builder: (context, showOverlay, _) {
@@ -532,11 +579,17 @@ class _ErrorIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Selector<YoutubeFeedProvider, int>(
-      selector: (_, provider) =>
-          provider.getController(index)?.value.errorCode ?? 0,
-      builder: (context, errorCode, _) {
-        if (errorCode == 0) return const SizedBox.shrink();
+    return Selector<YoutubeFeedProvider, dynamic>(
+      selector: (_, provider) {
+        final mp4 = provider.getMp4Controller(index);
+        if (mp4 != null && mp4.value.hasError)
+          return mp4.value.errorDescription;
+
+        final yt = provider.getController(index);
+        return yt?.value.errorCode ?? 0;
+      },
+      builder: (context, error, _) {
+        if (error == null || error == 0) return const SizedBox.shrink();
 
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -549,9 +602,12 @@ class _ErrorIndicator extends StatelessWidget {
             children: [
               const Icon(Icons.error, color: Colors.white, size: 16),
               const SizedBox(width: 6),
-              Text(
-                'Error $errorCode - Skipping...',
-                style: const TextStyle(color: Colors.white, fontSize: 12),
+              Flexible(
+                child: Text(
+                  'Error: $error',
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -798,11 +854,14 @@ class _ActionButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-    final userId = user?.uid ?? '';
+    final user = Supabase.instance.client.auth.currentUser;
+    final userId = user?.id ?? '';
     final userName =
-        user?.displayName ?? user?.email?.split('@').first ?? 'User';
-    final userAvatar = user?.photoURL;
+        user?.userMetadata?['full_name'] ??
+        user?.userMetadata?['name'] ??
+        user?.email?.split('@').first ??
+        'User';
+    final userAvatar = user?.userMetadata?['avatar_url'];
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -832,7 +891,7 @@ class _ActionButtons extends StatelessWidget {
 
         // Share Button
         _ActionButton(
-          icon: FontAwesomeIcons.share,
+          icon: Icons.send,
           label: 'Share',
           onTap: () => showVideoShareSheet(
             context,
@@ -891,7 +950,7 @@ class _ActionButton extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
 
-            child: FaIcon(icon, color: Colors.white, size: 20),
+            child: Icon(icon, color: Colors.white, size: 20),
           ),
           const SizedBox(height: 4),
           Text(

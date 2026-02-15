@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Service for uploading files to Cloudflare R2 via presigned URLs.
 ///
@@ -24,11 +24,11 @@ class R2StorageService {
     String contentType = 'image/jpeg',
   }) async {
     // 1. Get auth token
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session == null) {
       throw Exception('User not authenticated');
     }
-    final token = await user.getIdToken();
+    final token = session.accessToken;
 
     // 2. Request presigned URL from backend
     final urlResponse = await http.post(

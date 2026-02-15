@@ -7,7 +7,7 @@ import 'package:finishd/Discover/widgets/ranking_section.dart';
 import 'package:finishd/Widget/movie_section.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:finishd/services/social_discovery_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 
 class ProviderContentScreen extends StatefulWidget {
@@ -174,11 +174,11 @@ class _ProviderContentScreenState extends State<ProviderContentScreen> {
   }
 
   Future<List<MediaItem>> _fetchSocialContent() async {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return [];
 
     try {
-      await _socialService.fetchSocialSignals(user.uid);
+      await _socialService.fetchSocialSignals(user.id);
       return [];
     } catch (e) {
       return [];
@@ -403,7 +403,6 @@ class _ProviderContentScreenState extends State<ProviderContentScreen> {
         onPressed: () => Navigator.pop(context),
       ),
       title: Text(widget.providerName, style: theme.textTheme.titleLarge),
-      
     );
   }
 

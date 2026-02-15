@@ -1,10 +1,11 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:finishd/Model/user_preferences.dart';
 import 'package:finishd/services/user_preferences_service.dart';
 import 'package:flutter/foundation.dart';
 
 class OnboardingProvider with ChangeNotifier {
   final UserPreferencesService _preferencesService = UserPreferencesService();
+  final SupabaseClient _supabase = Supabase.instance.client;
 
   // Genre selections
   final Set<String> _selectedGenres = {};
@@ -91,14 +92,14 @@ class OnboardingProvider with ChangeNotifier {
     return _selectedProviders.any((p) => p.providerId == providerId);
   }
 
-  // Save all preferences to Firestore
-  Future<bool> saveToFirestore() async {
+  // Save all preferences to Supabase
+  Future<bool> savePreferences() async {
     _isSaving = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final user = _supabase.auth.currentUser;
       if (user == null) {
         throw 'No user logged in';
       }
@@ -111,7 +112,7 @@ class OnboardingProvider with ChangeNotifier {
         streamingProviders: _selectedProviders,
       );
 
-      await _preferencesService.saveUserPreferences(user.uid, preferences);
+      await _preferencesService.saveUserPreferences(user.id, preferences);
 
       _isSaving = false;
       notifyListeners();
@@ -138,12 +139,10 @@ class OnboardingProvider with ChangeNotifier {
   // Load existing preferences (if user returns to onboarding)
   Future<void> loadPreferences() async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final user = _supabase.auth.currentUser;
       if (user == null) return;
 
-      final preferences = await _preferencesService.getUserPreferences(
-        user.uid,
-      );
+      final preferences = await _preferencesService.getUserPreferences(user.id);
       if (preferences != null) {
         _selectedGenres.clear();
         _selectedGenres.addAll(preferences.selectedGenres);

@@ -1,3 +1,4 @@
+import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:flutter/material.dart';
 import 'package:finishd/models/appeal_model.dart';
 import 'package:finishd/services/appeal_service.dart';
@@ -254,7 +255,7 @@ class _AppealBottomSheetState extends State<AppealBottomSheet> {
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: LogoLoadingScreen(),
                           )
                         : const Text(
                             'Submit Appeal',

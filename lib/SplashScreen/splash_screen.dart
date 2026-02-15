@@ -77,7 +77,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     final authService = Provider.of<AuthService>(context, listen: false);
     if (authService.currentUser != null) {
-      final userId = authService.currentUser!.uid;
+      final userId = authService.currentUser!.id;
 
       // Check moderation status BEFORE allowing into app
       final moderationStatus = await authService.checkUserModerationStatus(

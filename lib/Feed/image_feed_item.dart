@@ -1,5 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui';
 
@@ -203,11 +203,14 @@ class _ImageActionButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-    final userId = user?.uid ?? '';
+    final user = Supabase.instance.client.auth.currentUser;
+    final userId = user?.id ?? '';
     final userName =
-        user?.displayName ?? user?.email?.split('@').first ?? 'User';
-    final userAvatar = user?.photoURL;
+        user?.userMetadata?['full_name'] ??
+        user?.userMetadata?['name'] ??
+        user?.email?.split('@').first ??
+        'User';
+    final userAvatar = user?.userMetadata?['avatar_url'];
 
     return Column(
       mainAxisSize: MainAxisSize.min,

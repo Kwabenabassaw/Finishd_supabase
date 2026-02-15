@@ -1,4 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:finishd/services/user_preferences_service.dart';
 
@@ -33,6 +33,7 @@ final List<Genre> allGenres = [
   Genre('War', '⚔️', 10752),
   Genre('Western', '🤠', 37),
 ];
+
 class EditGenresScreen extends StatefulWidget {
   const EditGenresScreen({super.key});
 
@@ -59,7 +60,7 @@ class _EditGenresScreenState extends State<EditGenresScreen> {
 
   Future<void> _loadData() async {
     try {
-      final userId = FirebaseAuth.instance.currentUser?.uid;
+      final userId = Supabase.instance.client.auth.currentUser?.id;
       if (userId == null) {
         setState(() {
           _error = 'Not logged in';
@@ -111,7 +112,7 @@ class _EditGenresScreenState extends State<EditGenresScreen> {
       return;
     }
 
-    final userId = FirebaseAuth.instance.currentUser?.uid;
+    final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) return;
 
     setState(() => _isSaving = true);

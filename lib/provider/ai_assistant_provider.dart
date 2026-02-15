@@ -5,8 +5,8 @@ import 'package:finishd/Model/tvdetail.dart';
 import 'package:finishd/Model/movie_ratings_model.dart';
 import 'package:finishd/services/ai/ai_context_builder.dart';
 import 'package:finishd/services/ai/vertex_ai_service.dart';
-import 'package:firebase_ai/firebase_ai.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:flutter/material.dart';
 
@@ -40,10 +40,10 @@ class AiAssistantProvider extends ChangeNotifier {
   late ChatSession _chatSession;
 
   AiAssistantProvider() {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = Supabase.instance.client.auth.currentUser;
     _currentUser = ChatUser(
-      id: user?.uid ?? 'guest',
-      firstName: user?.displayName ?? 'User',
+      id: user?.id ?? 'guest',
+      firstName: user?.userMetadata?['full_name'] ?? 'User',
     );
   }
 

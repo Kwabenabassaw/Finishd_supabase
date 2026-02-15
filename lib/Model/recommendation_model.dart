@@ -1,10 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class Recommendation {
   final String id;
   final String fromUserId;
   final String toUserId;
-  final String movieId; // Changed to String to match MovieListItem
+  final String movieId;
   final String movieTitle;
   final String? moviePosterPath;
   final String mediaType; // 'movie' or 'tv'
@@ -24,52 +22,38 @@ class Recommendation {
   });
 
   factory Recommendation.fromMap(Map<String, dynamic> map, String id) {
-    // Handle timestamp being either Firestore Timestamp or a Map/String from JSON
-    DateTime parsedTime;
-    try {
-      if (map['timestamp'] is Timestamp) {
-        parsedTime = (map['timestamp'] as Timestamp).toDate();
-      } else if (map['timestamp'] is Map) {
-        // Handle serialized Timestamp as Map: {_seconds: ..., _nanoseconds: ...}
-        final t = map['timestamp'];
-        parsedTime = Timestamp(
-          t['_seconds'] ?? 0,
-          t['_nanoseconds'] ?? 0,
-        ).toDate();
-      } else if (map['timestamp'] is int) {
-        parsedTime = DateTime.fromMillisecondsSinceEpoch(map['timestamp']);
-      } else if (map['timestamp'] is String) {
-        parsedTime = DateTime.tryParse(map['timestamp']) ?? DateTime.now();
-      } else {
-        parsedTime = DateTime.now();
-      }
-    } catch (e) {
-      print('Error parsing recommendation timestamp: $e');
-      parsedTime = DateTime.now();
-    }
-
     return Recommendation(
       id: id,
-      fromUserId: map['fromUserId'] ?? '',
-      toUserId: map['toUserId'] ?? '',
-      movieId: map['movieId'] ?? '',
-      movieTitle: map['movieTitle'] ?? '',
-      moviePosterPath: map['moviePosterPath'],
-      mediaType: map['mediaType'] ?? 'movie',
-      timestamp: parsedTime,
+      fromUserId:
+          map['from_user_id'] ??
+          map['fromUserId'] ??
+          '', // Support both snake_case (DB) and camelCase (Legacy)
+      toUserId: map['to_user_id'] ?? map['toUserId'] ?? '',
+      movieId: map['movie_id'] ?? map['movieId'] ?? '',
+      movieTitle: map['title'] ?? map['movie_title'] ?? map['movieTitle'] ?? '',
+      moviePosterPath:
+          map['poster_path'] ??
+          map['movie_poster_path'] ??
+          map['moviePosterPath'],
+      mediaType: map['media_type'] ?? map['mediaType'] ?? 'movie',
+      timestamp: map['created_at'] != null
+          ? DateTime.tryParse(map['created_at']) ?? DateTime.now()
+          : (map['timestamp'] is int
+                ? DateTime.fromMillisecondsSinceEpoch(map['timestamp'])
+                : DateTime.now()),
       status: map['status'] ?? 'unread',
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'fromUserId': fromUserId,
-      'toUserId': toUserId,
-      'movieId': movieId,
-      'movieTitle': movieTitle,
-      'moviePosterPath': moviePosterPath,
-      'mediaType': mediaType,
-      'timestamp': Timestamp.fromDate(timestamp),
+      'from_user_id': fromUserId,
+      'to_user_id': toUserId,
+      'movie_id': movieId,
+      'movie_title': movieTitle,
+      'movie_poster_path': moviePosterPath,
+      'media_type': mediaType,
+      'created_at': timestamp.toIso8601String(),
       'status': status,
     };
   }

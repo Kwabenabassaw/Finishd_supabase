@@ -1,66 +1,31 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:finishd/Model/reaction_data.dart';
 
-/// Service for managing video reactions in Firestore
+/// Service for managing video reactions in Supabase
 ///
-/// Firestore Structure:
-/// video_reactions/{videoId}/reactions/{userId} -> {type, emoji, timestamp, userId, videoId}
-/// video_reactions/{videoId} -> {reactionCounts: {heart: 10, laugh: 4, ...}}
+/// Schema:
+/// table: video_reactions (id, video_id, user_id, reaction_type, emoji, created_at)
+/// counts: retrieved via get_reaction_counts RPC
 class ReactionService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  /// Collection reference for video reactions
-  CollectionReference get _reactionsCollection =>
-      _firestore.collection('video_reactions');
+  final SupabaseClient _supabase = Supabase.instance.client;
 
   /// React to a video (creates or updates reaction)
-  ///
-  /// Uses batch write to atomically update both the reaction document
-  /// and the reaction counts.
   Future<void> reactToVideo({
     required String videoId,
     required String userId,
     required String reactionType,
     required String emoji,
   }) async {
-    final videoDocRef = _reactionsCollection.doc(videoId);
-    final userReactionRef = videoDocRef.collection('reactions').doc(userId);
-
-    // Check if user already has a reaction (to update counts correctly)
-    final existingReaction = await userReactionRef.get();
-    final existingData = existingReaction.data();
-    final String? previousType = existingData?['type'] as String?;
-
-    // Use batch write for atomicity
-    final batch = _firestore.batch();
-
-    // Set the new reaction
-    batch.set(userReactionRef, {
-      'type': reactionType,
-      'emoji': emoji,
-      'timestamp': FieldValue.serverTimestamp(),
-      'userId': userId,
-      'videoId': videoId,
-    });
-
-    // Update reaction counts
-    if (previousType != null && previousType != reactionType) {
-      // Decrement old type, increment new type
-      batch.set(videoDocRef, {
-        'reactionCounts': {
-          previousType: FieldValue.increment(-1),
-          reactionType: FieldValue.increment(1),
-        },
-      }, SetOptions(merge: true));
-    } else if (previousType == null) {
-      // First reaction - just increment
-      batch.set(videoDocRef, {
-        'reactionCounts': {reactionType: FieldValue.increment(1)},
-      }, SetOptions(merge: true));
+    try {
+      await _supabase.from('video_reactions').upsert({
+        'video_id': videoId,
+        'user_id': userId,
+        'reaction_type': reactionType,
+      }, onConflict: 'video_id,user_id');
+    } catch (e) {
+      print('❌ Error reacting to video: $e');
+      rethrow;
     }
-    // If same type, no count change needed
-
-    await batch.commit();
   }
 
   /// Quick heart reaction (tap to like)
@@ -81,28 +46,14 @@ class ReactionService {
     required String videoId,
     required String userId,
   }) async {
-    final videoDocRef = _reactionsCollection.doc(videoId);
-    final userReactionRef = videoDocRef.collection('reactions').doc(userId);
-
-    // Get current reaction to decrement correct count
-    final existingReaction = await userReactionRef.get();
-    if (!existingReaction.exists) return;
-
-    final String? reactionType = existingReaction.data()?['type'] as String?;
-
-    final batch = _firestore.batch();
-
-    // Delete the reaction
-    batch.delete(userReactionRef);
-
-    // Decrement the count
-    if (reactionType != null) {
-      batch.set(videoDocRef, {
-        'reactionCounts': {reactionType: FieldValue.increment(-1)},
-      }, SetOptions(merge: true));
+    try {
+      await _supabase.from('video_reactions').delete().match({
+        'video_id': videoId,
+        'user_id': userId,
+      });
+    } catch (e) {
+      print('❌ Error removing reaction: $e');
     }
-
-    await batch.commit();
   }
 
   /// Toggle reaction - if same reaction exists, remove it; otherwise set it
@@ -139,15 +90,14 @@ class ReactionService {
     required String userId,
   }) async {
     try {
-      final doc = await _reactionsCollection
-          .doc(videoId)
-          .collection('reactions')
-          .doc(userId)
-          .get();
+      final response = await _supabase.from('video_reactions').select().match({
+        'video_id': videoId,
+        'user_id': userId,
+      }).maybeSingle();
 
-      if (!doc.exists || doc.data() == null) return null;
+      if (response == null) return null;
 
-      return ReactionData.fromJson(doc.data()!, doc.id);
+      return ReactionData.fromJson(response, response['id'].toString());
     } catch (e) {
       print('Error getting user reaction: $e');
       return null;
@@ -159,65 +109,83 @@ class ReactionService {
     required String videoId,
     required String userId,
   }) {
-    return _reactionsCollection
-        .doc(videoId)
-        .collection('reactions')
-        .doc(userId)
-        .snapshots()
-        .map((doc) {
-          if (!doc.exists || doc.data() == null) return null;
-          return ReactionData.fromJson(doc.data()!, doc.id);
-        });
+    return _supabase.from('video_reactions').stream(primaryKey: ['id']).map((
+      data,
+    ) {
+      final filtered = data.where(
+        (row) => row['video_id'] == videoId && row['user_id'] == userId,
+      );
+      if (filtered.isEmpty) return null;
+      return ReactionData.fromJson(
+        filtered.first,
+        filtered.first['id'].toString(),
+      );
+    });
   }
 
-  /// Get reaction counts for a video
+  /// Get reaction counts for a video via direct query
   Future<Map<String, int>> getReactionCounts(String videoId) async {
     try {
-      final doc = await _reactionsCollection.doc(videoId).get();
-      if (!doc.exists) return _emptyCountsMap();
+      final response = await _supabase
+          .from('video_reactions')
+          .select('reaction_type')
+          .eq('video_id', videoId);
 
-      final data = doc.data() as Map<String, dynamic>?;
-      final counts = data?['reactionCounts'] as Map<String, dynamic>?;
-
-      if (counts == null) return _emptyCountsMap();
-
-      return {
-        'heart': (counts['heart'] ?? 0) as int,
-        'laugh': (counts['laugh'] ?? 0) as int,
-        'wow': (counts['wow'] ?? 0) as int,
-        'sad': (counts['sad'] ?? 0) as int,
-        'angry': (counts['angry'] ?? 0) as int,
-      };
+      final counts = _emptyCountsMap();
+      for (final row in (response as List)) {
+        final type = row['reaction_type'] as String?;
+        if (type != null && counts.containsKey(type)) {
+          counts[type] = counts[type]! + 1;
+        }
+      }
+      return counts;
     } catch (e) {
       print('Error getting reaction counts: $e');
       return _emptyCountsMap();
     }
   }
 
-  /// Stream reaction counts (for real-time updates)
+  /// Stream reaction counts
+  /// Note: Supabase doesn't support streaming aggregation directly.
+  /// Ideally, we would stream the raw table filter by video_id and aggregate client-side,
+  /// OR use a trigger-updated aggregator table.
+  /// For now, to keep it simple and consistent with the interface, we'll stream raw insertions
+  /// and re-fetch counts, or just stream the raw list if volume is low.
+  ///
+  /// Given the potential volume, it's better to just return a Stream that emits regularly or on changes.
+  /// We'll use a simplified approach: Stream the raw table filtered by video_id, and aggregate client-side.
   Stream<Map<String, int>> getReactionCountsStream(String videoId) {
-    return _reactionsCollection.doc(videoId).snapshots().map((doc) {
-      if (!doc.exists) return _emptyCountsMap();
+    return _supabase.from('video_reactions').stream(primaryKey: ['id']).map((
+      List<Map<String, dynamic>> data,
+    ) {
+      // Client-side filtering because .eq() isn't supported on stream() in this SDK version
+      final filteredData = data.where((row) => row['video_id'] == videoId);
 
-      final data = doc.data() as Map<String, dynamic>?;
-      final counts = data?['reactionCounts'] as Map<String, dynamic>?;
-
-      if (counts == null) return _emptyCountsMap();
-
-      return {
-        'heart': (counts['heart'] ?? 0) as int,
-        'laugh': (counts['laugh'] ?? 0) as int,
-        'wow': (counts['wow'] ?? 0) as int,
-        'sad': (counts['sad'] ?? 0) as int,
-        'angry': (counts['angry'] ?? 0) as int,
-      };
+      final counts = _emptyCountsMap();
+      for (var row in filteredData) {
+        final type = row['reaction_type'] as String?;
+        if (type != null && counts.containsKey(type)) {
+          counts[type] = (counts[type]! + 1);
+        }
+      }
+      return counts;
     });
   }
 
-  /// Get total reaction count for a video
+  /// Get total reaction count for a video (reads denormalized counter)
   Future<int> getTotalReactionCount(String videoId) async {
-    final counts = await getReactionCounts(videoId);
-    return counts.values.fold<int>(0, (sum, count) => sum + count);
+    try {
+      final response = await _supabase
+          .from('creator_videos')
+          .select('like_count')
+          .eq('id', videoId)
+          .maybeSingle();
+      return (response?['like_count'] ?? 0) as int;
+    } catch (e) {
+      // Fallback: count from reactions table
+      final counts = await getReactionCounts(videoId);
+      return counts.values.fold<int>(0, (sum, count) => sum + count);
+    }
   }
 
   /// Stream total reaction count

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Service for uploading files to Cloudinary using Unsigned Uploads.
 ///
@@ -241,5 +242,56 @@ class StorageService {
       urls.add(url);
     }
     return urls;
+  }
+  // ============================================================
+  // CREATOR VIDEO SYSTEM (Supabase Storage)
+  // ============================================================
+
+  /// Upload a creator video to Supabase Storage.
+  Future<String> uploadCreatorVideo(File videoFile, String userId) async {
+    try {
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.mp4';
+      final path = '$userId/$fileName';
+
+      await Supabase.instance.client.storage
+          .from('creator-videos')
+          .upload(path, videoFile);
+
+      // Get public URL (or signed URL if private - buckets are private by policy for uploads, public for reads?)
+      // Plan said: "Read: public (approved only via signed URLs or Edge Function)"
+      // Actually, standard pattern is to store the path or get a public URL if the bucket is public.
+      // The instructions said "creator-videos" (Private).
+      // So we should probably store the path. Or get a signed URL.
+      // For simplicity in the app, let's assume we store the full path or public URL.
+      // If the bucket is private, we need signedURL.
+      // However, usually detailed implementation stores the path.
+      // Let's return the path for now, or the key.
+      return path;
+    } catch (e) {
+      print('Error uploading creator video: $e');
+      rethrow;
+    }
+  }
+
+  /// Upload a creator thumbnail to Supabase Storage.
+  Future<String> uploadCreatorThumbnail(File imageFile, String userId) async {
+    try {
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final path = '$userId/$fileName';
+
+      await Supabase.instance.client.storage
+          .from('creator-thumbnails')
+          .upload(path, imageFile);
+
+      // Thumbnails are public bucket
+      final url = Supabase.instance.client.storage
+          .from('creator-thumbnails')
+          .getPublicUrl(path);
+
+      return url;
+    } catch (e) {
+      print('Error uploading creator thumbnail: $e');
+      rethrow;
+    }
   }
 }

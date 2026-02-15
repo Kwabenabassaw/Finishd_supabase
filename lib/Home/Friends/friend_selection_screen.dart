@@ -1,6 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:finishd/LoadingWidget/LogoLoading.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:finishd/Model/movie_list_item.dart';
 import 'package:finishd/Model/user_model.dart';
@@ -20,7 +20,8 @@ class FriendSelectionScreen extends StatefulWidget {
 class _FriendSelectionScreenState extends State<FriendSelectionScreen> {
   final UserService _userService = UserService();
   final RecommendationService _recommendationService = RecommendationService();
-  final String _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+  final String _currentUserId =
+      Supabase.instance.client.auth.currentUser?.id ?? '';
   final ScrollController _scrollController = ScrollController();
 
   final List<UserModel> _friends = [];
@@ -225,7 +226,9 @@ class _FriendSelectionScreenState extends State<FriendSelectionScreen> {
                       ? _sendRecommendation
                       : null,
                   style: FilledButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.2),
+                    backgroundColor: Theme.of(
+                      context,
+                    ).primaryColor.withOpacity(0.2),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
                       vertical: 8,
@@ -321,10 +324,9 @@ class _FriendSelectionScreenState extends State<FriendSelectionScreen> {
                               Text(
                                 widget.movie.title,
                                 style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.bold)
-                                    ,
+                                    ?.copyWith(fontWeight: FontWeight.bold),
                                 maxLines: 2,
-                              
+
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 6),
@@ -344,7 +346,7 @@ class _FriendSelectionScreenState extends State<FriendSelectionScreen> {
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w800,
-                                 
+
                                     letterSpacing: 0.5,
                                   ),
                                 ),

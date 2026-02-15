@@ -1,26 +1,16 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:finishd/models/report_model.dart';
 
 class ReportService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-
-  // Collection References
-  CollectionReference get _reportsRef => _db.collection('reports');
-  CollectionReference get _auditLogsRef => _db.collection('audit_logs');
-  CollectionReference get _communityPostsRef =>
-      _db.collection('community_posts');
-  CollectionReference get _communityCommentsRef =>
-      _db.collection('community_comments');
+  final SupabaseClient _supabase = Supabase.instance.client;
 
   // Helper to get current user ID or throw error
   String get _currentUserId {
-    final user = _auth.currentUser;
+    final user = _supabase.auth.currentUser;
     if (user == null) {
       throw Exception('Must be logged in to submit a report');
     }
-    return user.uid;
+    return user.id;
   }
 
   // ===========================================================================
@@ -35,28 +25,29 @@ class ReportService {
     required ReportReason reason,
     String? additionalInfo,
   }) async {
-    final uid = _currentUserId;
-
     // 1. Check duplicate
     if (await hasUserReported(postId, ReportType.communityPost)) {
       throw Exception('You have already reported this post');
     }
 
-    // 2. Fetch content snapshot
-    final postSnapshot = await _db
-        .collection('community_posts')
-        .doc(postId)
-        .get();
-    if (!postSnapshot.exists) throw Exception('Post not found');
+    // 2. Fetch content snapshot (from Supabase post table)
+    final postResponse = await _supabase
+        .from('community_posts')
+        .select()
+        .eq('id', postId)
+        .maybeSingle();
 
-    final data = postSnapshot.data() as Map<String, dynamic>;
+    if (postResponse == null) throw Exception('Post not found');
+
     final snapshot = ContentSnapshot(
-      text: data['content'],
-      mediaUrls: data['mediaUrls'] != null
-          ? List<String>.from(data['mediaUrls'])
+      text: postResponse['content'],
+      mediaUrls: postResponse['media_urls'] != null
+          ? List<String>.from(postResponse['media_urls'])
           : null,
-      authorName: data['authorName'],
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+      authorName: null, // Ideally fetch from profiles join
+      createdAt: postResponse['created_at'] != null
+          ? DateTime.parse(postResponse['created_at'])
+          : null,
     );
 
     // 3. Create Report
@@ -80,23 +71,24 @@ class ReportService {
     required ReportReason reason,
     String? additionalInfo,
   }) async {
-    final uid = _currentUserId;
-
     if (await hasUserReported(commentId, ReportType.communityComment)) {
       throw Exception('You have already reported this comment');
     }
 
-    final commentDoc = await _db
-        .collection('community_comments')
-        .doc(commentId)
-        .get();
-    if (!commentDoc.exists) throw Exception('Comment not found');
+    final commentResponse = await _supabase
+        .from('community_comments')
+        .select()
+        .eq('id', commentId)
+        .maybeSingle();
 
-    final data = commentDoc.data() as Map<String, dynamic>;
+    if (commentResponse == null) throw Exception('Comment not found');
+
     final snapshot = ContentSnapshot(
-      text: data['content'],
-      authorName: data['authorName'],
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+      text: commentResponse['content'],
+      authorName: null,
+      createdAt: commentResponse['created_at'] != null
+          ? DateTime.parse(commentResponse['created_at'])
+          : null,
     );
 
     await _createReport(
@@ -118,29 +110,28 @@ class ReportService {
     required ReportReason reason,
     String? additionalInfo,
   }) async {
-    final uid = _currentUserId;
-
     if (await hasUserReported(messageId, ReportType.chatMessage)) {
       throw Exception('You have already reported this message');
     }
 
-    final messageDoc = await _db
-        .collection('chats')
-        .doc(chatId)
-        .collection('messages')
-        .doc(messageId)
-        .get();
+    final messageResponse = await _supabase
+        .from('messages')
+        .select()
+        .eq('id', messageId)
+        .maybeSingle();
 
-    if (!messageDoc.exists) throw Exception('Message not found');
+    if (messageResponse == null) throw Exception('Message not found');
 
-    final data = messageDoc.data() as Map<String, dynamic>;
     final snapshot = ContentSnapshot(
-      text: data['text'],
+      text: messageResponse['content'],
       mediaUrls:
-          data['mediaUrl'] != null && data['mediaUrl'].toString().isNotEmpty
-          ? [data['mediaUrl']]
+          messageResponse['media_url'] != null &&
+              messageResponse['media_url'].toString().isNotEmpty
+          ? [messageResponse['media_url']]
           : null,
-      createdAt: (data['timestamp'] as Timestamp?)?.toDate(),
+      createdAt: messageResponse['created_at'] != null
+          ? DateTime.parse(messageResponse['created_at'])
+          : null,
     );
 
     await _createReport(
@@ -156,23 +147,25 @@ class ReportService {
 
   /// Check if user has already reported this content
   Future<bool> hasUserReported(String contentId, ReportType type) async {
-    final query = await _reportsRef
-        .where('reportedBy', isEqualTo: _currentUserId)
-        .where('reportedContentId', isEqualTo: contentId)
-        .limit(1)
-        .get();
+    final response = await _supabase
+        .from('reports')
+        .select()
+        .eq('reported_by', _currentUserId)
+        .eq('reported_content_id', contentId)
+        .limit(1);
 
-    return query.docs.isNotEmpty;
+    return (response as List).isNotEmpty;
   }
 
   /// Get reports submitted by current user
   Future<List<Report>> getUserReports() async {
-    final query = await _reportsRef
-        .where('reportedBy', isEqualTo: _currentUserId)
-        .orderBy('createdAt', descending: true)
-        .get();
+    final response = await _supabase
+        .from('reports')
+        .select()
+        .eq('reported_by', _currentUserId)
+        .order('created_at', ascending: false);
 
-    return query.docs.map((doc) => Report.fromDocument(doc)).toList();
+    return (response as List).map((json) => Report.fromJson(json)).toList();
   }
 
   // ===========================================================================
@@ -190,49 +183,25 @@ class ReportService {
     required ContentSnapshot contentSnapshot,
   }) async {
     final uid = _currentUserId;
-    final timestamp = DateTime.now();
 
     // Calculate severity
     final severity = _calculateSeverity(reason);
     final weight = _calculateReportWeight(reason);
 
-    // Run transaction
-    await _db.runTransaction((transaction) async {
-      // 1. Create Report Document
-      final newReportRef = _reportsRef.doc();
-      final report = Report(
-        id: newReportRef.id,
-        type: type,
-        reason: reason,
-        reportedContentId: reportedContentId,
-        reportedBy: uid,
-        reportedUserId: reportedUserId,
-        communityId: communityId,
-        chatId: chatId,
-        additionalInfo: additionalInfo,
-        contentSnapshot: contentSnapshot,
-        reportWeight: weight,
-        severity: severity,
-        status: ReportStatus.pending,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      );
-
-      transaction.set(newReportRef, report.toJson());
-
-      // 2. Check for Auto-Moderation (Optional: could be Cloud Function)
-      // For client-side, we can just aggregate weights if we query other reports.
-      // But purely client-side aggregation is expensive/insecure without Cloud Functions.
-      // We will implement a simplified check:
-      // If this is a high-severity report, flag it.
-
-      // NOTE: Real auto-moderation threshold logic (3 reports -> hide) is best done
-      // via Cloud Functions to avoid race conditions and client trust issues.
-      // However, we can update a 'report_stats' subcollection or field on the content
-      // if security rules allow it.
-
-      // For now, we'll leave actual content hiding to the Admin Dashboard
-      // or a future Cloud Function as per architectural best practices.
+    // Create Report in Supabase
+    await _supabase.from('reports').insert({
+      'type': type.name,
+      'reason': reason.name,
+      'reported_content_id': reportedContentId,
+      'reported_by': uid,
+      'reported_user_id': reportedUserId,
+      'community_id': communityId,
+      'chat_id': chatId,
+      'additional_info': additionalInfo,
+      'content_snapshot': contentSnapshot.toJson(),
+      'report_weight': weight,
+      'severity': severity,
+      'status': 'pending',
     });
   }
 

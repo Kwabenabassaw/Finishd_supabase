@@ -1,4 +1,4 @@
-import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 
 class AnalyticsService {
@@ -10,23 +10,36 @@ class AnalyticsService {
 
   AnalyticsService._internal();
 
-  final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
+  final SupabaseClient _supabase = Supabase.instance.client;
 
-  /// Returns the standard Firebase Analytics observer
-  NavigatorObserver getAnalyticsObserver() {
-    return FirebaseAnalyticsObserver(analytics: _analytics);
+  /// Returns a custom RouteObserver instead of Firebase's
+  RouteObserver<ModalRoute<dynamic>> getAnalyticsObserver() {
+    return ScreenTimeObserver();
+  }
+
+  /// Logs a custom event
+  Future<void> logEvent(String name, {Map<String, dynamic>? parameters}) async {
+    try {
+      final user = _supabase.auth.currentUser;
+      await _supabase.from('analytics_events').insert({
+        'user_id': user?.id,
+        'event_name': name,
+        'parameters': parameters,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      debugPrint('📊 Analytics: $name logged');
+    } catch (e) {
+      debugPrint('Example Analytics Log (Error: $e): $name $parameters');
+    }
   }
 
   /// Logs a custom event for time spent on a screen
   Future<void> logTimeSpentOnScreen(String screenName, int seconds) async {
     // Only log if significant time spent (e.g. > 1 second)
     if (seconds > 0) {
-      await _analytics.logEvent(
-        name: 'screen_view_duration',
-        parameters: {
-          'screen_name': screenName,
-          'duration_seconds': seconds,
-        },
+      await logEvent(
+        'screen_view_duration',
+        parameters: {'screen_name': screenName, 'duration_seconds': seconds},
       );
       debugPrint('⏱️ Analytics: $screenName viewed for ${seconds}s');
     }

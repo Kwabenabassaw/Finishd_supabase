@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 /// Type of moderation action being appealed
 enum AppealActionType { suspension, ban }
 
@@ -38,37 +36,49 @@ class Appeal {
 
   Map<String, dynamic> toJson() {
     return {
-      'userId': userId,
-      'userEmail': userEmail,
+      'user_id': userId,
+      'userEmail':
+          userEmail, // Keep for legacy if needed, though not in my schema
       'username': username,
-      'actionType': actionType.name,
-      'originalReason': originalReason,
-      'appealMessage': appealMessage,
+      'action_type': actionType.name,
+      'original_reason': originalReason,
+      'appeal_message': appealMessage,
       'status': status.name,
-      'createdAt': Timestamp.fromDate(createdAt),
-      if (reviewedAt != null) 'reviewedAt': Timestamp.fromDate(reviewedAt!),
-      if (reviewedBy != null) 'reviewedBy': reviewedBy,
-      if (adminResponse != null) 'adminResponse': adminResponse,
+      'created_at': createdAt.toIso8601String(),
+      if (reviewedAt != null) 'reviewed_at': reviewedAt!.toIso8601String(),
+      if (reviewedBy != null) 'reviewed_by': reviewedBy,
+      if (adminResponse != null) 'admin_notes': adminResponse,
     };
   }
 
-  factory Appeal.fromDocument(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory Appeal.fromJson(Map<String, dynamic> json) {
     return Appeal(
-      id: doc.id,
-      userId: data['userId'] ?? '',
-      userEmail: data['userEmail'],
-      username: data['username'],
+      id: json['id']?.toString() ?? '',
+      userId: json['user_id'] ?? json['userId'] ?? '',
+      userEmail: json['userEmail'],
+      username: json['username'],
       actionType: AppealActionType.values.byName(
-        data['actionType'] ?? 'suspension',
+        json['action_type'] ?? json['actionType'] ?? 'suspension',
       ),
-      originalReason: data['originalReason'] ?? '',
-      appealMessage: data['appealMessage'] ?? '',
-      status: AppealStatus.values.byName(data['status'] ?? 'pending'),
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      reviewedAt: (data['reviewedAt'] as Timestamp?)?.toDate(),
-      reviewedBy: data['reviewedBy'],
-      adminResponse: data['adminResponse'],
+      originalReason: json['original_reason'] ?? json['originalReason'] ?? '',
+      appealMessage: json['appeal_message'] ?? json['appealMessage'] ?? '',
+      status: AppealStatus.values.byName(json['status'] ?? 'pending'),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : json['createdAt'] != null
+          ? (json['createdAt'] is String
+                ? DateTime.parse(json['createdAt'])
+                : (json['createdAt'] as dynamic).toDate())
+          : DateTime.now(),
+      reviewedAt: json['reviewed_at'] != null
+          ? DateTime.parse(json['reviewed_at'])
+          : json['reviewedAt'] != null
+          ? (json['reviewedAt'] is String
+                ? DateTime.parse(json['reviewedAt'])
+                : (json['reviewedAt'] as dynamic).toDate())
+          : null,
+      reviewedBy: json['reviewed_by'] ?? json['reviewedBy'],
+      adminResponse: json['admin_notes'] ?? json['adminResponse'],
     );
   }
 }

@@ -4,7 +4,7 @@ import 'package:finishd/provider/chat_provider.dart';
 import 'package:finishd/services/user_service.dart';
 import 'package:finishd/Model/user_model.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:finishd/Widget/user_avatar.dart';
 import 'package:provider/provider.dart';
@@ -22,7 +22,8 @@ class ChatListScreen extends StatefulWidget {
 
 class _ChatListScreenState extends State<ChatListScreen> {
   final UserService _userService = UserService();
-  String get _currentUserId => FirebaseAuth.instance.currentUser?.uid ?? '';
+  String get _currentUserId =>
+      Supabase.instance.client.auth.currentUser?.id ?? '';
   final TextEditingController _searchController = TextEditingController();
 
   List<UserModel> _activeUsers = [];

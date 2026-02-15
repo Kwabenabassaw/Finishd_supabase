@@ -22,7 +22,6 @@ void showVideoShareSheet(
       maxChildSize: 0.9,
       builder: (context, scrollController) => Container(
         decoration: const BoxDecoration(
-          
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: _ShareSheetContent(
@@ -63,8 +62,13 @@ class _ShareSheetContent extends StatelessWidget {
     required this.scrollController,
   });
 
+  /// Detect if videoId is a UUID (creator video) vs YouTube ID
+  bool get _isCreatorVideo => videoId.length > 20 && videoId.contains('-');
+
   String get _shareUrl => videoId.isNotEmpty
-      ? 'https://youtu.be/$videoId'
+      ? (_isCreatorVideo
+            ? 'https://finishd.app/video/$videoId' // Deep link for creator videos
+            : 'https://youtu.be/$videoId') // YouTube short URL
       : 'Check out FINISHD app!';
 
   String get _shareText => videoTitle.isNotEmpty
@@ -80,10 +84,7 @@ class _ShareSheetContent extends StatelessWidget {
           width: 40,
           height: 4,
           margin: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-          
-            borderRadius: BorderRadius.circular(2),
-          ),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(2)),
         ),
         const Padding(
           padding: EdgeInsets.only(left: 16, bottom: 12),
@@ -150,16 +151,12 @@ class _ShareSheetContent extends StatelessWidget {
                           SizedBox(height: 2),
                           Text(
                             'Share directly in FINISHD chat',
-                            style: TextStyle( fontSize: 13),
+                            style: TextStyle(fontSize: 13),
                           ),
                         ],
                       ),
                     ),
-                    const Icon(
-                      Icons.arrow_forward_ios,
-                      size: 16,
-                     
-                    ),
+                    const Icon(Icons.arrow_forward_ios, size: 16),
                   ],
                 ),
               ),
@@ -173,11 +170,7 @@ class _ShareSheetContent extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: Text(
               "Share via",
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              
-              ),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
           ),
         ),

@@ -310,35 +310,6 @@ class _YoutubeFeedScreenState extends State<YoutubeFeedScreen>
             },
           ),
           ListTile(
-            leading: const Icon(Icons.cloud_sync, color: Colors.orange),
-            title: const Text(
-              'Trigger Backend Refresh',
-              style: TextStyle(color: Colors.white),
-            ),
-            subtitle: const Text(
-              'Tell server to fetch fresh content',
-              style: TextStyle(color: Colors.white54),
-            ),
-            onTap: () async {
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Triggering backend job...')),
-              );
-              final success = await _provider.triggerBackendRefresh();
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      success
-                          ? '✅ Backend job started!'
-                          : '❌ Failed to start job',
-                    ),
-                  ),
-                );
-              }
-            },
-          ),
-          ListTile(
             leading: const Icon(Icons.delete_sweep, color: Colors.red),
             title: const Text(
               'Clear SQLite Cache',

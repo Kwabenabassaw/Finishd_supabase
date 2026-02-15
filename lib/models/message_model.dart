@@ -1,13 +1,12 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class Message {
   final String messageId;
   final String senderId;
-  final String receiverId;
+  final String
+  receiverId; // In Supabase, messages belong to chat, receiver is implied. But keeping for model compat.
   final String text;
   final String mediaUrl;
   final String type; // 'text', 'image', 'video', 'video_link', 'recommendation'
-  final Timestamp timestamp;
+  final DateTime timestamp;
   final bool isRead;
 
   // Video link preview metadata (for type == 'video_link')
@@ -41,51 +40,56 @@ class Message {
     this.mediaType,
   });
 
-  /// Check if this message is a video link with preview
   bool get isVideoLink => type == 'video_link' && videoId != null;
-
-  /// Check if this message is a movie/TV recommendation
   bool get isRecommendation => type == 'recommendation' && movieId != null;
 
-  factory Message.fromDocument(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory Message.fromSupabase(Map<String, dynamic> data) {
+    // Extract metadata from JSONB column if exists
+    final metadata = data['metadata'] as Map<String, dynamic>? ?? {};
+
     return Message(
-      messageId: doc.id,
-      senderId: data['senderId'] ?? '',
-      receiverId: data['receiverId'] ?? '',
-      text: data['text'] ?? '',
-      mediaUrl: data['mediaUrl'] ?? '',
+      messageId: data['id'],
+      senderId: data['sender_id'] ?? '',
+      receiverId: '', // Context dependent, often not in message row
+      text: data['content'] ?? '',
+      mediaUrl: data['media_url'] ?? '',
       type: data['type'] ?? 'text',
-      timestamp: data['timestamp'] ?? Timestamp.now(),
-      isRead: data['isRead'] ?? false,
-      videoId: data['videoId'],
-      videoTitle: data['videoTitle'],
-      videoThumbnail: data['videoThumbnail'],
-      videoChannel: data['videoChannel'],
-      movieId: data['movieId'],
-      movieTitle: data['movieTitle'],
-      moviePoster: data['moviePoster'],
-      mediaType: data['mediaType'],
+      timestamp: DateTime.tryParse(data['created_at'] ?? '') ?? DateTime.now(),
+      isRead: data['is_read'] ?? false,
+
+      // Map metadata fields
+      videoId:
+          metadata['videoId'] ?? data['videoId'], // Support flattened or nested
+      videoTitle: metadata['videoTitle'] ?? data['videoTitle'],
+      videoThumbnail: metadata['videoThumbnail'] ?? data['videoThumbnail'],
+      videoChannel: metadata['videoChannel'] ?? data['videoChannel'],
+
+      movieId: metadata['movieId'] ?? data['movieId'],
+      movieTitle: metadata['movieTitle'] ?? data['movieTitle'],
+      moviePoster: metadata['moviePoster'] ?? data['moviePoster'],
+      mediaType: metadata['mediaType'] ?? data['mediaType'],
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'senderId': senderId,
-      'receiverId': receiverId,
-      'text': text,
-      'mediaUrl': mediaUrl,
+      'id': messageId,
+      'sender_id': senderId,
+      'content': text,
+      'media_url': mediaUrl,
       'type': type,
-      'timestamp': timestamp,
-      'isRead': isRead,
-      if (videoId != null) 'videoId': videoId,
-      if (videoTitle != null) 'videoTitle': videoTitle,
-      if (videoThumbnail != null) 'videoThumbnail': videoThumbnail,
-      if (videoChannel != null) 'videoChannel': videoChannel,
-      if (movieId != null) 'movieId': movieId,
-      if (movieTitle != null) 'movieTitle': movieTitle,
-      if (moviePoster != null) 'moviePoster': moviePoster,
-      if (mediaType != null) 'mediaType': mediaType,
+      'created_at': timestamp.toIso8601String(),
+      'is_read': isRead,
+      'metadata': {
+        if (videoId != null) 'videoId': videoId,
+        if (videoTitle != null) 'videoTitle': videoTitle,
+        if (videoThumbnail != null) 'videoThumbnail': videoThumbnail,
+        if (videoChannel != null) 'videoChannel': videoChannel,
+        if (movieId != null) 'movieId': movieId,
+        if (movieTitle != null) 'movieTitle': movieTitle,
+        if (moviePoster != null) 'moviePoster': moviePoster,
+        if (mediaType != null) 'mediaType': mediaType,
+      },
     };
   }
 }

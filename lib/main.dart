@@ -37,10 +37,8 @@ import 'package:flutter/services.dart'; // Added for SystemNavigator
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 
-import 'package:firebase_core/firebase_core.dart';
-import 'package:finishd/firebase_options.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:finishd/services/auth_service.dart';
-import 'package:finishd/services/push_notification_service.dart';
 import 'package:finishd/theme/app_theme.dart';
 import 'package:finishd/theme/app_colors.dart';
 import 'package:finishd/db/objectbox/objectbox_store.dart'; // ObjectBox Init
@@ -50,6 +48,7 @@ import 'package:finishd/services/deep_link_service.dart';
 import 'package:finishd/services/seen_sync_service.dart'; // Video deduplication sync
 import 'package:finishd/services/moderation_listener_service.dart'; // Real-time moderation
 import 'package:finishd/services/moderation_notification_handler.dart'; // Moderation warnings
+import 'package:finishd/screens/video_upload_screen.dart';
 
 // GLOBAL ROUTE OBSERVER
 final RouteObserver<ModalRoute<void>> routeObserver =
@@ -58,34 +57,48 @@ final RouteObserver<ModalRoute<void>> routeObserver =
 void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
+    debugPrint('DEBUG: WidgetsFlutterBinding initialized');
+
+    // Initialize Supabase
+    debugPrint('DEBUG: Initializing Supabase...');
+    await Supabase.initialize(
+      url: 'https://lihaddxlyychswpkswbp.supabase.co',
+      anonKey:
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpaGFkZHhseXljaHN3cGtzd2JwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkzNDA5MzQsImV4cCI6MjA4NDkxNjkzNH0.DrBUuz2ayMRCIicYAFNqH2ws3gbRu8ycsbATF54BuFM',
     );
+    debugPrint('DEBUG: Supabase initialized');
 
     // Initialize ObjectBox (Offline-First DB)
+    debugPrint('DEBUG: Initializing ObjectBox...');
     await ObjectBoxStore.create();
+    debugPrint('DEBUG: ObjectBox initialized');
 
     // Initialize ChatSyncService (after ObjectBox is ready)
+    debugPrint('DEBUG: Initializing ChatSyncService...');
     await ChatSyncService.instance.initialize();
+    debugPrint('DEBUG: ChatSyncService initialized');
 
     // Initialize SeenSyncService for video deduplication (sync on login)
+    debugPrint('DEBUG: Initializing SeenSyncService...');
     SeenSyncService.instance.syncOnLogin();
+    debugPrint('DEBUG: SeenSyncService initialized');
 
     final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
     // Initialize Moderation Listener (real-time ban/suspension detection)
+    debugPrint('DEBUG: Initializing ModerationListenerService...');
     ModerationListenerService.instance.init(navigatorKey);
+    debugPrint('DEBUG: ModerationListenerService initialized');
 
     // Initialize Moderation Notification Handler (warnings display)
+    debugPrint('DEBUG: Initializing ModerationNotificationHandler...');
     ModerationNotificationHandler.instance.init(navigatorKey);
-
-    // Start push notifications in the background so they don't block the UI
-    PushNotificationService().initialize(navigatorKey).catchError((e) {
-      debugPrint('Push Notification initialization error: $e');
-    });
+    debugPrint('DEBUG: ModerationNotificationHandler initialized');
 
     // Initialize Deep Link Handling
+    debugPrint('DEBUG: Initializing DeepLinkService...');
     DeepLinkService().initialize(navigatorKey);
+    debugPrint('DEBUG: All services initialized, running app...');
 
     runApp(
       MultiProvider(
@@ -102,7 +115,8 @@ void main() async {
           ),
           ChangeNotifierProvider(create: (_) => ChatProvider()..initialize()),
           ChangeNotifierProxyProvider<ChatProvider, UnreadStateProvider>(
-            create: (context) => UnreadStateProvider(context.read<ChatProvider>())..initialize(),
+            create: (context) =>
+                UnreadStateProvider(context.read<ChatProvider>())..initialize(),
             update: (context, chatProvider, unreadProvider) => unreadProvider!,
           ),
           ChangeNotifierProvider(create: (_) => AiAssistantProvider()),
@@ -111,15 +125,33 @@ void main() async {
         child: MyApp(navigatorKey: navigatorKey),
       ),
     );
-  } catch (e) {
+  } catch (e, stackTrace) {
     debugPrint('App initialization error: $e');
-    // Still run the app even if initialization fails, allowing the UI to handle errors
+    debugPrint('Stack trace: $stackTrace');
+    // Show the actual error on screen for debugging
     runApp(
       MaterialApp(
         home: Scaffold(
-          body: Center(
-            child: Text(
-              'An initialization error occurred. Please restart the app.',
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Initialization Error',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text('Error: $e'),
+                  const SizedBox(height: 16),
+                  Text('Stack: ${stackTrace.toString().substring(0, 500)}...'),
+                ],
+              ),
             ),
           ),
         ),
@@ -200,33 +232,40 @@ class _HomePageState extends State<HomePage> {
   DateTime? _lastBackPressTime;
 
   Future<void> _handleBackPress(BuildContext context) async {
-    final navProvider = Provider.of<AppNavigationProvider>(context, listen: false);
-    final selectedIndex = navProvider.currentIndex;
+    final navProvider = Provider.of<AppNavigationProvider>(
+      context,
+      listen: false,
+    );
 
     // 1. If not on Home tab (index 0), navigate to Home tab
-    if (selectedIndex != 0) {
+    if (navProvider.currentIndex != 0) {
       navProvider.setTab(0);
       return;
     }
 
     // 2. If already on Home tab, check for double-press
     final now = DateTime.now();
-    if (_lastBackPressTime == null || 
+    if (_lastBackPressTime == null ||
         now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
       _lastBackPressTime = now;
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text(
               'Press back again to exit',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             backgroundColor: const Color(0xFF1A8927).withOpacity(0.9),
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 2),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
       }
@@ -240,7 +279,22 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final navProvider = context.watch<AppNavigationProvider>();
-    final selectedIndex = navProvider.currentIndex;
+    final userProvider = context.watch<UserProvider>();
+    final user = userProvider.currentUser;
+    final internalIndex = navProvider.currentIndex; // 0..4
+
+    // Check if user is an approved creator
+    final isCreator =
+        user != null &&
+        user.role == 'creator' &&
+        user.creatorStatus == 'approved';
+
+    // Map internal index to visual index
+    // If creator: skip the + button at visual index 2 (6 items: 0,1,+,3,4,5)
+    // If not creator: no + button (5 items: 0,1,2,3,4)
+    final visualIndex = isCreator
+        ? (internalIndex >= 2 ? internalIndex + 1 : internalIndex)
+        : internalIndex;
 
     return PopScope(
       canPop: false,
@@ -249,47 +303,60 @@ class _HomePageState extends State<HomePage> {
         _handleBackPress(context);
       },
       child: Scaffold(
-        extendBody: false, // Ensure content sits ABOVE the nav bar, not behind it
-
-        body: IndexedStack(index: selectedIndex, children: _pages),
-
+        extendBody: false,
+        body: IndexedStack(index: internalIndex, children: _pages),
         bottomNavigationBar: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
-          currentIndex: selectedIndex,
-          onTap: (index) {
+          currentIndex: visualIndex,
+          onTap: (index) async {
+            // Handle Plus Button (Index 2) - only if creator
+            if (isCreator && index == 2) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const VideoUploadScreen()),
+              );
+              return;
+            }
+
+            // Map visual index back to internal index
+            // If creator: 0->0, 1->1, 3->2, 4->3, 5->4
+            // If not creator: direct mapping 0->0, 1->1, 2->2, 3->3, 4->4
+            final newInternalIndex = isCreator
+                ? (index > 2 ? index - 1 : index)
+                : index;
+
             final feedProvider = context.read<YoutubeFeedProvider>();
-            if (index != 0) {
+            if (newInternalIndex != 0) {
               feedProvider.pauseAll();
-            } else if (index == 0 && selectedIndex != 0) {
+            } else if (newInternalIndex == 0 && internalIndex != 0) {
               feedProvider.resumeCurrent();
             }
 
-            // Mark messages as viewed when tapping the Messages tab (Index 3)
-            if (index == 3) {
-              Provider.of<UnreadStateProvider>(context, listen: false).markMessagesAsViewed();
+            if (newInternalIndex == 3) {
+              // Messages (internal index 3)
+              Provider.of<UnreadStateProvider>(
+                context,
+                listen: false,
+              ).markMessagesAsViewed();
             }
 
-            navProvider.setTab(index);
+            navProvider.setTab(newInternalIndex);
           },
           showUnselectedLabels: false,
           iconSize: 24,
           enableFeedback: true,
-
-          unselectedItemColor: selectedIndex == 0
+          unselectedItemColor: visualIndex == 0
               ? Colors.white54
               : Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white54
-                  : Colors.black45,
-
+              ? Colors.white54
+              : Colors.black45,
           selectedItemColor: const Color(0xFF1A8927),
-
-          backgroundColor: selectedIndex == 0
+          backgroundColor: visualIndex == 0
               ? Colors.black
               : Theme.of(context).cardColor,
-
           elevation: 8,
-
           items: [
+            // Android
             if (Platform.isAndroid) ...[
               const BottomNavigationBarItem(
                 icon: FaIcon(FontAwesomeIcons.solidHouse),
@@ -299,6 +366,25 @@ class _HomePageState extends State<HomePage> {
                 icon: Icon(CupertinoIcons.compass_fill),
                 label: 'Discover',
               ),
+
+              // PLUS BUTTON - only for creators
+              if (isCreator)
+                BottomNavigationBarItem(
+                  icon: Container(
+                    width: 48,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.black, width: 2),
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.add, color: Colors.black, size: 24),
+                    ),
+                  ),
+                  label: 'Create',
+                ),
+
               const BottomNavigationBarItem(
                 icon: FaIcon(FontAwesomeIcons.solidBookmark, size: 24.0),
                 label: 'Watchlist',
@@ -326,6 +412,8 @@ class _HomePageState extends State<HomePage> {
                 label: 'Profile',
               ),
             ],
+
+            // iOS
             if (Platform.isIOS) ...[
               const BottomNavigationBarItem(
                 icon: FaIcon(FontAwesomeIcons.solidHouse),
@@ -335,6 +423,22 @@ class _HomePageState extends State<HomePage> {
                 icon: Icon(Icons.explore),
                 label: 'Discover',
               ),
+
+              // PLUS BUTTON - only for creators
+              if (isCreator)
+                BottomNavigationBarItem(
+                  icon: Container(
+                    width: 42,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE50914), // Finishd Red
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.add, color: Colors.white, size: 20),
+                  ),
+                  label: 'Create',
+                ),
+
               const BottomNavigationBarItem(
                 icon: FaIcon(FontAwesomeIcons.bookmark, size: 24.0),
                 label: 'Watchlist',

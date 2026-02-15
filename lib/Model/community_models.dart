@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 /// Data model for a show-centric community
 class Community {
   final String id;
@@ -34,43 +32,52 @@ class Community {
 
   factory Community.fromJson(Map<String, dynamic> json) {
     return Community(
-      id: json['id'] ?? json['showId']?.toString() ?? '',
-      showId: json['showId'] ?? 0,
+      id: json['id'] is int
+          ? json['id'].toString()
+          : (json['id'] ?? json['show_id']?.toString() ?? ''),
+      showId: json['show_id'] ?? json['showId'] ?? 0,
       title: json['title'] ?? '',
-      posterPath: json['posterPath'],
-      mediaType: json['mediaType'] ?? 'tv',
-      memberCount: json['memberCount'] ?? 0,
-      postCount: json['postCount'] ?? 0,
-      lastActivityAt: json['lastActivityAt'] is Timestamp
-          ? (json['lastActivityAt'] as Timestamp).toDate()
-          : null,
-      createdAt: json['createdAt'] is Timestamp
-          ? (json['createdAt'] as Timestamp).toDate()
-          : null,
-      createdBy: json['createdBy'],
+      posterPath: json['poster_path'] ?? json['posterPath'],
+      mediaType: json['media_type'] ?? json['mediaType'] ?? 'tv',
+      memberCount: json['member_count'] ?? json['memberCount'] ?? 0,
+      postCount: json['post_count'] ?? json['postCount'] ?? 0,
+      lastActivityAt: json['last_activity_at'] != null
+          ? DateTime.tryParse(json['last_activity_at'].toString())
+          : (json['lastActivityAt'] != null
+                ? DateTime.tryParse(json['lastActivityAt'].toString())
+                : null),
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'].toString())
+          : (json['createdAt'] != null
+                ? DateTime.tryParse(json['createdAt'].toString())
+                : null),
+      createdBy: json['created_by'] ?? json['createdBy'],
       // These might not be in the community doc itself, but injected later
-      recentPostContent: json['recentPostContent'],
-      recentPostAuthor: json['recentPostAuthor'],
-      recentPostTime: json['recentPostTime'] is Timestamp
-          ? (json['recentPostTime'] as Timestamp).toDate()
-          : json['recentPostTime'],
+      recentPostContent:
+          json['recent_post_content'] ?? json['recentPostContent'],
+      recentPostAuthor: json['recent_post_author'] ?? json['recentPostAuthor'],
+      recentPostTime: json['recent_post_time'] != null
+          ? DateTime.tryParse(json['recent_post_time'].toString())
+          : (json['recentPostTime'] != null
+                ? DateTime.tryParse(json['recentPostTime'].toString())
+                : null),
     );
   }
 
   Map<String, dynamic> toJson() => {
     'id': id,
-    'showId': showId,
+    'show_id': showId,
     'title': title,
-    'posterPath': posterPath,
-    'mediaType': mediaType,
-    'memberCount': memberCount,
-    'postCount': postCount,
-    'lastActivityAt': lastActivityAt,
-    'createdAt': createdAt,
-    'createdBy': createdBy,
-    'recentPostContent': recentPostContent,
-    'recentPostAuthor': recentPostAuthor,
-    'recentPostTime': recentPostTime,
+    'poster_path': posterPath,
+    'media_type': mediaType,
+    'member_count': memberCount,
+    'post_count': postCount,
+    'last_activity_at': lastActivityAt?.toIso8601String(),
+    'created_at': createdAt?.toIso8601String(),
+    'created_by': createdBy,
+    'recent_post_content': recentPostContent,
+    'recent_post_author': recentPostAuthor,
+    'recent_post_time': recentPostTime?.toIso8601String(),
   };
 
   /// Create a copy with updated fields
@@ -163,30 +170,40 @@ class CommunityPost {
 
   factory CommunityPost.fromJson(Map<String, dynamic> json) {
     return CommunityPost(
-      id: json['id'] ?? '',
-      showId: json['showId'] ?? 0,
-      communityId: json['communityId'] ?? '',
-      authorId: json['authorId'] ?? '',
-      authorName: json['authorName'] ?? 'Anonymous',
-      authorAvatar: json['authorAvatar'],
+      id: json['id'] is int ? json['id'].toString() : (json['id'] ?? ''),
+      showId: json['show_id'] ?? json['showId'] ?? 0,
+      communityId: json['community_id'] is int
+          ? json['community_id'].toString()
+          : (json['community_id'] ?? json['communityId'] ?? ''),
+      authorId: json['author_id'] ?? json['authorId'] ?? '',
+      authorName: json['author_name'] ?? json['authorName'] ?? 'Anonymous',
+      authorAvatar: json['author_avatar'] ?? json['authorAvatar'],
       content: json['content'] ?? '',
-      mediaUrls: List<String>.from(json['mediaUrls'] ?? []),
-      mediaTypes: List<String>.from(json['mediaTypes'] ?? []),
+      mediaUrls: List<String>.from(
+        json['media_urls'] ?? json['mediaUrls'] ?? [],
+      ),
+      mediaTypes: List<String>.from(
+        json['media_types'] ?? json['mediaTypes'] ?? [],
+      ),
       hashtags: List<String>.from(json['hashtags'] ?? []),
-      isSpoiler: json['isSpoiler'] ?? false,
-      isHidden: json['isHidden'] ?? false,
+      isSpoiler: json['is_spoiler'] ?? json['isSpoiler'] ?? false,
+      isHidden: json['is_hidden'] ?? json['isHidden'] ?? false,
       score:
           json['score'] ?? ((json['upvotes'] ?? 0) - (json['downvotes'] ?? 0)),
       upvotes: json['upvotes'] ?? 0,
       downvotes: json['downvotes'] ?? 0,
-      commentCount: json['commentCount'] ?? 0,
-      createdAt: json['createdAt'] is Timestamp
-          ? (json['createdAt'] as Timestamp).toDate()
-          : null,
-      lastActivityAt: json['lastActivityAt'] is Timestamp
-          ? (json['lastActivityAt'] as Timestamp).toDate()
-          : null,
-      showTitle: json['showTitle'],
+      commentCount: json['comment_count'] ?? json['commentCount'] ?? 0,
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'].toString())
+          : (json['createdAt'] != null
+                ? DateTime.tryParse(json['createdAt'].toString())
+                : null),
+      lastActivityAt: json['last_activity_at'] != null
+          ? DateTime.tryParse(json['last_activity_at'].toString())
+          : (json['lastActivityAt'] != null
+                ? DateTime.tryParse(json['lastActivityAt'].toString())
+                : null),
+      showTitle: json['show_title'] ?? json['showTitle'],
     );
   }
 
@@ -237,24 +254,24 @@ class CommunityPost {
 
   Map<String, dynamic> toJson() => {
     'id': id,
-    'showId': showId,
-    'communityId': communityId,
-    'authorId': authorId,
-    'authorName': authorName,
-    'authorAvatar': authorAvatar,
+    'show_id': showId,
+    'community_id': communityId,
+    'author_id': authorId,
+    'author_name': authorName,
+    'author_avatar': authorAvatar,
     'content': content,
-    'mediaUrls': mediaUrls,
-    'mediaTypes': mediaTypes,
+    'media_urls': mediaUrls,
+    'media_types': mediaTypes,
     'hashtags': hashtags,
-    'isSpoiler': isSpoiler,
-    'isHidden': isHidden,
+    'is_spoiler': isSpoiler,
+    'is_hidden': isHidden,
     'score': score,
     'upvotes': upvotes,
     'downvotes': downvotes,
-    'commentCount': commentCount,
-    'createdAt': createdAt,
-    'lastActivityAt': lastActivityAt,
-    'showTitle': showTitle,
+    'comment_count': commentCount,
+    'created_at': createdAt?.toIso8601String(),
+    'last_activity_at': lastActivityAt?.toIso8601String(),
+    'show_title': showTitle,
   };
 
   /// Time ago string for display
@@ -299,19 +316,23 @@ class CommunityComment {
 
   factory CommunityComment.fromJson(Map<String, dynamic> json) {
     return CommunityComment(
-      id: json['id'] ?? '',
-      postId: json['postId'] ?? '',
-      showId: json['showId'] ?? 0,
-      authorId: json['authorId'] ?? '',
-      authorName: json['authorName'] ?? 'Anonymous',
-      authorAvatar: json['authorAvatar'],
+      id: json['id'] is int ? json['id'].toString() : (json['id'] ?? ''),
+      postId: json['post_id'] ?? json['postId'] ?? '',
+      showId: json['show_id'] ?? json['showId'] ?? 0,
+      authorId: json['author_id'] is int
+          ? json['author_id'].toString()
+          : (json['author_id'] ?? json['authorId'] ?? ''),
+      authorName: json['author_name'] ?? json['authorName'] ?? 'Anonymous',
+      authorAvatar: json['author_avatar'] ?? json['authorAvatar'],
       content: json['content'] ?? '',
-      parentId: json['parentId'],
+      parentId: json['parent_id'] ?? json['parentId'],
       upvotes: json['upvotes'] ?? 0,
       downvotes: json['downvotes'] ?? 0,
-      createdAt: json['createdAt'] is Timestamp
-          ? (json['createdAt'] as Timestamp).toDate()
-          : null,
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'].toString())
+          : (json['createdAt'] != null
+                ? DateTime.tryParse(json['createdAt'].toString())
+                : null),
     );
   }
 

@@ -1,10 +1,10 @@
 import 'dart:io' show Platform;
-import 'package:cached_network_image/cached_network_image.dart';
+
 import 'package:finishd/Model/user_model.dart';
 import 'package:finishd/profile/profileScreen.dart';
 import 'package:finishd/Widget/user_avatar.dart';
 import 'package:finishd/services/user_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -19,7 +19,8 @@ class _FriendsScreenState extends State<FriendsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final UserService _userService = UserService();
-  final String _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+  final String _currentUserId =
+      Supabase.instance.client.auth.currentUser?.id ?? '';
 
   List<UserModel> _myFriends = []; // Followers
   List<UserModel> _allUsers = []; // Find Friends
@@ -177,13 +178,15 @@ class _FriendsScreenState extends State<FriendsScreen>
     setState(() {
       _filteredMyFriends = _myFriends.where((user) {
         final username = user.username.toLowerCase();
-        final fullName = '${user.firstName} ${user.lastName ?? ''}'.toLowerCase();
+        final fullName = '${user.firstName} ${user.lastName ?? ''}'
+            .toLowerCase();
         return username.contains(searchLower) || fullName.contains(searchLower);
       }).toList();
 
       _filteredAllUsers = _allUsers.where((user) {
         final username = user.username.toLowerCase();
-        final fullName = '${user.firstName} ${user.lastName ?? ''}'.toLowerCase();
+        final fullName = '${user.firstName} ${user.lastName ?? ''}'
+            .toLowerCase();
         return username.contains(searchLower) || fullName.contains(searchLower);
       }).toList();
     });
