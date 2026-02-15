@@ -3,7 +3,7 @@ import 'package:finishd/Model/community_models.dart';
 import 'package:finishd/Widget/user_avatar.dart';
 import 'package:finishd/provider/community_provider.dart';
 import 'package:finishd/provider/user_provider.dart';
-import 'package:finishd/Widget/report_bottom_sheet.dart';
+import 'package:finishd/Community/report_bottom_sheet.dart';
 import 'package:finishd/models/report_model.dart';
 import 'package:finishd/Widget/image_preview.dart';
 import 'package:finishd/Home/share_post_sheet.dart';
@@ -959,6 +959,38 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     );
   }
 
+  void _confirmBlockUser(BuildContext context, String userId, String username) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Block $username?'),
+        content: const Text(
+          'They will not be able to follow you or view your content, and you will not see their posts or comments.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Provider.of<UserProvider>(
+                context,
+                listen: false,
+              ).blockUser(userId);
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text('$username blocked')));
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Block'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showPostOptions(BuildContext context, CommunityProvider provider) {
     final theme = Theme.of(context);
     final isAuthor = widget.post.authorId == provider.currentUid;
@@ -1032,6 +1064,79 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   Navigator.pop(context);
                 },
               ),
+            if (!isAuthor)
+              ListTile(
+                leading: const Icon(Icons.block_rounded, color: Colors.red),
+                title: const Text(
+                  'Block User',
+                  style: TextStyle(color: Colors.red),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmBlockUser(
+                    context,
+                    widget.post.authorId,
+                    widget.post.authorName,
+                  );
+                },
+              ),
+            if (provider.isModerator) ...[
+              const Divider(),
+              Padding(
+                padding: const EdgeInsets.only(left: 16, top: 8, bottom: 8),
+                child: Text(
+                  'Moderation Tools',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.primaryColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: Icon(
+                  widget.post.isHidden
+                      ? Icons.visibility_rounded
+                      : Icons.visibility_off_rounded,
+                  color: theme.iconTheme.color,
+                ),
+                title: Text(widget.post.isHidden ? 'Unhide Post' : 'Hide Post'),
+                onTap: () {
+                  Navigator.pop(context);
+                  provider.hidePost(widget.post.id, !widget.post.isHidden);
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                  widget.post.isLocked
+                      ? Icons.lock_open_rounded
+                      : Icons.lock_outline_rounded,
+                  color: theme.iconTheme.color,
+                ),
+                title: Text(widget.post.isLocked ? 'Unlock Post' : 'Lock Post'),
+                onTap: () {
+                  Navigator.pop(context);
+                  provider.lockPost(widget.post.id, !widget.post.isLocked);
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                  widget.post.pinnedAt != null
+                      ? Icons.push_pin_outlined
+                      : Icons.push_pin_rounded,
+                  color: theme.iconTheme.color,
+                ),
+                title: Text(
+                  widget.post.pinnedAt != null ? 'Unpin Post' : 'Pin Post',
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  provider.pinPost(
+                    widget.post.id,
+                    widget.post.pinnedAt == null,
+                  );
+                },
+              ),
+            ],
             ListTile(
               leading: const Icon(Icons.share_rounded),
               title: const Text('Share Post'),

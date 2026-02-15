@@ -115,6 +115,43 @@ class UserService {
     }
   }
 
+  Future<void> blockUser(String currentUid, String targetUid) async {
+    try {
+      await _supabase.from('user_blocks').insert({
+        'blocker_id': currentUid,
+        'blocked_id': targetUid,
+      });
+      // Also unfollow
+      await unfollowUser(currentUid, targetUid);
+    } catch (e) {
+      print('Error blocking user: $e');
+    }
+  }
+
+  Future<void> unblockUser(String currentUid, String targetUid) async {
+    try {
+      await _supabase.from('user_blocks').delete().match({
+        'blocker_id': currentUid,
+        'blocked_id': targetUid,
+      });
+    } catch (e) {
+      print('Error unblocking user: $e');
+    }
+  }
+
+  Future<List<String>> getBlockedUsers(String uid) async {
+    try {
+      final response = await _supabase
+          .from('user_blocks')
+          .select('blocked_id')
+          .eq('blocker_id', uid);
+      return (response as List).map((e) => e['blocked_id'] as String).toList();
+    } catch (e) {
+      print('Error fetching blocked users: $e');
+      return [];
+    }
+  }
+
   Future<bool> isFollowing(String currentUid, String targetUid) async {
     try {
       final response = await _supabase.from('follows').select().match({

@@ -145,6 +145,8 @@ class CommunityPost {
   final DateTime? createdAt;
   final DateTime? lastActivityAt;
   final String? showTitle;
+  final bool isLocked;
+  final DateTime? pinnedAt;
 
   CommunityPost({
     required this.id,
@@ -166,6 +168,8 @@ class CommunityPost {
     this.createdAt,
     this.lastActivityAt,
     this.showTitle,
+    this.isLocked = false,
+    this.pinnedAt,
   });
 
   factory CommunityPost.fromJson(Map<String, dynamic> json) {
@@ -204,6 +208,12 @@ class CommunityPost {
                 ? DateTime.tryParse(json['lastActivityAt'].toString())
                 : null),
       showTitle: json['show_title'] ?? json['showTitle'],
+      isLocked: json['is_locked'] ?? json['isLocked'] ?? false,
+      pinnedAt: json['pinned_at'] != null
+          ? DateTime.tryParse(json['pinned_at'].toString())
+          : (json['pinnedAt'] != null
+                ? DateTime.tryParse(json['pinnedAt'].toString())
+                : null),
     );
   }
 
@@ -228,6 +238,8 @@ class CommunityPost {
     DateTime? createdAt,
     DateTime? lastActivityAt,
     String? showTitle,
+    bool? isLocked,
+    DateTime? pinnedAt,
   }) {
     return CommunityPost(
       id: id ?? this.id,
@@ -249,6 +261,8 @@ class CommunityPost {
       createdAt: createdAt ?? this.createdAt,
       lastActivityAt: lastActivityAt ?? this.lastActivityAt,
       showTitle: showTitle ?? this.showTitle,
+      isLocked: isLocked ?? this.isLocked,
+      pinnedAt: pinnedAt ?? this.pinnedAt,
     );
   }
 
@@ -272,6 +286,8 @@ class CommunityPost {
     'created_at': createdAt?.toIso8601String(),
     'last_activity_at': lastActivityAt?.toIso8601String(),
     'show_title': showTitle,
+    'is_locked': isLocked,
+    'pinned_at': pinnedAt?.toIso8601String(),
   };
 
   /// Time ago string for display

@@ -14,8 +14,10 @@ class UserProvider with ChangeNotifier {
   UserModel? _currentUser;
   UserPreferences? _userPreferences;
   Set<String> _followingIds = {};
+  Set<String> _blockedUserIds = {};
   bool _isLoading = false;
   bool _followingLoaded = false;
+  bool _blockedLoaded = false;
   String? _error;
 
   UserModel? get currentUser => _currentUser;
@@ -23,6 +25,7 @@ class UserProvider with ChangeNotifier {
   Set<String> get followingIds => _followingIds;
   bool get isLoading => _isLoading;
   bool get followingLoaded => _followingLoaded;
+  bool get blockedLoaded => _blockedLoaded;
   String? get error => _error;
 
   // Fetch current user data
@@ -149,5 +152,56 @@ class UserProvider with ChangeNotifier {
     } catch (e) {
       print('Error ensuring following loaded: $e');
     }
+  }
+
+  // --- Blocking ---
+
+  Future<void> loadBlockedUsers() async {
+    if (_currentUser == null) return;
+    try {
+      final list = await _userService.getBlockedUsers(_currentUser!.uid);
+      _blockedUserIds = list.toSet();
+      _blockedLoaded = true;
+      notifyListeners();
+    } catch (e) {
+      print('Error loading blocked users: $e');
+    }
+  }
+
+  Future<void> blockUser(String targetUid) async {
+    if (_currentUser == null) return;
+    try {
+      // Optimistic
+      _blockedUserIds.add(targetUid);
+      _followingIds.remove(targetUid);
+      notifyListeners();
+
+      await _userService.blockUser(_currentUser!.uid, targetUid);
+    } catch (e) {
+      print('Error blocking user: $e');
+      _blockedUserIds.remove(targetUid);
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> unblockUser(String targetUid) async {
+    if (_currentUser == null) return;
+    try {
+      // Optimistic
+      _blockedUserIds.remove(targetUid);
+      notifyListeners();
+
+      await _userService.unblockUser(_currentUser!.uid, targetUid);
+    } catch (e) {
+      print('Error unblocking user: $e');
+      _blockedUserIds.add(targetUid);
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  bool isBlocked(String targetUid) {
+    return _blockedUserIds.contains(targetUid);
   }
 }

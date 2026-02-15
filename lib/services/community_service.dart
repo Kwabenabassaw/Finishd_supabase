@@ -1,3 +1,4 @@
+import 'package:finishd/models/report_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Service for managing show-centric communities.
@@ -268,24 +269,129 @@ class CommunityService {
 
   Future<bool> deletePost(String postId, int showId) async {
     try {
+      // Soft delete by setting is_hidden = true (or actually delete if policy allows)
+      // For now, let's try strict delete, but usually we want soft delete
       await _supabase.from('community_posts').delete().eq('id', postId);
       return true;
     } catch (e) {
+      print('Error deleting post: $e');
       return false;
     }
   }
 
-  Future<bool> isMember(int showId) async {
-    if (_currentUid == null) return false;
+  // ==========================================================================
+  // MODERATION ACTIONS
+  // ==========================================================================
+
+  Future<void> reportContent({
+    required ReportType type,
+    required ReportReason reason,
+    required String contentId,
+    required String reportedUserId,
+    String? additionalInfo,
+    String? communityId,
+    Map<String, dynamic>? contentSnapshot,
+  }) async {
+    if (_currentUid == null) return;
+
+    try {
+      await _supabase.from('reports').insert({
+        'type': type.name,
+        'reason': reason.name,
+        'reported_content_id': contentId,
+        'reported_by': _currentUid,
+        'reported_user_id': reportedUserId,
+        'community_id': communityId,
+        'additional_info': additionalInfo,
+        'content_snapshot': contentSnapshot ?? {},
+        'status': 'pending',
+        'severity': 'low', // Default, backend trigger can update this
+        'report_weight': 1.0,
+      });
+    } catch (e) {
+      print('❌ Error reporting content: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> muteCommunity(int showId, bool mute) async {
+    if (_currentUid == null) return;
     final community = await getCommunity(showId);
-    if (community == null) return false;
+    if (community == null) return;
+
+    try {
+      await _supabase
+          .from(
+            'community_members',
+          ) // Assuming this table links users to communities
+          .update({'is_muted': mute})
+          .match({'community_id': community['id'], 'user_id': _currentUid!});
+    } catch (e) {
+      print('Error muting community: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<int>> getMutedCommunityIds() async {
+    if (_currentUid == null) return [];
+    try {
+      final response = await _supabase
+          .from('community_members')
+          .select('communities(show_id)')
+          .eq('user_id', _currentUid!)
+          .eq('is_muted', true);
+
+      final List<int> ids = [];
+      for (final row in response) {
+        final comm = row['communities'];
+        if (comm != null && comm['show_id'] != null) {
+          ids.add(comm['show_id'] as int);
+        }
+      }
+      return ids;
+    } catch (e) {
+      print('Error fetching muted communities: $e');
+      return [];
+    }
+  }
+
+  Future<void> hidePost(String postId, bool hide) async {
+    await _supabase
+        .from('community_posts')
+        .update({'is_hidden': hide})
+        .eq('id', postId);
+  }
+
+  Future<void> lockPost(String postId, bool lock) async {
+    await _supabase
+        .from('community_posts')
+        .update({'is_locked': lock})
+        .eq('id', postId);
+  }
+
+  Future<void> pinPost(String postId, bool pin) async {
+    await _supabase
+        .from('community_posts')
+        .update({'pinned_at': pin ? DateTime.now().toIso8601String() : null})
+        .eq('id', postId);
+  }
+
+  Future<String?> getMemberRole(int showId) async {
+    if (_currentUid == null) return null;
+    final community = await getCommunity(showId);
+    if (community == null) return null;
     final response = await _supabase
         .from('community_members')
-        .select()
+        .select('role')
         .eq('community_id', community['id'])
         .eq('user_id', _currentUid!)
         .maybeSingle();
-    return response != null;
+    return response?['role'] as String?;
+  }
+
+  Future<bool> isMember(int showId) async {
+    final role = await getMemberRole(showId);
+    return role != null;
   }
 
   Future<List<Map<String, dynamic>>> getMyCommunities() async {

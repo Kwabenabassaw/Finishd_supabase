@@ -51,6 +51,7 @@ class CommunityProvider extends ChangeNotifier {
   // My Communities
   List<Community> _myCommunities = [];
   bool _isLoadingMyCommunities = false;
+  Set<int> _mutedCommunityIds = {};
 
   // Discover Content
   List<MediaItem> _discoverContent = [];
@@ -73,7 +74,9 @@ class CommunityProvider extends ChangeNotifier {
   String _currentSortBy = 'createdAt';
   String _searchQuery = '';
   Map<String, int> _currentUserVotes = {}; // postId -> vote
+
   final Map<String, int> _commentVotes = {}; // commentId -> vote
+  String? _currentUserRole; // 'admin', 'moderator', or null
 
   // Real-time listener for posts
   StreamSubscription<List<Map<String, dynamic>>>? _postsSubscription;
@@ -98,6 +101,11 @@ class CommunityProvider extends ChangeNotifier {
   String get currentSortBy => _currentSortBy;
   String get searchQuery => _searchQuery;
   Map<String, int> get currentUserVotes => _currentUserVotes;
+
+  String? get currentUserRole => _currentUserRole;
+  bool get isModerator =>
+      _currentUserRole == 'moderator' || _currentUserRole == 'admin';
+  bool get isAdmin => _currentUserRole == 'admin';
 
   String? get currentUid => Supabase.instance.client.auth.currentUser?.id;
 
@@ -172,6 +180,7 @@ class CommunityProvider extends ChangeNotifier {
     try {
       final data = await _communityService.getMyCommunities();
       _myCommunities = data.map((json) => Community.fromJson(json)).toList();
+      loadMutedCommunities();
     } catch (e) {
       debugPrint('Error fetching my communities: $e');
     } finally {
@@ -290,6 +299,8 @@ class CommunityProvider extends ChangeNotifier {
     _postsMap.clear();
     _currentPosts = [];
     _isMemberOfCurrent = false;
+
+    _currentUserRole = null;
     _currentUserVotes = {};
     _selectedHashtag = null;
     _stopPostsStream();
@@ -308,16 +319,17 @@ class CommunityProvider extends ChangeNotifier {
       // Fetch community info and membership status
       final results = await Future.wait([
         _communityService.getCommunity(showId),
-        _communityService.isMember(showId),
+        _communityService.getMemberRole(showId),
       ]);
 
       final communityData = results[0] as Map<String, dynamic>?;
-      final isMember = results[1] as bool;
+      final role = results[1] as String?;
 
       _currentCommunity = communityData != null
           ? Community.fromJson(communityData)
           : null;
-      _isMemberOfCurrent = isMember;
+      _currentUserRole = role;
+      _isMemberOfCurrent = role != null;
 
       // Start listening to posts stream for real-time updates
       _listenToPostsStream(showId);
@@ -526,6 +538,37 @@ class CommunityProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> loadMutedCommunities() async {
+    final ids = await _communityService.getMutedCommunityIds();
+    _mutedCommunityIds = ids.toSet();
+    notifyListeners();
+  }
+
+  Future<void> muteCommunity(int showId, bool mute) async {
+    // Optimistic
+    if (mute) {
+      _mutedCommunityIds.add(showId);
+    } else {
+      _mutedCommunityIds.remove(showId);
+    }
+    notifyListeners();
+
+    try {
+      await _communityService.muteCommunity(showId, mute);
+    } catch (e) {
+      print('Error muting community: $e');
+      // Revert
+      if (mute) {
+        _mutedCommunityIds.remove(showId);
+      } else {
+        _mutedCommunityIds.add(showId);
+      }
+      notifyListeners();
+    }
+  }
+
+  bool isMuted(int showId) => _mutedCommunityIds.contains(showId);
+
   Future<void> voteOnPost(String postId, int showId, int vote) async {
     final currentVote = _currentUserVotes[postId] ?? 0;
     final newVote = currentVote == vote ? 0 : vote;
@@ -593,6 +636,71 @@ class CommunityProvider extends ChangeNotifier {
       // Log detailed error for debugging
       debugPrint('[CommunityProvider] Error details: ${e.toString()}');
       rethrow; // Let UI handle the error
+    }
+  }
+
+  // ==========================================================================
+  // MODERATION ACTIONS
+  // ==========================================================================
+
+  Future<void> hidePost(String postId, bool hide) async {
+    // Optimistic update
+    final index = _currentPosts.indexWhere((p) => p.id == postId);
+    if (index != -1) {
+      final oldPost = _currentPosts[index];
+      _currentPosts[index] = oldPost.copyWith(isHidden: hide);
+      notifyListeners();
+
+      try {
+        await _communityService.hidePost(postId, hide);
+      } catch (e) {
+        // Revert
+        _currentPosts[index] = oldPost;
+        notifyListeners();
+        rethrow;
+      }
+    }
+  }
+
+  Future<void> lockPost(String postId, bool lock) async {
+    // Optimistic update
+    final index = _currentPosts.indexWhere((p) => p.id == postId);
+    if (index != -1) {
+      final oldPost = _currentPosts[index];
+      _currentPosts[index] = oldPost.copyWith(isLocked: lock);
+      notifyListeners();
+
+      try {
+        await _communityService.lockPost(postId, lock);
+      } catch (e) {
+        // Revert
+        _currentPosts[index] = oldPost;
+        notifyListeners();
+        rethrow;
+      }
+    }
+  }
+
+  Future<void> pinPost(String postId, bool pin) async {
+    // Optimistic update
+    final index = _currentPosts.indexWhere((p) => p.id == postId);
+    if (index != -1) {
+      final oldPost = _currentPosts[index];
+      _currentPosts[index] = oldPost.copyWith(
+        pinnedAt: pin ? DateTime.now() : null,
+      );
+      // If pinning, move to top? Or just rely on re-sort?
+      // For now, just update the field.
+      notifyListeners();
+
+      try {
+        await _communityService.pinPost(postId, pin);
+      } catch (e) {
+        // Revert
+        _currentPosts[index] = oldPost;
+        notifyListeners();
+        rethrow;
+      }
     }
   }
 
