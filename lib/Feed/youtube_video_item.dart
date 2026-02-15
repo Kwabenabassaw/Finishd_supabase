@@ -25,8 +25,7 @@ class YoutubeVideoItem extends StatefulWidget {
   State<YoutubeVideoItem> createState() => _YoutubeVideoItemState();
 }
 
-class _YoutubeVideoItemState extends State<YoutubeVideoItem>
-    with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
+class _YoutubeVideoItemState extends State<YoutubeVideoItem> {
   bool _showHeart = false;
   Offset _heartPos = Offset.zero;
 
@@ -47,14 +46,9 @@ class _YoutubeVideoItemState extends State<YoutubeVideoItem>
     });
   }
 
-  // Keep alive during minor scroll adjustments to prevent flickering
-  @override
-  bool get wantKeepAlive => true;
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // Required for AutomaticKeepAliveClientMixin
-
     // READ-ONLY access to provider for initial data to avoid full rebuilds
     final provider = context.read<YoutubeFeedProvider>();
 

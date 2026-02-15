@@ -33,6 +33,7 @@ import 'package:finishd/onboarding/streamingService.dart';
 import 'package:finishd/settings/settimgPage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart'; // Added for SystemNavigator
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
@@ -58,6 +59,10 @@ void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
     debugPrint('DEBUG: WidgetsFlutterBinding initialized');
+
+    // Feed-safe image cache limits (avoid bitmap growth during long scroll sessions).
+    PaintingBinding.instance.imageCache.maximumSize = 150;
+    PaintingBinding.instance.imageCache.maximumSizeBytes = 120 << 20; // 120 MB
 
     // Initialize Supabase
     debugPrint('DEBUG: Initializing Supabase...');
