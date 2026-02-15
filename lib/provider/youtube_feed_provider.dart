@@ -57,8 +57,9 @@ class YoutubeFeedProvider extends ChangeNotifier {
   };
 
   // Preload window configuration
-  static const int _preloadNextCount = 2; // Reduced for memory safety with MP4s
-  static const int _preloadPrevCount = 1;
+  static const int _controllerKeepAhead = 1; // Keep only current+next in memory
+  static const int _controllerKeepBehind = 1; // Keep previous for smooth reverse swipe
+  static const int _networkPreloadAhead = 2; // Preload at most two ahead on network cache
 
   // ============================================================================
   // FEED BACKEND
@@ -83,6 +84,10 @@ class YoutubeFeedProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   FeedType get activeFeedType => _activeFeedType;
   int get currentPage => _pageCountsByType[_activeFeedType] ?? 1;
+
+  int get activeYoutubeControllerCount => _controllers.length;
+  int get activeMp4ControllerCount => _mp4Controllers.length;
+  int get totalActiveControllers => _controllers.length + _mp4Controllers.length;
 
   /// Get controller for specific index (null if not in window)
   YoutubePlayerController? getController(int index) => _controllers[index];
@@ -451,10 +456,12 @@ class YoutubeFeedProvider extends ChangeNotifier {
 
     final windowIndices = <int>{};
     windowIndices.add(centerIndex);
-    for (int i = 1; i <= _preloadNextCount; i++)
+    for (int i = 1; i <= _controllerKeepAhead; i++) {
       windowIndices.add(centerIndex + i);
-    for (int i = 1; i <= _preloadPrevCount; i++)
+    }
+    for (int i = 1; i <= _controllerKeepBehind; i++) {
       windowIndices.add(centerIndex - i);
+    }
 
     final validWindow = windowIndices
         .where((i) => i >= 0 && i < videos.length)
@@ -483,10 +490,10 @@ class YoutubeFeedProvider extends ChangeNotifier {
   }
 
   void _preloadNextVideos(int currentIndex) {
-    // Start AFTER the controller window to avoid redundant work.
-    // Window covers [current - _preloadPrevCount, current + _preloadNextCount].
-    final start = currentIndex + _preloadNextCount + 1;
-    final end = start + 2; // Preload 2 videos beyond the window
+    // Keep controller memory tight (prev/current/next), but still warm network cache.
+    // Preload ahead from index + 1 and index + 2 only.
+    final start = currentIndex + 1;
+    final end = start + _networkPreloadAhead;
 
     for (int i = start; i < end && i < videos.length; i++) {
       final video = videos[i];

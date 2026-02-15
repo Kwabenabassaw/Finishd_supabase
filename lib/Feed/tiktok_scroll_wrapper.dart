@@ -9,14 +9,11 @@
 /// - Uses YoutubeVideoItem for each page
 library;
 
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:tiktoklikescroller/tiktoklikescroller.dart';
 import 'package:provider/provider.dart';
 
 import '../provider/youtube_feed_provider.dart';
 import 'youtube_video_item.dart';
-import 'creator_video_item.dart';
 
 class TikTokScrollWrapper extends StatefulWidget {
   const TikTokScrollWrapper({super.key});
@@ -26,108 +23,58 @@ class TikTokScrollWrapper extends StatefulWidget {
 }
 
 class _TikTokScrollWrapperState extends State<TikTokScrollWrapper> {
-  late Controller _scrollController;
-  int _currentPageIndex = 0;
-  StreamSubscription? _jumpSubscription;
+  late final PageController _pageController;
+  int _lastKnownLength = 0;
 
   @override
   void initState() {
     super.initState();
-
-    // Initialize the tiktoklikescroller controller
-    _scrollController = Controller()
-      ..addListener((event) {
-        _handleScrollEvent(event);
-      });
-
-    // Listen for remote jump requests
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<YoutubeFeedProvider>();
-      _jumpSubscription = provider.jumpToPageStream.listen((index) {
-        if (mounted && index != _currentPageIndex) {
-          debugPrint(
-            '[TikTokScroll] 🚀 Jumping to page $index by remote request',
-          );
-          _scrollController.jumpToPosition(index);
-          // animateTo triggers the listener which calls onPageChanged
-          _currentPageIndex = index;
-        }
-      });
-    });
+    _pageController = PageController();
   }
 
   @override
   void dispose() {
-    _scrollController.disposeListeners();
-    _jumpSubscription?.cancel();
+    _pageController.dispose();
     super.dispose();
   }
 
-  void _handleScrollEvent(ScrollEvent event) {
-    debugPrint(
-      '📜 Scroll event: direction=${event.direction}, '
-      'success=${event.success}, currentPage=$_currentPageIndex',
-    );
-
-    // Only update on successful scrolls
-    if (event.success == ScrollSuccess.SUCCESS) {
-      final oldIndex = _currentPageIndex;
-
-      // Update current page based on scroll direction
-      if (event.direction == ScrollDirection.FORWARD) {
-        _currentPageIndex++;
-      } else if (event.direction == ScrollDirection.BACKWARDS &&
-          _currentPageIndex > 0) {
-        _currentPageIndex--;
-      }
-
-      if (oldIndex != _currentPageIndex) {
-        debugPrint('📄 Page changed: $oldIndex → $_currentPageIndex');
-
-        // Notify provider of the change
-        if (mounted) {
-          context.read<YoutubeFeedProvider>().onPageChanged(_currentPageIndex);
-        }
-      }
+  void _precacheNearThumbnails(YoutubeFeedProvider provider, int center) {
+    final nextCandidates = [center + 1, center + 2];
+    for (final index in nextCandidates) {
+      if (index < 0 || index >= provider.videos.length) continue;
+      final url = provider.videos[index].thumbnailUrl;
+      if (url.isEmpty) continue;
+      precacheImage(NetworkImage(url), context);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<YoutubeFeedProvider>(
-      builder: (context, provider, _) {
-        if (provider.videos.isEmpty) {
-          return const SizedBox.shrink();
+    return Selector<YoutubeFeedProvider, int>(
+      selector: (_, provider) => provider.videos.length,
+      builder: (context, length, _) {
+        final provider = context.read<YoutubeFeedProvider>();
+        if (length == 0) return const SizedBox.shrink();
+
+        if (_lastKnownLength != length && _pageController.hasClients) {
+          final target = provider.currentIndex.clamp(0, length - 1);
+          _pageController.jumpToPage(target);
+          _lastKnownLength = length;
         }
 
-        return TikTokStyleFullPageScroller(
-          contentSize: provider.videos.length,
-          swipePositionThreshold: 0.05,
-          // ^ 5% of screen height needed to trigger scroll (MUCH more sensitive)
-          swipeVelocityThreshold: 200,
-          // ^ velocity threshold for quick flicks (lower = easier to trigger)
-          animationDuration: const Duration(milliseconds: 350),
-          // ^ smooth animation duration (gives time for provider to update)
-          controller: _scrollController,
-          // ^ our listener for scroll events
-          builder: (BuildContext context, int index) {
-            // IMPORTANT: Builder is called for ALL visible pages (prev, current, next)
-            // Do NOT trigger state changes here - only build the widget
-            final video = provider.videos[index];
-
-            if (video.isCreator) {
-              return CreatorVideoItem(
-                index: index,
-                video: video,
-                key: ValueKey('creator_${video.videoId}'),
-              );
-            }
-
-            return YoutubeVideoItem(
-              index: index,
-              key: ValueKey('video_$index'),
-            );
+        return PageView.builder(
+          controller: _pageController,
+          scrollDirection: Axis.vertical,
+          physics: const PageScrollPhysics(),
+          itemCount: length,
+          onPageChanged: (index) {
+            provider.onPageChanged(index);
+            _precacheNearThumbnails(provider, index);
           },
+          itemBuilder: (context, index) => YoutubeVideoItem(
+            index: index,
+            key: ValueKey(provider.videos[index].videoId),
+          ),
         );
       },
     );
