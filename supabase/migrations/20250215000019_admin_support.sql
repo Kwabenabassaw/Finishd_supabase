@@ -133,7 +133,7 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
   -- Check if caller is admin
-  IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('admin', 'reviewer')) THEN
+  IF NOT EXISTS (SELECT 1 FROM public.profiles admin_chk WHERE admin_chk.id = auth.uid() AND admin_chk.role IN ('admin', 'reviewer')) THEN
     RAISE EXCEPTION 'Unauthorized';
   END IF;
 

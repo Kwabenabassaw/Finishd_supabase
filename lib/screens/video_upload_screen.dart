@@ -84,6 +84,21 @@ class _VideoUploadScreenState extends State<VideoUploadScreen> {
       return;
     }
 
+    if (_videoController == null || !_videoController!.value.isInitialized) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Video is not ready yet')));
+      return;
+    }
+
+    final duration = _videoController!.value.duration.inSeconds;
+    if (duration < 5) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Video must be at least 5 seconds long')),
+      );
+      return;
+    }
+
     setState(() => _isUploading = true);
 
     try {

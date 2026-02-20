@@ -115,9 +115,7 @@ void main() async {
           ChangeNotifierProvider(create: (_) => CommunityProvider()),
           ChangeNotifierProvider(create: (_) => ActorProvider()),
           ChangeNotifierProvider(create: (_) => AppNavigationProvider()),
-          ChangeNotifierProvider(
-            create: (_) => YoutubeFeedProvider()..initialize(),
-          ),
+          ChangeNotifierProvider(create: (_) => YoutubeFeedProvider()),
           ChangeNotifierProvider(create: (_) => ChatProvider()..initialize()),
           ChangeNotifierProxyProvider<ChatProvider, UnreadStateProvider>(
             create: (context) =>

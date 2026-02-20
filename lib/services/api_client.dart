@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:finishd/models/feed_video.dart';
@@ -196,24 +195,50 @@ class ApiClient {
     int? page,
     FeedType feedType = FeedType.forYou,
   }) async {
-    final effectivePage = page ?? Random().nextInt(10) + 1;
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user == null) return [];
+    // FALLBACK: Query Supabase directly if API fails or returns empty
+    // This is now the primary method as we move away from external API
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) return [];
 
-    final queryParams = {
-      'refresh': refresh.toString(),
-      'limit': limit.toString(),
-      'page': effectivePage.toString(),
-      'feed_type': feedType.value,
-    };
+      final int effectivePage = page ?? 1;
+      final int offset = (effectivePage - 1) * limit;
 
-    final response = await get('/feed/${user.id}', queryParams: queryParams);
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final List<dynamic> feedJson = data['feed'] ?? [];
-      return feedJson.map((v) => FeedItem.fromJson(v)).toList();
+      dynamic query = Supabase.instance.client
+          .from('creator_videos')
+          .select('''
+            *,
+            profiles!creator_videos_creator_id_fkey(username, avatar_url)
+          ''')
+          .eq('status', 'approved');
+
+      // Filter based on feed type if needed
+      if (feedType == FeedType.trending) {
+        query = query.order('engagement_score', ascending: false);
+      } else {
+        query = query.order('created_at', ascending: false);
+      }
+
+      final response = await query.range(offset, offset + limit - 1);
+      final List<dynamic> data = response as List<dynamic>;
+
+      return data.map((json) {
+        // Flatten profile data for FeedItem
+        final profile = json['profiles'];
+        if (profile != null) {
+          json['creator_username'] = profile['username'];
+          json['creator_avatar'] = profile['avatar_url'];
+        }
+        // Ensure source is set correctly
+        json['source'] = 'creator_video';
+        json['type'] = 'clip'; // Default type
+
+        return FeedItem.fromJson(json);
+      }).toList();
+    } catch (e) {
+      _log('Error fetching Supabase feed: $e', isError: true);
+      return [];
     }
-    return [];
   }
 
   // Compatibility stubs for rest of file...

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:finishd/models/feed_item.dart';
 import 'package:finishd/services/api_client.dart';
-import 'package:finishd/services/youtube_video_manager.dart';
+import 'package:finishd/services/feed_video_manager.dart';
 import 'package:finishd/Feed/feed_video_player_v2.dart';
 
 /// New HomeScreen using TMDB-based feed
@@ -17,7 +17,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     with WidgetsBindingObserver {
   final PageController _pageController = PageController();
   final ApiClient _apiClient = ApiClient();
-  final YouTubeVideoManager _videoManager = YouTubeVideoManager();
+  final FeedVideoManager _videoManager = FeedVideoManager();
 
   final List<FeedItem> _feedItems = [];
   bool _isLoading = false;
@@ -221,7 +221,6 @@ class _HomeScreenV2State extends State<HomeScreenV2>
               return FeedVideoPlayerV2(
                 item: _feedItems[index],
                 index: index,
-                isActive: index == _currentIndex,
                 videoManager: _videoManager,
               );
             },
