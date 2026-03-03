@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 /// Service for uploading files to Cloudinary using Unsigned Uploads.
 ///
@@ -248,24 +249,19 @@ class StorageService {
   // ============================================================
 
   /// Upload a creator video to Supabase Storage.
+  ///
+  /// Returns the relative storage path (e.g. `userId/uuid.mp4`).
+  /// Use a signed URL at playback time since the bucket is private.
   Future<String> uploadCreatorVideo(File videoFile, String userId) async {
     try {
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}.mp4';
+      const uuid = Uuid();
+      final fileName = '${uuid.v4()}.mp4';
       final path = '$userId/$fileName';
 
       await Supabase.instance.client.storage
           .from('creator-videos')
-          .upload(path, videoFile);
+          .upload(path, videoFile, retryAttempts: 3);
 
-      // Get public URL (or signed URL if private - buckets are private by policy for uploads, public for reads?)
-      // Plan said: "Read: public (approved only via signed URLs or Edge Function)"
-      // Actually, standard pattern is to store the path or get a public URL if the bucket is public.
-      // The instructions said "creator-videos" (Private).
-      // So we should probably store the path. Or get a signed URL.
-      // For simplicity in the app, let's assume we store the full path or public URL.
-      // If the bucket is private, we need signedURL.
-      // However, usually detailed implementation stores the path.
-      // Let's return the path for now, or the key.
       return path;
     } catch (e) {
       print('Error uploading creator video: $e');
@@ -274,16 +270,19 @@ class StorageService {
   }
 
   /// Upload a creator thumbnail to Supabase Storage.
+  ///
+  /// Returns the full public URL (thumbnails bucket is public).
   Future<String> uploadCreatorThumbnail(File imageFile, String userId) async {
     try {
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+      const uuid = Uuid();
+      final ext = imageFile.path.split('.').last.toLowerCase();
+      final fileName = '${uuid.v4()}.$ext';
       final path = '$userId/$fileName';
 
       await Supabase.instance.client.storage
           .from('creator-thumbnails')
-          .upload(path, imageFile);
+          .upload(path, imageFile, retryAttempts: 3);
 
-      // Thumbnails are public bucket
       final url = Supabase.instance.client.storage
           .from('creator-thumbnails')
           .getPublicUrl(path);

@@ -2,15 +2,13 @@ import 'dart:io';
 import 'dart:async';
 import 'package:finishd/Model/trending.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
-import 'package:finishd/services/storage_service.dart';
-import 'package:finishd/theme/app_colors.dart';
+import 'package:finishd/provider/video_upload_provider.dart';
 import 'package:finishd/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:video_compress/video_compress.dart';
+import 'package:provider/provider.dart';
 
 class VideoUploadScreen extends StatefulWidget {
   const VideoUploadScreen({super.key});
@@ -20,7 +18,6 @@ class VideoUploadScreen extends StatefulWidget {
 }
 
 class _VideoUploadScreenState extends State<VideoUploadScreen> {
-  final StorageService _storageService = StorageService();
   final _captionController = TextEditingController();
   final _titleController = TextEditingController(); // Search Movies placeholder
 
@@ -28,7 +25,6 @@ class _VideoUploadScreenState extends State<VideoUploadScreen> {
   File? _thumbnailFile;
   VideoPlayerController? _videoController;
 
-  bool _isUploading = false;
   bool _containsSpoilers = false;
   int? _tmdbId; // To link to a movie (placeholder for now)
   String? _mediaType; // 'movie' or 'tv'
@@ -99,85 +95,26 @@ class _VideoUploadScreenState extends State<VideoUploadScreen> {
       return;
     }
 
-    setState(() => _isUploading = true);
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
 
-    try {
-      final user = Supabase.instance.client.auth.currentUser;
-      if (user == null) return;
+    // Extract hashtags before popping.
+    final tags = _extractHashtags(_captionController.text);
 
-      // 0. Compress Video
-      File fileToUpload = _videoFile!;
-      try {
-        final info = await VideoCompress.compressVideo(
-          _videoFile!.path,
-          quality: VideoQuality.MediumQuality, // Good balance for mobile
-          deleteOrigin: false,
-          includeAudio: true,
-        );
-        if (info != null && info.file != null) {
-          fileToUpload = info.file!;
-          // Optional: Use generated thumbnail if user didn't pick one?
-          // For now, we stick to user's choice or we could fallback.
-        }
-      } catch (e) {
-        print("Compression failed: $e. Uploading original.");
-      }
+    // Kick off background upload and pop immediately.
+    context.read<VideoUploadProvider>().startUpload(
+      videoFile: _videoFile!,
+      thumbnailFile: _thumbnailFile!,
+      caption: _captionController.text,
+      title: _titleController.text,
+      tags: tags,
+      tmdbId: _tmdbId,
+      mediaType: _mediaType,
+      containsSpoilers: _containsSpoilers,
+      durationSeconds: duration,
+    );
 
-      // 1. Upload Video
-      final videoPath = await _storageService.uploadCreatorVideo(
-        fileToUpload,
-        user.id,
-      );
-
-      // 2. Upload Thumbnail
-      final thumbUrl = await _storageService.uploadCreatorThumbnail(
-        _thumbnailFile!,
-        user.id,
-      );
-
-      // 3. Parse Hashtags
-      final tags = _extractHashtags(_captionController.text);
-
-      // 4. Create DB Record
-      await Supabase.instance.client.from('creator_videos').insert({
-        'creator_id': user.id,
-        'video_url': videoPath,
-        'thumbnail_url': thumbUrl,
-        'title': _titleController.text.isNotEmpty
-            ? _titleController.text
-            : 'New Post',
-        'description': _captionController.text,
-        'tags': tags, // NEW: Hashtags array
-        'tmdb_id': _tmdbId,
-        'tmdb_type': _mediaType,
-        'spoiler': _containsSpoilers,
-        'duration_seconds': _videoController?.value.duration.inSeconds ?? 0,
-        'status': 'pending',
-      });
-
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Video submitted for review!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Upload failed: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      // Clear cache
-      VideoCompress.deleteAllCache();
-      if (mounted) setState(() => _isUploading = false);
-    }
+    Navigator.pop(context);
   }
 
   List<String> _extractHashtags(String text) {
@@ -432,30 +369,28 @@ class _VideoUploadScreenState extends State<VideoUploadScreen> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: _isUploading ? null : _submitVideo,
+                  onPressed: _submitVideo,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFE50914),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: _isUploading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Submit for Review',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            SizedBox(width: 8),
-                            Icon(Icons.arrow_forward, color: Colors.white),
-                          ],
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Submit for Review',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
+                      ),
+                      SizedBox(width: 8),
+                      Icon(Icons.arrow_forward, color: Colors.white),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 32),

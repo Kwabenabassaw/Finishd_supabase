@@ -4,6 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:finishd/models/feed_video.dart';
 import 'package:finishd/models/feed_item.dart';
 import 'package:finishd/models/feed_backend_response.dart';
+import 'package:finishd/models/trailer_item.dart';
+import 'package:finishd/models/creator_video.dart';
 
 import 'package:finishd/models/feed_type.dart';
 export 'package:finishd/models/feed_type.dart';
@@ -171,7 +173,7 @@ class ApiClient {
   // METHODS (Ported to use new internal helpers)
 
   Future<FeedBackendResponse> getFeedV3({
-    FeedType feedType = FeedType.forYou,
+    FeedType feedType = FeedType.creators,
     int limit = 40,
     String? cursor,
   }) async {
@@ -193,7 +195,7 @@ class ApiClient {
     bool refresh = false,
     int limit = 50,
     int? page,
-    FeedType feedType = FeedType.forYou,
+    FeedType feedType = FeedType.creators,
   }) async {
     // FALLBACK: Query Supabase directly if API fails or returns empty
     // This is now the primary method as we move away from external API
@@ -213,7 +215,7 @@ class ApiClient {
           .eq('status', 'approved');
 
       // Filter based on feed type if needed
-      if (feedType == FeedType.trending) {
+      if (feedType == FeedType.trailers) {
         query = query.order('engagement_score', ascending: false);
       } else {
         query = query.order('created_at', ascending: false);
@@ -538,20 +540,59 @@ class ApiClient {
   }
 
   Future<bool> shareVideo(String videoId) async {
-    // Increment share count (optional: could be a dedicated table or RPC)
-    // For now, we'll just track it via the share_count column if possible,
-    // or just let the UI handle the system share sheet.
-    // The schema has a `share_count` column on `creator_videos`.
-    // We can use an RPC or direct update if policy allows, but usually
-    // share counts are incremented via a specific endpoint/RPC to avoid abuse.
-    // Let's check if there's an RPC for this, or just return true for now.
-    // The schema audit didn't show a specific public RPC for incrementing shares.
     try {
       final response = await post('/videos/$videoId/share');
       return response.statusCode == 200;
     } catch (e) {
-      // If endpoint missing, just return true so UI shows success
       return true;
     }
+  }
+
+  // --- NEW: Phase 5 Trailers and Creators Feed ---
+
+  Future<List<TrailerItem>> getTrailersFeed({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      // Typically fetch from a trending or trailer endpoint
+      final response = await getPublic(
+        '/trending/get',
+        queryParams: {'page': page.toString(), 'limit': limit.toString()},
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final list = (data['movies'] as List? ?? [])
+            .cast<Map<String, dynamic>>();
+        return list.map((json) => TrailerItem.fromJson(json)).toList();
+      }
+    } catch (e) {
+      _log('Error fetching trailers feed: $e', isError: true);
+    }
+    return [];
+  }
+
+  Future<List<CreatorVideo>> getCreatorsFeed({
+    int page = 1,
+    int limit = 15,
+  }) async {
+    // This connects to the ML-ranked creator_videos backend.
+    // Right now, CreatorsFeedProvider fetches from Supabase directly per instructions,
+    // but we add this to adhere to the Phase 5 instructions.
+    // If the backend has a unified endpoint, it goes here:
+    try {
+      final response = await get(
+        '/feed/creators',
+        queryParams: {'page': page.toString(), 'limit': limit.toString()},
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final list = (data['feed'] as List? ?? []).cast<Map<String, dynamic>>();
+        return list.map((json) => CreatorVideo.fromJson(json)).toList();
+      }
+    } catch (e) {
+      _log('Error fetching creators feed: $e', isError: true);
+    }
+    return [];
   }
 }

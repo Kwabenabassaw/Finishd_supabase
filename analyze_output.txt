@@ -1,0 +1,965 @@
+Analyzing finishd_supabase...                                   
+
+   info • Don't invoke 'print' in production code • bin/check_supabase_data.dart:19:5 • avoid_print
+   info • Don't invoke 'print' in production code • bin/check_supabase_data.dart:21:7 • avoid_print
+   info • Don't invoke 'print' in production code • bin/check_supabase_data.dart:24:5 • avoid_print
+   info • Don't invoke 'print' in production code • bin/check_video_urls.dart:19:5 • avoid_print
+   info • Don't invoke 'print' in production code • bin/check_video_urls.dart:21:7 • avoid_print
+   info • Don't invoke 'print' in production code • bin/check_video_urls.dart:22:7 • avoid_print
+   info • Don't invoke 'print' in production code • bin/check_video_urls.dart:23:7 • avoid_print
+   info • Don't invoke 'print' in production code • bin/check_video_urls.dart:26:5 • avoid_print
+   info • The file name 'NewChat.dart' isn't a lower_case_with_underscores identifier • lib/Chat/NewChat.dart:1:1 • file_names
+   info • Don't invoke 'print' in production code • lib/Chat/NewChat.dart:50:7 • avoid_print
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Chat/NewChat.dart:101:24 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Chat/NewChat.dart:102:24 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Chat/NewChat.dart:241:48 • deprecated_member_use
+   info • The file name 'chatScreen.dart' isn't a lower_case_with_underscores identifier • lib/Chat/chatScreen.dart:1:1 • file_names
+   info • 'WillPopScope' is deprecated and shouldn't be used. Use PopScope instead. The Android predictive back feature will not work with WillPopScope. This feature was deprecated after v3.12.0-1.0.pre • lib/Chat/chatScreen.dart:346:13 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/Chat/chatScreen.dart:476:51 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/Chat/chatScreen.dart:480:41 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/Chat/chatScreen.dart:491:41 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/Chat/chatScreen.dart:502:51 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/Chat/chatScreen.dart:503:58 • use_build_context_synchronously
+   info • Unnecessary instance of 'Container' • lib/Chat/chatScreen.dart:644:22 • avoid_unnecessary_containers
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Chat/media_preview_screen.dart:103:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Chat/media_preview_screen.dart:111:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/all_communities_screen.dart:242:38 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/all_communities_screen.dart:277:33 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/Community/all_communities_screen.dart:310:43 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/Community/all_communities_screen.dart:310:47 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/all_communities_screen.dart:313:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/all_communities_screen.dart:323:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/all_communities_screen.dart:373:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/all_communities_screen.dart:434:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:167:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:177:52 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:267:40 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:331:55 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:334:57 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:492:38 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:517:36 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:581:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:606:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:638:57 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:655:54 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:668:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:683:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:745:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:768:53 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:794:53 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:814:54 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:822:54 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:839:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:870:34 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:995:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:1116:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:1125:39 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:1143:44 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/Community/community_detail_screen.dart:1264:42 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/Community/community_detail_screen.dart:1275:42 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/Community/community_detail_screen.dart:1367:19 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/Community/community_detail_screen.dart:1370:38 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:1454:43 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/Community/community_detail_screen.dart:1488:42 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/Community/community_detail_screen.dart:1502:42 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/Community/community_detail_screen.dart:1598:40 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/Community/community_detail_screen.dart:1612:40 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/Community/community_detail_screen.dart:1674:19 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/Community/community_detail_screen.dart:1676:38 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/Community/community_detail_screen.dart:1713:31 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/Community/community_detail_screen.dart:1714:38 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/Community/community_detail_screen.dart:1718:38 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:1756:42 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:1794:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_detail_screen.dart:1807:50 • deprecated_member_use
+   info • Don't invoke 'print' in production code • lib/Community/community_list_screen.dart:59:7 • avoid_print
+   info • Statements in an if should be enclosed in a block • lib/Community/community_list_screen.dart:312:9 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/Community/community_list_screen.dart:314:9 • curly_braces_in_flow_control_structures
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/community_list_screen.dart:337:35 • deprecated_member_use
+   info • Don't invoke 'print' in production code • lib/Community/create_post_screen.dart:169:7 • avoid_print
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/create_post_screen.dart:451:37 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/post_detail_screen.dart:160:52 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/post_detail_screen.dart:198:58 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/post_detail_screen.dart:204:60 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/post_detail_screen.dart:279:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/post_detail_screen.dart:315:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/post_detail_screen.dart:328:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/post_detail_screen.dart:410:51 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/post_detail_screen.dart:438:51 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/post_detail_screen.dart:455:46 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/post_detail_screen.dart:478:27 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/post_detail_screen.dart:512:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/post_detail_screen.dart:540:58 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/post_detail_screen.dart:551:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/post_detail_screen.dart:577:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/post_detail_screen.dart:597:46 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/post_detail_screen.dart:660:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/post_detail_screen.dart:678:39 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/post_detail_screen.dart:727:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/post_detail_screen.dart:750:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/post_detail_screen.dart:842:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/post_detail_screen.dart:942:34 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/post_detail_screen.dart:1023:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/post_detail_screen.dart:1032:39 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Community/post_detail_screen.dart:1050:44 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/Community/post_detail_screen.dart:1230:31 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/Community/post_detail_screen.dart:1232:19 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/Community/post_detail_screen.dart:1235:38 • use_build_context_synchronously
+   info • Parameter 'key' could be a super parameter • lib/Community/report_bottom_sheet.dart:12:9 • use_super_parameters
+   info • Statements in an if should be enclosed in a block • lib/Community/report_bottom_sheet.dart:113:15 • curly_braces_in_flow_control_structures
+   info • 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre • lib/Community/report_bottom_sheet.dart:118:15 • deprecated_member_use
+   info • 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre • lib/Community/report_bottom_sheet.dart:119:15 • deprecated_member_use
+   info • Unnecessary use of 'toList' in a spread • lib/Community/report_bottom_sheet.dart:123:14 • unnecessary_to_list_in_spreads
+   info • The file name 'Search.dart' isn't a lower_case_with_underscores identifier • lib/Discover/Search.dart:1:1 • file_names
+   info • Unnecessary use of multiple underscores • lib/Discover/Search.dart:366:42 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/Discover/Search.dart:372:42 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/Discover/Search.dart:372:46 • unnecessary_underscores
+warning • Dead code • lib/Discover/Search.dart:398:45 • dead_code
+warning • The left operand can't be null, so the right operand is never executed • lib/Discover/Search.dart:398:48 • dead_null_aware_expression
+   info • Don't use 'BuildContext's across async gaps • lib/Discover/discover.dart:147:51 • use_build_context_synchronously
+warning • Dead code • lib/Discover/discover.dart:260:45 • dead_code
+warning • The left operand can't be null, so the right operand is never executed • lib/Discover/discover.dart:260:48 • dead_null_aware_expression
+warning • The value of the field '_heroItem' isn't used • lib/Discover/provider_content_screen.dart:40:14 • unused_field
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Discover/provider_content_screen.dart:398:54 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Discover/provider_content_screen.dart:416:54 • deprecated_member_use
+   info • Don't invoke 'print' in production code • lib/Discover/see_all_screen.dart:93:7 • avoid_print
+warning • The declaration '_getMatchPercentage' isn't referenced • lib/Discover/widgets/netflix_hero.dart:68:10 • unused_element
+warning • The value of the local variable 'primaryColor' isn't used • lib/Discover/widgets/netflix_hero.dart:95:11 • unused_local_variable
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Discover/widgets/netflix_hero.dart:121:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Discover/widgets/netflix_hero.dart:123:33 • deprecated_member_use
+   info • Parameter 'key' could be a super parameter • lib/Feed/creator_video_player.dart:13:9 • use_super_parameters
+   info • Invalid use of a private type in a public API • lib/Feed/creator_video_player.dart:23:3 • library_private_types_in_public_api
+   info • Parameter 'key' could be a super parameter • lib/Feed/creators_feed_screen.dart:7:9 • use_super_parameters
+   info • Invalid use of a private type in a public API • lib/Feed/creators_feed_screen.dart:10:3 • library_private_types_in_public_api
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Feed/feed_tabs_wrapper.dart:62:32 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Feed/feed_tabs_wrapper.dart:63:32 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Feed/feed_tabs_wrapper.dart:139:35 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Feed/feed_tabs_wrapper.dart:142:37 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Feed/feed_tabs_wrapper.dart:160:42 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Feed/feed_tabs_wrapper.dart:174:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Feed/feed_tabs_wrapper.dart:215:45 • deprecated_member_use
+   info • Parameter 'key' could be a super parameter • lib/Feed/trailer_detail_screen.dart:8:9 • use_super_parameters
+   info • Invalid use of a private type in a public API • lib/Feed/trailer_detail_screen.dart:12:3 • library_private_types_in_public_api
+   info • Parameter 'key' could be a super parameter • lib/Feed/trailers_discovery_screen.dart:8:9 • use_super_parameters
+   info • Invalid use of a private type in a public API • lib/Feed/trailers_discovery_screen.dart:11:3 • library_private_types_in_public_api
+   info • Don't invoke 'print' in production code • lib/Home/Friends/friend_selection_screen.dart:93:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/Home/Friends/friend_selection_screen.dart:127:7 • avoid_print
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/Friends/friend_selection_screen.dart:231:36 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/Friends/friend_selection_screen.dart:266:59 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/Friends/friend_selection_screen.dart:296:63 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/Friends/friend_selection_screen.dart:300:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/Friends/friend_selection_screen.dart:341:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/Friends/friend_selection_screen.dart:374:55 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/Friends/friend_selection_screen.dart:416:54 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/Friends/friend_selection_screen.dart:423:56 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/Friends/friend_selection_screen.dart:426:56 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/Friends/friend_selection_screen.dart:534:56 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/Friends/friend_selection_screen.dart:549:53 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/Friends/friend_selection_screen.dart:604:48 • deprecated_member_use
+   info • The file name 'friendsTab.dart' isn't a lower_case_with_underscores identifier • lib/Home/Friends/friendsTab.dart:1:1 • file_names
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/Friends/friendsTab.dart:222:28 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/Friends/friendsTab.dart:223:27 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/Friends/friendsTab.dart:234:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/Friends/friendsTab.dart:263:56 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/Friends/friendsTab.dart:306:38 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/Friends/friendsTab.dart:307:38 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/Friends/friendsTab.dart:368:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/Friends/friendsTab.dart:404:51 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/Friends/friendsTab.dart:478:54 • deprecated_member_use
+   info • The file name 'Search.dart' isn't a lower_case_with_underscores identifier • lib/Home/Search.dart:1:1 • file_names
+   info • Unnecessary use of multiple underscores • lib/Home/Search.dart:381:34 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/Home/Search.dart:386:34 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/Home/Search.dart:386:38 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/Home/Search.dart:507:34 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/Home/Search.dart:512:34 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/Home/Search.dart:512:38 • unnecessary_underscores
+   info • The file name 'commentScreen.dart' isn't a lower_case_with_underscores identifier • lib/Home/commentScreen.dart:1:1 • file_names
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/commentScreen.dart:130:38 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/commentScreen.dart:131:38 • deprecated_member_use
+   info • The file name 'homeSceenFriends.dart' isn't a lower_case_with_underscores identifier • lib/Home/homeSceenFriends.dart:1:1 • file_names
+   info • The file name 'shareSceen.dart' isn't a lower_case_with_underscores identifier • lib/Home/shareSceen.dart:1:1 • file_names
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/shareSceen.dart:118:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/shareSceen.dart:121:52 • deprecated_member_use
+   info • 'Share' is deprecated and shouldn't be used. Use SharePlus instead • lib/Home/shareSceen.dart:232:5 • deprecated_member_use
+   info • 'share' is deprecated and shouldn't be used. Use SharePlus.instance.share() instead • lib/Home/shareSceen.dart:232:11 • deprecated_member_use
+   info • 'Share' is deprecated and shouldn't be used. Use SharePlus instead • lib/Home/shareSceen.dart:237:5 • deprecated_member_use
+   info • 'share' is deprecated and shouldn't be used. Use SharePlus.instance.share() instead • lib/Home/shareSceen.dart:237:11 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/shareSceen.dart:256:38 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/share_post_sheet.dart:174:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/share_post_sheet.dart:198:46 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/share_post_sheet.dart:239:60 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/share_post_sheet.dart:248:53 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/share_post_sheet.dart:303:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/share_post_sheet.dart:331:56 • deprecated_member_use
+   info • 'Share' is deprecated and shouldn't be used. Use SharePlus instead • lib/Home/share_post_sheet.dart:344:19 • deprecated_member_use
+   info • 'share' is deprecated and shouldn't be used. Use SharePlus.instance.share() instead • lib/Home/share_post_sheet.dart:344:25 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Home/share_post_sheet.dart:438:49 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/Home/share_to_friends_sheet.dart:247:38 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/Home/share_to_friends_sheet.dart:248:38 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/Home/share_to_friends_sheet.dart:248:42 • unnecessary_underscores
+   info • The file name 'LogoLoading.dart' isn't a lower_case_with_underscores identifier • lib/LoadingWidget/LogoLoading.dart:1:1 • file_names
+   info • The file name 'StreamingLoading.dart' isn't a lower_case_with_underscores identifier • lib/LoadingWidget/StreamingLoading.dart:1:1 • file_names
+   info • The file name 'Tvshowscreenloader.dart' isn't a lower_case_with_underscores identifier • lib/LoadingWidget/Tvshowscreenloader.dart:1:1 • file_names
+   info • Unnecessary use of multiple underscores • lib/LoadingWidget/Tvshowscreenloader.dart:109:42 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/LoadingWidget/Tvshowscreenloader.dart:134:42 • unnecessary_underscores
+   info • The file name 'Discover.dart' isn't a lower_case_with_underscores identifier • lib/Mainpage/Discover.dart:1:1 • file_names
+   info • The file name 'Home.dart' isn't a lower_case_with_underscores identifier • lib/Mainpage/Home.dart:1:1 • file_names
+   info • The file name 'Messages.dart' isn't a lower_case_with_underscores identifier • lib/Mainpage/Messages.dart:1:1 • file_names
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Messages.dart:159:28 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Messages.dart:160:28 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Messages.dart:181:41 • deprecated_member_use
+   info • The file name 'Profile.dart' isn't a lower_case_with_underscores identifier • lib/Mainpage/Profile.dart:1:1 • file_names
+   info • The private field _searchQuery could be 'final' • lib/Mainpage/Tabs/comms_tab.dart:20:10 • prefer_final_fields
+warning • The value of the field '_searchQuery' isn't used • lib/Mainpage/Tabs/comms_tab.dart:20:10 • unused_field
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Tabs/comms_tab.dart:184:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Tabs/comms_tab.dart:270:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Tabs/comms_tab.dart:337:39 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Tabs/comms_tab.dart:397:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Tabs/comms_tab.dart:402:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Tabs/comms_tab.dart:461:35 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Tabs/comms_tab.dart:545:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Tabs/comms_tab.dart:572:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Tabs/comms_tab.dart:607:47 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/Mainpage/Tabs/comms_tab.dart:620:43 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/Mainpage/Tabs/comms_tab.dart:620:47 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Tabs/comms_tab.dart:623:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Tabs/comms_tab.dart:648:51 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Tabs/comms_tab.dart:720:52 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Tabs/recs_tab.dart:59:59 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Tabs/recs_tab.dart:84:54 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Tabs/recs_tab.dart:147:53 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Tabs/recs_tab.dart:152:37 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Tabs/recs_tab.dart:195:46 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Tabs/recs_tab.dart:216:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Tabs/recs_tab.dart:244:55 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Tabs/recs_tab.dart:272:53 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Tabs/recs_tab.dart:275:55 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Tabs/recs_tab.dart:368:43 • deprecated_member_use
+   info • The file name 'Watchlist.dart' isn't a lower_case_with_underscores identifier • lib/Mainpage/Watchlist.dart:1:1 • file_names
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Watchlist.dart:105:28 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Watchlist.dart:106:28 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Watchlist.dart:125:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Watchlist.dart:313:39 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Watchlist.dart:361:38 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Watchlist.dart:364:38 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Watchlist.dart:384:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Watchlist.dart:387:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Watchlist.dart:433:51 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Watchlist.dart:439:53 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Watchlist.dart:458:57 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Watchlist.dart:540:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Mainpage/Watchlist.dart:601:42 • deprecated_member_use
+   info • The file name 'OpenProvider.dart' isn't a lower_case_with_underscores identifier • lib/Methods/OpenProvider.dart:1:1 • file_names
+   info • Don't invoke 'print' in production code • lib/Methods/OpenProvider.dart:55:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/Methods/OpenProvider.dart:66:5 • avoid_print
+   info • The file name 'MovieCredit.dart' isn't a lower_case_with_underscores identifier • lib/Model/MovieCredit.dart:1:1 • file_names
+   info • The file name 'MovieDetails.dart' isn't a lower_case_with_underscores identifier • lib/Model/MovieDetails.dart:1:1 • file_names
+   info • The file name 'MoviesWatchProvider.dart' isn't a lower_case_with_underscores identifier • lib/Model/MoviesWatchProvider.dart:1:1 • file_names
+   info • The file name 'Searchdiscover.dart' isn't a lower_case_with_underscores identifier • lib/Model/Searchdiscover.dart:1:1 • file_names
+   info • The file name 'TvShowcredit.dart' isn't a lower_case_with_underscores identifier • lib/Model/TvShowcredit.dart:1:1 • file_names
+   info • The file name 'Watchprovider.dart' isn't a lower_case_with_underscores identifier • lib/Model/Watchprovider.dart:1:1 • file_names
+   info • The constant name 'MOVIE' isn't a lowerCamelCase identifier • lib/Model/trendingmovies.dart:139:5 • constant_identifier_names
+   info • The constant name 'EN' isn't a lowerCamelCase identifier • lib/Model/trendingmovies.dart:143:5 • constant_identifier_names
+   info • The constant name 'PL' isn't a lowerCamelCase identifier • lib/Model/trendingmovies.dart:144:5 • constant_identifier_names
+   info • The constant name 'TR' isn't a lowerCamelCase identifier • lib/Model/trendingmovies.dart:145:5 • constant_identifier_names
+   info • The constant name 'ZH' isn't a lowerCamelCase identifier • lib/Model/trendingmovies.dart:146:5 • constant_identifier_names
+   info • The constant name 'ES' isn't a lowerCamelCase identifier • lib/Model/trendingmovies.dart:147:5 • constant_identifier_names
+   info • The constant name 'FR' isn't a lowerCamelCase identifier • lib/Model/trendingmovies.dart:148:5 • constant_identifier_names
+   info • The constant name 'DE' isn't a lowerCamelCase identifier • lib/Model/trendingmovies.dart:149:5 • constant_identifier_names
+   info • The constant name 'IT' isn't a lowerCamelCase identifier • lib/Model/trendingmovies.dart:150:5 • constant_identifier_names
+   info • The constant name 'JA' isn't a lowerCamelCase identifier • lib/Model/trendingmovies.dart:151:5 • constant_identifier_names
+   info • The constant name 'KO' isn't a lowerCamelCase identifier • lib/Model/trendingmovies.dart:152:5 • constant_identifier_names
+   info • The constant name 'RU' isn't a lowerCamelCase identifier • lib/Model/trendingmovies.dart:153:5 • constant_identifier_names
+   info • The constant name 'PT' isn't a lowerCamelCase identifier • lib/Model/trendingmovies.dart:154:5 • constant_identifier_names
+   info • The constant name 'AR' isn't a lowerCamelCase identifier • lib/Model/trendingmovies.dart:155:5 • constant_identifier_names
+   info • The constant name 'HI' isn't a lowerCamelCase identifier • lib/Model/trendingmovies.dart:156:5 • constant_identifier_names
+   info • The constant name 'TV' isn't a lowerCamelCase identifier • lib/Model/trendingmovies.dart:157:5 • constant_identifier_names
+   info • The file name 'EpisodeDetailsScreen.dart' isn't a lower_case_with_underscores identifier • lib/MovieDetails/EpisodeDetailsScreen.dart:1:1 • file_names
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/EpisodeDetailsScreen.dart:127:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/EpisodeDetailsScreen.dart:163:34 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/EpisodeDetailsScreen.dart:274:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/EpisodeDetailsScreen.dart:345:53 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/EpisodeDetailsScreen.dart:405:30 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/EpisodeDetailsScreen.dart:406:30 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/EpisodeDetailsScreen.dart:410:32 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/EpisodeDetailsScreen.dart:411:32 • deprecated_member_use
+   info • The file name 'MovieScreen.dart' isn't a lower_case_with_underscores identifier • lib/MovieDetails/MovieScreen.dart:1:1 • file_names
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/MovieDetails/MovieScreen.dart:373:33 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/MovieDetails/MovieScreen.dart:377:52 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/MovieScreen.dart:419:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/MovieScreen.dart:420:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/MovieScreen.dart:452:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/MovieScreen.dart:453:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/MovieScreen.dart:715:42 • deprecated_member_use
+   info • The file name 'SeasonDetailsScreen.dart' isn't a lower_case_with_underscores identifier • lib/MovieDetails/SeasonDetailsScreen.dart:1:1 • file_names
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/SeasonDetailsScreen.dart:121:52 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/SeasonDetailsScreen.dart:122:52 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/SeasonDetailsScreen.dart:212:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/SeasonDetailsScreen.dart:272:34 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/SeasonDetailsScreen.dart:315:34 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/SeasonDetailsScreen.dart:316:34 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/SeasonDetailsScreen.dart:320:36 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/SeasonDetailsScreen.dart:321:36 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/SeasonDetailsScreen.dart:363:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/SeasonDetailsScreen.dart:417:60 • deprecated_member_use
+   info • The file name 'Tvshowscreen.dart' isn't a lower_case_with_underscores identifier • lib/MovieDetails/Tvshowscreen.dart:1:1 • file_names
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/Tvshowscreen.dart:217:39 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/Tvshowscreen.dart:234:41 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/MovieDetails/Tvshowscreen.dart:373:35 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/MovieDetails/Tvshowscreen.dart:377:54 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/Tvshowscreen.dart:416:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/Tvshowscreen.dart:417:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/Tvshowscreen.dart:448:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/Tvshowscreen.dart:449:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/Tvshowscreen.dart:802:42 • deprecated_member_use
+   info • 'WillPopScope' is deprecated and shouldn't be used. Use PopScope instead. The Android predictive back feature will not work with WillPopScope. This feature was deprecated after v3.12.0-1.0.pre • lib/MovieDetails/movie_details_screen.dart:70:12 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/movie_recommenders_screen.dart:90:59 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/movie_recommenders_screen.dart:105:54 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/movie_recommenders_screen.dart:151:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/movie_recommenders_screen.dart:156:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/movie_recommenders_screen.dart:189:42 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/movie_recommenders_screen.dart:226:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/movie_recommenders_screen.dart:251:57 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/MovieDetails/widgets/ai_floating_button.dart:49:19 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/SplashScreen/no_internet_screen.dart:141:23 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps • lib/SplashScreen/splash_screen.dart:110:9 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/SplashScreen/splash_screen.dart:113:38 • use_build_context_synchronously
+   info • The file name 'SavedMovies.dart' isn't a lower_case_with_underscores identifier • lib/WatchlistPage/SavedMovies.dart:1:1 • file_names
+   info • The file name 'Watched.dart' isn't a lower_case_with_underscores identifier • lib/WatchlistPage/Watched.dart:1:1 • file_names
+   info • The file name 'WatchingCard.dart' isn't a lower_case_with_underscores identifier • lib/WatchlistPage/WatchingCard.dart:1:1 • file_names
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/WatchlistPage/WatchingCard.dart:38:38 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/WatchlistPage/WatchingCard.dart:41:38 • deprecated_member_use
+   info • The file name 'Cast_avatar.dart' isn't a lower_case_with_underscores identifier • lib/Widget/Cast_avatar.dart:1:1 • file_names
+   info • The file name 'ImageSlideshow.dart' isn't a lower_case_with_underscores identifier • lib/Widget/ImageSlideshow.dart:1:1 • file_names
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/ImageSlideshow.dart:34:35 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/ImageSlideshow.dart:59:36 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/ImageSlideshow.dart:60:36 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/ImageSlideshow.dart:82:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/ImageSlideshow.dart:126:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/ImageSlideshow.dart:140:47 • deprecated_member_use
+   info • Invalid use of a private type in a public API • lib/Widget/ImageSlideshow.dart:189:3 • library_private_types_in_public_api
+   info • The file name 'MovieStreamingprovider.dart' isn't a lower_case_with_underscores identifier • lib/Widget/MovieStreamingprovider.dart:1:1 • file_names
+   info • Unnecessary instance of 'Container' • lib/Widget/MovieStreamingprovider.dart:36:12 • avoid_unnecessary_containers
+   info • The file name 'ScoreDisplay.dart' isn't a lower_case_with_underscores identifier • lib/Widget/ScoreDisplay.dart:1:1 • file_names
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/ScoreDisplay.dart:39:39 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/ScoreDisplay.dart:50:32 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/ScoreDisplay.dart:101:44 • deprecated_member_use
+warning • The value of the local variable 'center' isn't used • lib/Widget/ScoreDisplay.dart:182:11 • unused_local_variable
+warning • The value of the local variable 'radius' isn't used • lib/Widget/ScoreDisplay.dart:183:11 • unused_local_variable
+   info • The file name 'TrailerPlayer.dart' isn't a lower_case_with_underscores identifier • lib/Widget/TrailerPlayer.dart:1:1 • file_names
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/TrailerPlayer.dart:79:40 • deprecated_member_use
+   info • The file name 'TvStreamingprovider.dart' isn't a lower_case_with_underscores identifier • lib/Widget/TvStreamingprovider.dart:1:1 • file_names
+   info • Unnecessary instance of 'Container' • lib/Widget/TvStreamingprovider.dart:37:12 • avoid_unnecessary_containers
+   info • The file name 'YouTubeTrailerPlayerDialog.dart' isn't a lower_case_with_underscores identifier • lib/Widget/YouTubeTrailerPlayerDialog.dart:1:1 • file_names
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/appeal_bottom_sheet.dart:167:37 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/appeal_bottom_sheet.dart:169:56 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/appeal_bottom_sheet.dart:196:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/clean_youtube_player.dart:123:56 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/clean_youtube_player.dart:162:31 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/Widget/clean_youtube_player.dart:178:33 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/Widget/clean_youtube_player.dart:189:35 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/Widget/clean_youtube_player.dart:226:33 • unnecessary_underscores
+   info • Don't invoke 'print' in production code • lib/Widget/comments/comment_sheet.dart:90:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/Widget/comments/comment_sheet.dart:122:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/Widget/comments/comment_sheet.dart:174:7 • avoid_print
+   info • The file name 'emojiSlider.dart' isn't a lower_case_with_underscores identifier • lib/Widget/emojiSlider.dart:1:1 • file_names
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/emojiSlider.dart:30:58 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/emotion_rating_slider.dart:57:28 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/emotion_rating_slider.dart:58:28 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/emotion_rating_slider.dart:92:61 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/emotion_rating_slider.dart:130:17 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/emotion_rating_slider.dart:131:54 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/emotion_rating_slider.dart:137:17 • deprecated_member_use
+   info • Parameter 'key' could be a super parameter • lib/Widget/error_dialog.dart:9:9 • use_super_parameters
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/error_dialog.dart:35:35 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/error_dialog.dart:76:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/error_dialog.dart:112:37 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/error_dialog.dart:130:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/gif_picker_sheet.dart:385:54 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/gif_picker_sheet.dart:386:57 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/image_preview.dart:94:37 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/image_preview.dart:167:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/interactive_media_poster.dart:211:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/interactive_media_poster.dart:529:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/interactive_media_poster.dart:555:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/interactive_media_poster.dart:615:53 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/interactive_media_poster.dart:624:58 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/interactive_media_poster.dart:703:27 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/Widget/loading.dart:49:20 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/Widget/loading.dart:105:31 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/Widget/loading.dart:106:26 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/message_bubble.dart:139:24 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/message_bubble.dart:142:24 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/message_bubble.dart:143:23 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/message_bubble.dart:157:35 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/message_bubble.dart:235:24 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/message_bubble.dart:238:24 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/message_bubble.dart:239:23 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/message_bubble.dart:249:35 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/message_bubble.dart:255:35 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/message_bubble.dart:311:28 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/message_bubble.dart:384:24 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/message_bubble.dart:387:24 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/message_bubble.dart:388:23 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/message_bubble.dart:402:35 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/message_bubble.dart:463:24 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/message_bubble.dart:466:24 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/message_bubble.dart:467:23 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/message_bubble.dart:574:40 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/message_bubble.dart:577:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/message_bubble.dart:625:26 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/message_bubble.dart:635:36 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/message_bubble.dart:636:36 • deprecated_member_use
+   info • Don't invoke 'print' in production code • lib/Widget/movie_action_drawer.dart:161:7 • avoid_print
+   info • 'checkCircle' is deprecated and shouldn't be used. Use "circleCheck" instead • lib/Widget/movie_action_drawer.dart:283:42 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/movie_card.dart:64:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/movie_card.dart:107:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/movie_card.dart:123:51 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/movie_section.dart:67:43 • deprecated_member_use
+warning • Unused import: 'package:cached_network_image/cached_network_image.dart' • lib/Widget/overlapping_avatars_widget.dart:1:8 • unused_import
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/overlapping_avatars_widget.dart:81:36 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/overlapping_avatars_widget.dart:82:36 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps • lib/Widget/rating_action_button.dart:81:36 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/Widget/rating_action_button.dart:82:31 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/rating_action_button.dart:106:32 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/rating_action_button.dart:107:32 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/rating_action_button.dart:111:52 • deprecated_member_use
+warning • The value of the local variable 'progressColor' isn't used • lib/Widget/ratings_display_widget.dart:126:17 • unused_local_variable
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/ratings_display_widget.dart:137:54 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/ratings_display_widget.dart:169:59 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/ratings_display_widget.dart:210:54 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/ratings_display_widget.dart:285:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/reactions/reaction_bar.dart:73:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/reactions/reaction_bar.dart:75:52 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/reactions/reaction_bar.dart:264:37 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/reactions/reaction_bar.dart:267:39 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/reactions/reaction_bar.dart:272:41 • deprecated_member_use
+   info • Don't invoke 'print' in production code • lib/Widget/reactions/reaction_button.dart:132:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/Widget/reactions/reaction_button.dart:235:7 • avoid_print
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/recommendation_preview.dart:40:35 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/Widget/recommendation_preview.dart:63:44 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/Widget/recommendation_preview.dart:70:44 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/Widget/recommendation_preview.dart:70:48 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/recommendation_preview.dart:101:40 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/recommendation_preview.dart:147:45 • deprecated_member_use
+   info • Don't invoke 'print' in production code • lib/Widget/related_content_section.dart:105:13 • avoid_print
+   info • Don't invoke 'print' in production code • lib/Widget/related_content_section.dart:120:13 • avoid_print
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/related_content_section.dart:182:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/report_bottom_sheet.dart:124:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/report_bottom_sheet.dart:141:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/report_bottom_sheet.dart:153:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/report_bottom_sheet.dart:175:55 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/report_bottom_sheet.dart:198:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/report_bottom_sheet.dart:208:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/report_bottom_sheet.dart:220:66 • deprecated_member_use
+   info • 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre • lib/Widget/report_bottom_sheet.dart:226:21 • deprecated_member_use
+   info • 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre • lib/Widget/report_bottom_sheet.dart:227:21 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/report_bottom_sheet.dart:264:54 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/report_bottom_sheet.dart:275:59 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/report_bottom_sheet.dart:281:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/report_bottom_sheet.dart:307:66 • deprecated_member_use
+   info • The file name 'serviceLogoTileSkeleton.dart' isn't a lower_case_with_underscores identifier • lib/Widget/serviceLogoTileSkeleton.dart:1:1 • file_names
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/streaming_badge.dart:39:39 • deprecated_member_use
+warning • Unused import: 'dart:math' • lib/Widget/user_avatar.dart:3:8 • unused_import
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/video_link_preview.dart:37:35 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/video_link_preview.dart:80:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/video_link_preview.dart:99:43 • deprecated_member_use
+   info • Don't invoke 'print' in production code • lib/Widget/video_player_screen.dart:74:7 • avoid_print
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/watchmode_streaming_section.dart:141:46 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/watchmode_streaming_section.dart:182:39 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/watchmode_streaming_section.dart:296:32 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/watchmode_streaming_section.dart:297:32 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/watchmode_streaming_section.dart:305:59 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/Widget/watchmode_streaming_section.dart:314:50 • deprecated_member_use
+   info • Don't invoke 'print' in production code • lib/db/app_database.dart:265:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/db/app_database.dart:282:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/db/app_database.dart:284:7 • avoid_print
+   info • The imported package 'path_provider' isn't a dependency of the importing package • lib/db/objectbox/objectbox_store.dart:1:8 • depend_on_referenced_packages
+   info • Uses 'await' on an instance of 'Store', which is not a subtype of 'Future' • lib/db/objectbox/objectbox_store.dart:22:19 • await_only_futures
+   info • The import of 'package:flutter/painting.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/cupertino.dart' • lib/main.dart:38:8 • unnecessary_import
+warning • Unused import: 'package:finishd/theme/app_colors.dart' • lib/main.dart:46:8 • unused_import
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/main.dart:270:54 • deprecated_member_use
+   info • 'onPopInvoked' is deprecated and shouldn't be used. Use onPopInvokedWithResult instead. This feature was deprecated after v3.22.0-12.0.pre • lib/main.dart:308:7 • deprecated_member_use
+   info • The file name 'mainScreent.dart' isn't a lower_case_with_underscores identifier • lib/notification/mainScreent.dart:1:1 • file_names
+   info • Don't invoke 'print' in production code • lib/notification/mainScreent.dart:81:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/notification/mainScreent.dart:88:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/notification/mainScreent.dart:103:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/notification/mainScreent.dart:105:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/notification/mainScreent.dart:163:7 • avoid_print
+   info • Unnecessary use of multiple underscores • lib/notification/mainScreent.dart:503:43 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/notification/mainScreent.dart:503:47 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/notification/mainScreent.dart:596:43 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/notification/mainScreent.dart:596:47 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/notification/mainScreent.dart:710:43 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/notification/mainScreent.dart:710:47 • unnecessary_underscores
+   info • The file name 'newRelease.dart' isn't a lower_case_with_underscores identifier • lib/notification/newRelease.dart:1:1 • file_names
+   info • Unnecessary instance of 'Container' • lib/notification/newRelease.dart:9:12 • avoid_unnecessary_containers
+   info • The file name 'CategoriesTypeMove.dart' isn't a lower_case_with_underscores identifier • lib/onboarding/CategoriesTypeMove.dart:1:1 • file_names
+   info • Don't invoke 'print' in production code • lib/onboarding/CategoriesTypeMove.dart:184:27 • avoid_print
+   info • Don't invoke 'print' in production code • lib/onboarding/CategoriesTypeMove.dart:187:27 • avoid_print
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/onboarding/CategoriesTypeMove.dart:198:23 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/onboarding/CategoriesTypeMove.dart:245:39 • deprecated_member_use
+   info • The file name 'Login.dart' isn't a lower_case_with_underscores identifier • lib/onboarding/Login.dart:1:1 • file_names
+   info • Don't use 'BuildContext's across async gaps • lib/onboarding/Login.dart:67:31 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/onboarding/Login.dart:133:42 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/onboarding/Login.dart:138:15 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/onboarding/Login.dart:144:42 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/onboarding/Login.dart:493:43 • deprecated_member_use
+   info • The file name 'Welcome.dart' isn't a lower_case_with_underscores identifier • lib/onboarding/Welcome.dart:1:1 • file_names
+   info • Don't invoke 'print' in production code • lib/onboarding/Welcome.dart:38:5 • avoid_print
+warning • The declaration '_buildAppLogo' isn't referenced • lib/onboarding/Welcome.dart:105:10 • unused_element
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/onboarding/landing.dart:85:34 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/onboarding/landing.dart:86:34 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/onboarding/landing.dart:87:34 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/onboarding/landing.dart:212:35 • deprecated_member_use
+   info • The file name 'showSelectionScreen.dart' isn't a lower_case_with_underscores identifier • lib/onboarding/showSelectionScreen.dart:1:1 • file_names
+   info • Don't invoke 'print' in production code • lib/onboarding/showSelectionScreen.dart:266:19 • avoid_print
+   info • Don't invoke 'print' in production code • lib/onboarding/showSelectionScreen.dart:269:19 • avoid_print
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/onboarding/showSelectionScreen.dart:275:62 • deprecated_member_use
+   info • Don't invoke 'print' in production code • lib/onboarding/showSelectionScreen.dart:295:15 • avoid_print
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/onboarding/showSelectionScreen.dart:352:39 • deprecated_member_use
+   info • The file name 'signUp.dart' isn't a lower_case_with_underscores identifier • lib/onboarding/signUp.dart:1:1 • file_names
+   info • Don't use 'BuildContext's across async gaps • lib/onboarding/signUp.dart:70:31 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/onboarding/signUp.dart:171:42 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/onboarding/signUp.dart:178:17 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/onboarding/signUp.dart:184:44 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/onboarding/signUp.dart:188:44 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/onboarding/signUp.dart:587:41 • deprecated_member_use
+   info • The file name 'streamingService.dart' isn't a lower_case_with_underscores identifier • lib/onboarding/streamingService.dart:1:1 • file_names
+   info • Don't use 'BuildContext's across async gaps • lib/onboarding/streamingService.dart:269:32 • use_build_context_synchronously
+   info • Don't invoke 'print' in production code • lib/onboarding/streamingService.dart:272:21 • avoid_print
+   info • Don't invoke 'print' in production code • lib/onboarding/streamingService.dart:273:21 • avoid_print
+   info • Don't invoke 'print' in production code • lib/onboarding/streamingService.dart:276:21 • avoid_print
+   info • Don't invoke 'print' in production code • lib/onboarding/streamingService.dart:279:21 • avoid_print
+   info • Don't use 'BuildContext's across async gaps • lib/onboarding/streamingService.dart:282:52 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/onboarding/streamingService.dart:284:42 • use_build_context_synchronously
+   info • Don't invoke 'print' in production code • lib/onboarding/streamingService.dart:325:15 • avoid_print
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/onboarding/streamingService.dart:375:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/onboarding/widgets/button.dart:37:35 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/onboarding/widgets/onboarding_widgets.dart:126:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/onboarding/widgets/onboarding_widgets.dart:163:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/onboarding/widgets/onboarding_widgets.dart:226:55 • deprecated_member_use
+   info • The file name 'MoviePosterGrid.dart' isn't a lower_case_with_underscores identifier • lib/profile/MoviePosterGrid.dart:1:1 • file_names
+warning • Unused import: 'package:finishd/settings/edit_genres.dart' • lib/profile/creator_video_grid.dart:2:8 • unused_import
+warning • Unused import: 'package:finishd/theme/app_colors.dart' • lib/profile/creator_video_grid.dart:3:8 • unused_import
+warning • Unused import: 'package:video_player/video_player.dart' • lib/profile/creator_video_grid.dart:6:8 • unused_import
+   info • The file name 'profileScreen.dart' isn't a lower_case_with_underscores identifier • lib/profile/profileScreen.dart:1:1 • file_names
+warning • Unused import: 'package:cached_network_image/cached_network_image.dart' • lib/profile/user_list_screen.dart:1:8 • unused_import
+   info • Don't invoke 'print' in production code • lib/profile/user_list_screen.dart:59:7 • avoid_print
+   info • The file name 'MovieProvider.dart' isn't a lower_case_with_underscores identifier • lib/provider/MovieProvider.dart:1:1 • file_names
+warning • Dead code • lib/provider/MovieProvider.dart:184:28 • dead_code
+warning • The left operand can't be null, so the right operand is never executed • lib/provider/MovieProvider.dart:184:31 • dead_null_aware_expression
+   info • Don't invoke 'print' in production code • lib/provider/chat_provider.dart:56:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/provider/community_provider.dart:340:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/provider/community_provider.dart:352:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/provider/community_provider.dart:360:13 • avoid_print
+   info • Don't invoke 'print' in production code • lib/provider/community_provider.dart:385:17 • avoid_print
+   info • Don't invoke 'print' in production code • lib/provider/community_provider.dart:404:13 • avoid_print
+   info • Don't invoke 'print' in production code • lib/provider/community_provider.dart:445:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/provider/community_provider.dart:453:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/provider/community_provider.dart:516:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/provider/community_provider.dart:559:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/provider/community_provider.dart:780:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/provider/community_provider.dart:845:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/provider/community_provider.dart:896:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/provider/community_provider.dart:913:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/provider/community_provider.dart:921:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/provider/community_provider.dart:929:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/provider/community_provider.dart:968:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/provider/user_provider.dart:48:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/provider/user_provider.dart:91:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/provider/user_provider.dart:114:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/provider/user_provider.dart:134:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/provider/user_provider.dart:153:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/provider/user_provider.dart:167:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/provider/user_provider.dart:181:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/provider/user_provider.dart:197:7 • avoid_print
+warning • Unused import: 'dart:io' • lib/provider/youtube_feed_provider.dart:1:8 • unused_import
+   info • Statements in an if should be enclosed in a block • lib/provider/youtube_feed_provider.dart:423:9 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/provider/youtube_feed_provider.dart:425:9 • curly_braces_in_flow_control_structures
+   info • Statements in a for should be enclosed in a block • lib/provider/youtube_feed_provider.dart:471:38 • curly_braces_in_flow_control_structures
+   info • Statements in a for should be enclosed in a block • lib/provider/youtube_feed_provider.dart:476:39 • curly_braces_in_flow_control_structures
+   info • Statements in a for should be enclosed in a block • lib/provider/youtube_feed_provider.dart:667:53 • curly_braces_in_flow_control_structures
+   info • Statements in a for should be enclosed in a block • lib/provider/youtube_feed_provider.dart:669:7 • curly_braces_in_flow_control_structures
+   info • Statements in a for should be enclosed in a block • lib/provider/youtube_feed_provider.dart:703:42 • curly_braces_in_flow_control_structures
+   info • Statements in a for should be enclosed in a block • lib/provider/youtube_feed_provider.dart:704:45 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/provider/youtube_feed_provider.dart:725:9 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/provider/youtube_feed_provider.dart:727:9 • curly_braces_in_flow_control_structures
+   info • Function literals shouldn't be passed to 'forEach' • lib/provider/youtube_feed_provider.dart:742:20 • avoid_function_literals_in_foreach_calls
+warning • The value of the local variable 'isDark' isn't used • lib/screens/actor_profile_screen.dart:47:11 • unused_local_variable
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/actor_profile_screen.dart:150:55 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/actor_profile_screen.dart:163:55 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/actor_profile_screen.dart:164:55 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/actor_profile_screen.dart:198:37 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/actor_profile_screen.dart:208:39 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/actor_profile_screen.dart:216:39 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/actor_profile_screen.dart:267:69 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/screens/actor_profile_screen.dart:301:45 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/actor_profile_screen.dart:369:45 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/actor_profile_screen.dart:381:59 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/actor_profile_screen.dart:403:56 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/actor_profile_screen.dart:432:65 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/actor_profile_screen.dart:453:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/actor_profile_screen.dart:500:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/actor_profile_screen.dart:525:51 • deprecated_member_use
+warning • The value of the local variable 'isDark' isn't used • lib/screens/actor_profile_screen.dart:620:11 • unused_local_variable
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/actor_profile_screen.dart:637:38 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/actor_profile_screen.dart:638:38 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/actor_profile_screen.dart:674:56 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/appeal_status_screen.dart:154:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/appeal_status_screen.dart:170:40 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/appeal_status_screen.dart:237:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/moderation_block_screen.dart:43:39 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/moderation_block_screen.dart:72:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/moderation_block_screen.dart:94:49 • deprecated_member_use
+warning • Unused import: 'package:finishd/theme/app_colors.dart' • lib/screens/video_upload_screen.dart:6:8 • unused_import
+warning • Unused import: 'package:font_awesome_flutter/font_awesome_flutter.dart' • lib/screens/video_upload_screen.dart:12:8 • unused_import
+   info • Don't invoke 'print' in production code • lib/screens/video_upload_screen.dart:123:9 • avoid_print
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/video_upload_screen.dart:235:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/video_upload_screen.dart:273:53 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/video_upload_screen.dart:354:45 • deprecated_member_use
+   info • 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre • lib/screens/video_upload_screen.dart:423:23 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/screens/video_upload_screen.dart:651:51 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/video_upload_screen.dart:651:55 • unnecessary_underscores
+   info • Don't invoke 'print' in production code • lib/services/actor_service.dart:50:7 • avoid_print
+warning • Dead code • lib/services/ai/ai_context_builder.dart:100:57 • dead_code
+warning • The left operand can't be null, so the right operand is never executed • lib/services/ai/ai_context_builder.dart:100:60 • dead_null_aware_expression
+   info • Don't invoke 'print' in production code • lib/services/api_client.dart:58:7 • avoid_print
+   info • Statements in an if should be enclosed in a block • lib/services/api_client.dart:296:7 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/services/api_client.dart:357:7 • curly_braces_in_flow_control_structures
+   info • Don't invoke 'print' in production code • lib/services/auth_service.dart:86:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/auth_service.dart:119:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/auth_service.dart:163:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/auth_service.dart:224:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/auth_service.dart:231:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/auth_service.dart:238:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/backend_notification_service.dart:19:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/backend_notification_service.dart:30:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/backend_trending_service.dart:15:11 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/backend_trending_service.dart:29:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/backend_trending_service.dart:71:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/feed_cache_service.dart:38:11 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/feed_cache_service.dart:112:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/following_cache_service.dart:42:11 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/following_cache_service.dart:71:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/following_cache_service.dart:112:11 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/following_cache_service.dart:141:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/following_cache_service.dart:181:11 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/following_cache_service.dart:219:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/movie_list_cache_service.dart:30:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/movie_list_cache_service.dart:50:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/movie_list_cache_service.dart:65:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/movie_list_cache_service.dart:80:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/notification_cache_service.dart:32:11 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/notification_cache_service.dart:37:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/notification_cache_service.dart:59:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/notification_cache_service.dart:61:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/notification_cache_service.dart:79:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/ratings_cache_service.dart:37:11 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/ratings_cache_service.dart:70:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/recommendation_cache_service.dart:37:11 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/recommendation_cache_service.dart:43:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/recommendation_cache_service.dart:68:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/recommendation_cache_service.dart:100:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/recommendation_cache_service.dart:128:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/recommendation_cache_service.dart:152:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/recommendation_cache_service.dart:170:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/streaming_cache_service.dart:27:11 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/streaming_cache_service.dart:56:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/streaming_cache_service.dart:68:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/streaming_cache_service.dart:80:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/streaming_cache_service.dart:82:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/trending_cache_service.dart:30:11 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/cache/trending_cache_service.dart:62:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/chat_service.dart:28:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/chat_sync_service.dart:68:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/chat_sync_service.dart:81:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/chat_sync_service.dart:87:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/chat_sync_service.dart:92:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/chat_sync_service.dart:97:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/chat_sync_service.dart:355:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/chat_sync_service.dart:361:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/chat_sync_service.dart:448:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/chat_sync_service.dart:489:7 • avoid_print
+   info • Statements in an if should be enclosed in a block • lib/services/chat_sync_service.dart:511:15 • curly_braces_in_flow_control_structures
+   info • Don't invoke 'print' in production code • lib/services/chat_sync_service.dart:522:15 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/chat_sync_service.dart:536:15 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/chat_sync_service.dart:564:13 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/chat_sync_service.dart:610:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/comment_service.dart:74:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/comment_service.dart:132:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/community_service.dart:91:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/community_service.dart:112:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/community_service.dart:126:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/community_service.dart:135:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/community_service.dart:277:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/community_service.dart:312:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/community_service.dart:330:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/community_service.dart:353:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/community_service.dart:443:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/community_service.dart:453:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/content_lake_repository.dart:91:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/content_lake_repository.dart:100:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/content_lake_repository.dart:110:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/content_lake_repository.dart:112:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/content_lake_repository.dart:115:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/content_lake_repository.dart:126:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/content_lake_repository.dart:175:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/content_lake_repository.dart:179:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/content_lake_repository.dart:208:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/content_lake_repository.dart:263:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/content_lake_repository.dart:299:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/content_lake_repository.dart:310:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/content_lake_repository.dart:315:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/content_lake_repository.dart:323:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/content_lake_repository.dart:327:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/content_lake_repository.dart:344:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/content_lake_repository.dart:353:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/content_lake_repository.dart:370:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/content_lake_repository.dart:374:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/content_lake_repository.dart:413:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/content_lake_repository.dart:715:5 • avoid_print
+   info • The imported package 'app_links' isn't a dependency of the importing package • lib/services/deep_link_service.dart:1:8 • depend_on_referenced_packages
+   info • Don't use 'BuildContext's across async gaps • lib/services/deep_link_service.dart:92:13 • use_build_context_synchronously
+   info • Don't invoke 'print' in production code • lib/services/discover_cache_service.dart:38:11 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/episode_alert_service.dart:15:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/episode_alert_service.dart:26:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/episode_alert_service.dart:37:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/episode_alert_service.dart:48:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/feed_cache_manager.dart:37:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/feed_cache_manager.dart:39:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/feed_cache_manager.dart:50:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/feed_cache_manager.dart:61:11 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/feed_cache_manager.dart:69:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/feed_cache_manager.dart:72:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/feed_cache_manager.dart:96:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/feed_scoring_service.dart:102:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/feed_search_service.dart:60:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/genre_discover_service.dart:40:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/genre_discover_service.dart:60:7 • avoid_print
+   info • The file name 'getShow.dart' isn't a lower_case_with_underscores identifier • lib/services/getShow.dart:1:1 • file_names
+   info • Don't invoke 'print' in production code • lib/services/getShow.dart:26:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/klipy_service.dart:51:11 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/klipy_service.dart:56:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/klipy_service.dart:123:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/klipy_service.dart:124:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/klipy_service.dart:145:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/klipy_service.dart:146:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/klipy_service.dart:162:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/klipy_service.dart:163:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/movie_list_service.dart:41:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/movie_list_service.dart:63:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/movie_list_service.dart:86:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/movie_list_service.dart:126:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/movie_list_service.dart:152:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/movie_list_service.dart:186:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/movie_list_service.dart:211:11 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/movie_list_service.dart:226:13 • avoid_print
+warning • Dead code • lib/services/movie_list_service.dart:258:36 • dead_code
+warning • The left operand can't be null, so the right operand is never executed • lib/services/movie_list_service.dart:258:39 • dead_null_aware_expression
+warning • The left operand can't be null, so the right operand is never executed • lib/services/movie_list_service.dart:260:34 • dead_null_aware_expression
+warning • Dead code • lib/services/movie_list_service.dart:277:36 • dead_code
+warning • The left operand can't be null, so the right operand is never executed • lib/services/movie_list_service.dart:277:39 • dead_null_aware_expression
+warning • The left operand can't be null, so the right operand is never executed • lib/services/movie_list_service.dart:279:34 • dead_null_aware_expression
+   info • Don't invoke 'print' in production code • lib/services/movie_list_service.dart:357:11 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/movie_list_service.dart:401:19 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/movie_list_service.dart:407:11 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/movie_list_service.dart:420:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/personalized_feed_service.dart:47:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/personalized_feed_service.dart:51:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/personalized_feed_service.dart:63:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/personalized_feed_service.dart:73:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/personalized_feed_service.dart:82:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/personalized_feed_service.dart:92:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/personalized_feed_service.dart:96:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/personalized_feed_service.dart:106:7 • avoid_print
+   info • Statements in a for should be enclosed in a block • lib/services/personalized_feed_service.dart:165:7 • curly_braces_in_flow_control_structures
+   info • Statements in a for should be enclosed in a block • lib/services/personalized_feed_service.dart:167:7 • curly_braces_in_flow_control_structures
+   info • Statements in a for should be enclosed in a block • lib/services/personalized_feed_service.dart:171:7 • curly_braces_in_flow_control_structures
+   info • Statements in a for should be enclosed in a block • lib/services/personalized_feed_service.dart:175:7 • curly_braces_in_flow_control_structures
+   info • Statements in a for should be enclosed in a block • lib/services/personalized_feed_service.dart:179:46 • curly_braces_in_flow_control_structures
+   info • Statements in a for should be enclosed in a block • lib/services/personalized_feed_service.dart:180:47 • curly_braces_in_flow_control_structures
+   info • Don't invoke 'print' in production code • lib/services/personalized_feed_service.dart:240:7 • avoid_print
+warning • Dead code • lib/services/personalized_feed_service.dart:254:24 • dead_code
+warning • The left operand can't be null, so the right operand is never executed • lib/services/personalized_feed_service.dart:254:27 • dead_null_aware_expression
+warning • Dead code • lib/services/personalized_feed_service.dart:264:24 • dead_code
+warning • The left operand can't be null, so the right operand is never executed • lib/services/personalized_feed_service.dart:264:27 • dead_null_aware_expression
+   info • Don't invoke 'print' in production code • lib/services/personalized_feed_service.dart:272:7 • avoid_print
+   info • Statements in an if should be enclosed in a block • lib/services/personalized_feed_service.dart:330:11 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/services/personalized_feed_service.dart:332:11 • curly_braces_in_flow_control_structures
+   info • Statements in a for should be enclosed in a block • lib/services/personalized_feed_service.dart:375:36 • curly_braces_in_flow_control_structures
+   info • Don't invoke 'print' in production code • lib/services/personalized_feed_service.dart:389:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/personalized_feed_service.dart:404:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/personalized_feed_service.dart:411:7 • avoid_print
+   info • The constant name 'TMDB_API_KEY' isn't a lowerCamelCase identifier • lib/services/ratings_service.dart:12:23 • constant_identifier_names
+   info • The constant name 'OMDB_API_KEY' isn't a lowerCamelCase identifier • lib/services/ratings_service.dart:13:23 • constant_identifier_names
+   info • Don't invoke 'print' in production code • lib/services/ratings_service.dart:22:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/ratings_service.dart:42:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/ratings_service.dart:56:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/ratings_service.dart:81:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/ratings_service.dart:109:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/ratings_service.dart:134:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/reaction_service.dart:26:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/reaction_service.dart:55:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/reaction_service.dart:102:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/reaction_service.dart:143:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/recommendation_service.dart:87:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/recommendation_service.dart:175:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/recommendation_service.dart:289:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/seen_repository.dart:58:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/seen_repository.dart:171:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/seen_sync_service.dart:30:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/seen_sync_service.dart:38:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/seen_sync_service.dart:44:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/seen_sync_service.dart:53:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/seen_sync_service.dart:66:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/seen_sync_service.dart:70:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/seen_sync_service.dart:94:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/seen_sync_service.dart:96:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/seen_sync_service.dart:105:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/seen_sync_service.dart:115:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/seen_sync_service.dart:134:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/seen_sync_service.dart:136:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/social_database_helper.dart:174:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/social_database_helper.dart:193:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/social_database_helper.dart:195:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/social_discovery_service.dart:81:7 • avoid_print
+   info • Statements in an if should be enclosed in a block • lib/services/social_sync_service.dart:81:11 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/services/social_sync_service.dart:83:11 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/services/social_sync_service.dart:85:11 • curly_braces_in_flow_control_structures
+   info • Don't invoke 'print' in production code • lib/services/storage_service.dart:50:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/storage_service.dart:75:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/storage_service.dart:173:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/storage_service.dart:225:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/storage_service.dart:271:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/storage_service.dart:293:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/streaming_availability_service.dart:91:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/streaming_availability_service.dart:105:11 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/streaming_availability_service.dart:113:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/streaming_availability_service.dart:117:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/streaming_availability_service.dart:159:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/streaming_availability_service.dart:205:11 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/streaming_availability_service.dart:209:11 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/streaming_availability_service.dart:218:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/streaming_availability_service.dart:235:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/streaming_availability_service.dart:255:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/streaming_availability_service.dart:263:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/streaming_availability_service.dart:266:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/tmdb_sync_service.dart:30:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/tmdb_sync_service.dart:46:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/tmdb_sync_service.dart:61:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/tmdb_sync_service.dart:77:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/user_preferences_cache.dart:86:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/user_preferences_cache.dart:195:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/user_preferences_cache.dart:216:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/user_preferences_service.dart:40:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/user_service.dart:37:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/user_service.dart:79:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/user_service.dart:99:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/user_service.dart:114:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/user_service.dart:127:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/user_service.dart:138:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/user_service.dart:150:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/user_titles_service.dart:75:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/user_titles_service.dart:112:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/user_titles_service.dart:186:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/video_cache_service.dart:35:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/video_cache_service.dart:58:18 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/video_cache_service.dart:62:28 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/watchmode_service.dart:163:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/watchmode_service.dart:177:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/watchmode_service.dart:179:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/watchmode_service.dart:183:7 • avoid_print
+warning • The declaration '_getLogoUrlAsync' isn't referenced • lib/services/watchmode_service.dart:191:25 • unused_element
+   info • Don't invoke 'print' in production code • lib/services/watchmode_service.dart:237:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/watchmode_service.dart:240:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/watchmode_service.dart:243:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/watchmode_service.dart:247:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/watchmode_service.dart:251:11 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/watchmode_service.dart:254:11 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/watchmode_service.dart:257:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/watchmode_service.dart:261:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/watchmode_service.dart:273:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/watchmode_service.dart:309:13 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/watchmode_service.dart:324:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/watchmode_service.dart:327:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/watchmode_service.dart:331:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/watchmode_service.dart:348:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/watchmode_service.dart:383:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/watchmode_service.dart:398:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/watchmode_service.dart:400:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/youtube_service.dart:90:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/youtube_service.dart:133:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/youtube_service.dart:137:7 • avoid_print
+   info • Unnecessary use of multiple underscores • lib/settings/edit_favorite_content.dart:384:32 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/settings/edit_favorite_content.dart:390:32 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/settings/edit_favorite_content.dart:390:36 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/settings/edit_favorite_content.dart:402:39 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/settings/edit_favorite_content.dart:425:37 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/settings/edit_genres.dart:290:30 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/settings/edit_streaming_services.dart:284:45 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/settings/edit_streaming_services.dart:299:36 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/settings/edit_streaming_services.dart:301:36 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/settings/edit_streaming_services.dart:301:40 • unnecessary_underscores
+   info • The file name 'settimgPage.dart' isn't a lower_case_with_underscores identifier • lib/settings/settimgPage.dart:1:1 • file_names
+   info • The file name 'Nowplaying.dart' isn't a lower_case_with_underscores identifier • lib/tmbd/Nowplaying.dart:1:1 • file_names
+   info • The file name 'Search.dart' isn't a lower_case_with_underscores identifier • lib/tmbd/Search.dart:1:1 • file_names
+   info • Don't invoke 'print' in production code • lib/tmbd/Search.dart:30:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/Search.dart:44:5 • avoid_print
+   info • The file name 'airingToday.dart' isn't a lower_case_with_underscores identifier • lib/tmbd/airingToday.dart:1:1 • file_names
+   info • Don't invoke 'print' in production code • lib/tmbd/airingToday.dart:22:7 • avoid_print
+   info • The file name 'fetchCredit.dart' isn't a lower_case_with_underscores identifier • lib/tmbd/fetchCredit.dart:1:1 • file_names
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchCredit.dart:20:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchCredit.dart:31:7 • avoid_print
+   info • The file name 'fetchDiscover.dart' isn't a lower_case_with_underscores identifier • lib/tmbd/fetchDiscover.dart:1:1 • file_names
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchDiscover.dart:42:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetch_trialler.dart:54:7 • avoid_print
+   info • Missing type annotation • lib/tmbd/fetch_trialler.dart:59:38 • strict_top_level_inference
+   info • Don't invoke 'print' in production code • lib/tmbd/fetch_trialler.dart:80:7 • avoid_print
+   info • Missing type annotation • lib/tmbd/fetch_trialler.dart:85:39 • strict_top_level_inference
+   info • Don't invoke 'print' in production code • lib/tmbd/fetch_trialler.dart:106:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchtrending.dart:35:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchtrending.dart:50:7 • avoid_print
+   info • The variable name 'TopRatedTv' isn't a lowerCamelCase identifier • lib/tmbd/fetchtrending.dart:55:27 • non_constant_identifier_names
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchtrending.dart:61:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchtrending.dart:81:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchtrending.dart:107:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchtrending.dart:109:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchtrending.dart:121:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchtrending.dart:134:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchtrending.dart:169:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchtrending.dart:186:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchtrending.dart:201:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchtrending.dart:217:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchtrending.dart:233:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchtrending.dart:249:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchtrending.dart:263:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchtrending.dart:286:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchtrending.dart:306:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchtrending.dart:322:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchtrending.dart:335:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchtrending.dart:352:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchtrending.dart:365:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchtrending.dart:378:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchtrending.dart:391:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchtrending.dart:404:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/fetchtrending.dart:422:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/tmbd/getproviders.dart:22:7 • avoid_print
+warning • Unused import: 'dart:convert' • test/test_klipy_api.dart:1:8 • unused_import
+   info • Don't invoke 'print' in production code • test/test_klipy_api.dart:35:5 • avoid_print
+   info • Don't invoke 'print' in production code • test/test_klipy_api.dart:54:3 • avoid_print
+   info • Don't invoke 'print' in production code • test/verify_klipy_fix.dart:9:3 • avoid_print
+   info • Don't invoke 'print' in production code • test/verify_klipy_fix.dart:21:5 • avoid_print
+   info • Don't invoke 'print' in production code • test/verify_klipy_fix.dart:27:9 • avoid_print
+   info • Don't invoke 'print' in production code • test/verify_klipy_fix.dart:30:9 • avoid_print
+   info • Don't invoke 'print' in production code • test/verify_klipy_fix.dart:32:11 • avoid_print
+   info • Don't invoke 'print' in production code • test/verify_klipy_fix.dart:34:11 • avoid_print
+   info • Don't invoke 'print' in production code • test/verify_klipy_fix.dart:37:9 • avoid_print
+   info • Don't invoke 'print' in production code • test/verify_klipy_fix.dart:40:7 • avoid_print
+   info • Don't invoke 'print' in production code • test/verify_klipy_fix.dart:43:5 • avoid_print
+   info • Don't invoke 'print' in production code • test/verify_klipy_fix.dart:46:3 • avoid_print
+   info • Don't invoke 'print' in production code • test/verify_klipy_fix.dart:56:5 • avoid_print
+   info • Don't invoke 'print' in production code • test/verify_klipy_fix.dart:61:10 • avoid_print
+   info • Don't invoke 'print' in production code • test/verify_klipy_fix.dart:63:9 • avoid_print
+   info • Don't invoke 'print' in production code • test/verify_klipy_fix.dart:67:5 • avoid_print
+

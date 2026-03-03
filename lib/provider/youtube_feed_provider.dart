@@ -47,19 +47,20 @@ class YoutubeFeedProvider extends ChangeNotifier {
   Stream<int> get jumpToPageStream => _jumpToPageController.stream;
 
   // --- NEW: Multi-tab state ---
-  FeedType _activeFeedType = FeedType.forYou;
+  FeedType _activeFeedType = FeedType.creators;
 
   // Separate video lists per tab
   final Map<FeedType, List<FeedVideo>> _feedsByType = {
-    FeedType.trending: [],
-    FeedType.following: [],
-    FeedType.forYou: [],
+    FeedType.trailers: [],
+    FeedType.creators: [],
   };
 
   // Preload window configuration
   static const int _controllerKeepAhead = 1; // Keep only current+next in memory
-  static const int _controllerKeepBehind = 1; // Keep previous for smooth reverse swipe
-  static const int _networkPreloadAhead = 2; // Preload at most two ahead on network cache
+  static const int _controllerKeepBehind =
+      1; // Keep previous for smooth reverse swipe
+  static const int _networkPreloadAhead =
+      2; // Preload at most two ahead on network cache
 
   // ============================================================================
   // FEED BACKEND
@@ -68,9 +69,8 @@ class YoutubeFeedProvider extends ChangeNotifier {
 
   /// Track page counts for UI display (debug menu)
   final Map<FeedType, int> _pageCountsByType = {
-    FeedType.trending: 1,
-    FeedType.following: 1,
-    FeedType.forYou: 1,
+    FeedType.trailers: 1,
+    FeedType.creators: 1,
   };
 
   // --- Getters ---
@@ -87,7 +87,8 @@ class YoutubeFeedProvider extends ChangeNotifier {
 
   int get activeYoutubeControllerCount => _controllers.length;
   int get activeMp4ControllerCount => _mp4Controllers.length;
-  int get totalActiveControllers => _controllers.length + _mp4Controllers.length;
+  int get totalActiveControllers =>
+      _controllers.length + _mp4Controllers.length;
 
   /// Get controller for specific index (null if not in window)
   YoutubePlayerController? getController(int index) => _controllers[index];
@@ -138,15 +139,11 @@ class YoutubeFeedProvider extends ChangeNotifier {
           .filter('deleted_at', 'is', null);
 
       // Filtering/Ordering based on feed type
-      if (type == FeedType.trending) {
+      if (type == FeedType.trailers) {
         query = query.order('engagement_score', ascending: false);
-      } else if (type == FeedType.following) {
-        // Ideally filter by following, but for now just show all (or implement following logic)
-        // Since 'following' logic requires joins, we might just show latest for now
+      } else if (type == FeedType.creators) {
         query = query.order('created_at', ascending: false);
       } else {
-        // For You (default)
-        // Using created_at for now, maybe random or Algo later
         query = query.order('created_at', ascending: false);
       }
 

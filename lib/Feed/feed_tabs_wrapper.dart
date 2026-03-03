@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:finishd/provider/youtube_feed_provider.dart';
 import 'package:finishd/services/api_client.dart';
+import 'package:finishd/Feed/creators_feed_screen.dart';
+import 'package:finishd/Feed/trailers_discovery_screen.dart';
 
 /// Feed Tabs Wrapper Widget
 ///
@@ -12,9 +14,7 @@ import 'package:finishd/services/api_client.dart';
 /// - Following: Content from friends and communities
 /// - For You: Personalized recommendations
 class FeedTabsWrapper extends StatefulWidget {
-  final Widget feedWidget;
-
-  const FeedTabsWrapper({super.key, required this.feedWidget});
+  const FeedTabsWrapper({super.key});
 
   @override
   State<FeedTabsWrapper> createState() => _FeedTabsWrapperState();
@@ -22,7 +22,7 @@ class FeedTabsWrapper extends StatefulWidget {
 
 class _FeedTabsWrapperState extends State<FeedTabsWrapper> {
   // Tab labels
-  final List<String> _tabs = ['Following', 'For You', 'Trending'];
+  final List<String> _tabs = ['Trailers', 'Creators'];
 
   @override
   Widget build(BuildContext context) {
@@ -32,21 +32,20 @@ class _FeedTabsWrapperState extends State<FeedTabsWrapper> {
     // Map FeedType to tab index
     int selectedIndex;
     switch (provider.activeFeedType) {
-      case FeedType.following:
+      case FeedType.trailers:
         selectedIndex = 0;
         break;
-      case FeedType.forYou:
+      case FeedType.creators:
         selectedIndex = 1;
-        break;
-      case FeedType.trending:
-        selectedIndex = 2;
         break;
     }
 
     return Stack(
       children: [
         // Feed content (full screen)
-        widget.feedWidget,
+        selectedIndex == 0
+            ? const TrailersDiscoveryScreen()
+            : const CreatorsFeedScreen(),
 
         // Top gradient overlay for legibility
         Positioned(
@@ -71,10 +70,40 @@ class _FeedTabsWrapperState extends State<FeedTabsWrapper> {
 
         // Tab bar at top (above the gradient)
         Positioned(
-          top: MediaQuery.of(context).padding.top + 8,
+          top: 0,
           left: 0,
           right: 0,
-          child: _buildTabBar(context, selectedIndex, isDark, provider),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8.0,
+                vertical: 8.0,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.notifications_none,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                    onPressed: () =>
+                        Navigator.pushNamed(context, 'notification'),
+                  ),
+                  _buildTabBar(context, selectedIndex, isDark, provider),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.search,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                    onPressed: () => Navigator.pushNamed(context, 'homesearch'),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ],
     );
@@ -211,16 +240,13 @@ class _FeedTabsWrapperState extends State<FeedTabsWrapper> {
     FeedType newType;
     switch (index) {
       case 0:
-        newType = FeedType.following;
+        newType = FeedType.trailers;
         break;
       case 1:
-        newType = FeedType.forYou;
-        break;
-      case 2:
-        newType = FeedType.trending;
+        newType = FeedType.creators;
         break;
       default:
-        newType = FeedType.forYou;
+        newType = FeedType.creators;
     }
 
     provider.switchFeedType(newType);

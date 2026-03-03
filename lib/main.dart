@@ -8,6 +8,7 @@ import 'package:finishd/Mainpage/Home.dart';
 import 'package:finishd/Mainpage/Messages.dart';
 import 'package:finishd/Mainpage/Profile.dart';
 import 'package:finishd/Mainpage/Watchlist.dart';
+import 'package:finishd/Mainpage/Tabs/comms_tab.dart';
 import 'package:finishd/notification/mainScreent.dart';
 import 'package:finishd/provider/MovieProvider.dart';
 import 'package:finishd/provider/onboarding_provider.dart';
@@ -17,11 +18,12 @@ import 'package:finishd/provider/community_provider.dart';
 import 'package:finishd/provider/actor_provider.dart';
 import 'package:finishd/provider/ai_assistant_provider.dart';
 import 'package:sizer/sizer.dart';
-import 'dart:io' show Platform;
 
 import 'package:finishd/provider/app_navigation_provider.dart';
 import 'package:finishd/provider/unread_state_provider.dart';
 import 'package:finishd/provider/youtube_feed_provider.dart';
+import 'package:finishd/provider/creators_feed_provider.dart';
+import 'package:finishd/provider/trailers_feed_provider.dart';
 import 'package:finishd/SplashScreen/splash_screen.dart';
 import 'package:finishd/onboarding/CategoriesTypeMove.dart';
 import 'package:finishd/onboarding/Login.dart';
@@ -35,8 +37,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart'; // Added for SystemNavigator
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:glassmotion_navbar/glassmotion_navbar.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:finishd/services/auth_service.dart';
@@ -50,6 +52,8 @@ import 'package:finishd/services/seen_sync_service.dart'; // Video deduplication
 import 'package:finishd/services/moderation_listener_service.dart'; // Real-time moderation
 import 'package:finishd/services/moderation_notification_handler.dart'; // Moderation warnings
 import 'package:finishd/screens/video_upload_screen.dart';
+import 'package:finishd/provider/video_upload_provider.dart';
+import 'package:finishd/widgets/upload_progress_overlay.dart';
 
 // GLOBAL ROUTE OBSERVER
 final RouteObserver<ModalRoute<void>> routeObserver =
@@ -116,6 +120,8 @@ void main() async {
           ChangeNotifierProvider(create: (_) => ActorProvider()),
           ChangeNotifierProvider(create: (_) => AppNavigationProvider()),
           ChangeNotifierProvider(create: (_) => YoutubeFeedProvider()),
+          ChangeNotifierProvider(create: (_) => CreatorsFeedProvider()),
+          ChangeNotifierProvider(create: (_) => TrailersFeedProvider()),
           ChangeNotifierProvider(create: (_) => ChatProvider()..initialize()),
           ChangeNotifierProxyProvider<ChatProvider, UnreadStateProvider>(
             create: (context) =>
@@ -123,6 +129,7 @@ void main() async {
             update: (context, chatProvider, unreadProvider) => unreadProvider!,
           ),
           ChangeNotifierProvider(create: (_) => AiAssistantProvider()),
+          ChangeNotifierProvider(create: (_) => VideoUploadProvider()),
           Provider<AuthService>(create: (_) => AuthService()),
         ],
         child: MyApp(navigatorKey: navigatorKey),
@@ -190,6 +197,11 @@ class MyApp extends StatelessWidget {
                 ScreenTimeObserver(), // For our custom screen_view_duration events
               ],
               initialRoute: '/',
+              builder: (context, child) {
+                return UploadProgressOverlay(
+                  child: child ?? const SizedBox.shrink(),
+                );
+              },
               routes: {
                 '/': (context) => const SplashScreen(),
                 '/home': (context) => LandingScreen(),
@@ -224,9 +236,9 @@ class HomePage extends StatefulWidget {
 
 final List<Widget> _pages = [
   Home(),
-
   Discover(),
   Watchlist(),
+  const CommsTab(),
   Messages(),
   Profile(),
 ];
@@ -284,7 +296,7 @@ class _HomePageState extends State<HomePage> {
     final navProvider = context.watch<AppNavigationProvider>();
     final userProvider = context.watch<UserProvider>();
     final user = userProvider.currentUser;
-    final internalIndex = navProvider.currentIndex; // 0..4
+    final internalIndex = navProvider.currentIndex; // 0..5 (6 pages)
 
     // Check if user is an approved creator
     final isCreator =
@@ -292,12 +304,27 @@ class _HomePageState extends State<HomePage> {
         user.role == 'creator' &&
         user.creatorStatus == 'approved';
 
-    // Map internal index to visual index
-    // If creator: skip the + button at visual index 2 (6 items: 0,1,+,3,4,5)
-    // If not creator: no + button (5 items: 0,1,2,3,4)
-    final visualIndex = isCreator
-        ? (internalIndex >= 2 ? internalIndex + 1 : internalIndex)
-        : internalIndex;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Shared tap handler for both navbars
+    void handleTabTap(int newInternalIndex) {
+      final feedProvider = context.read<YoutubeFeedProvider>();
+      if (newInternalIndex != 0) {
+        feedProvider.pauseAll();
+      } else if (newInternalIndex == 0 && internalIndex != 0) {
+        feedProvider.resumeCurrent();
+      }
+
+      if (newInternalIndex == 4) {
+        // Messages (internal index 4)
+        Provider.of<UnreadStateProvider>(
+          context,
+          listen: false,
+        ).markMessagesAsViewed();
+      }
+
+      navProvider.setTab(newInternalIndex);
+    }
 
     return PopScope(
       canPop: false,
@@ -306,172 +333,105 @@ class _HomePageState extends State<HomePage> {
         _handleBackPress(context);
       },
       child: Scaffold(
-        extendBody: false,
+        extendBody: isCreator,
         body: IndexedStack(index: internalIndex, children: _pages),
-        bottomNavigationBar: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          currentIndex: visualIndex,
-          onTap: (index) async {
-            // Handle Plus Button (Index 2) - only if creator
-            if (isCreator && index == 2) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const VideoUploadScreen()),
-              );
-              return;
-            }
-
-            // Map visual index back to internal index
-            // If creator: 0->0, 1->1, 3->2, 4->3, 5->4
-            // If not creator: direct mapping 0->0, 1->1, 2->2, 3->3, 4->4
-            final newInternalIndex = isCreator
-                ? (index > 2 ? index - 1 : index)
-                : index;
-
-            final feedProvider = context.read<YoutubeFeedProvider>();
-            if (newInternalIndex != 0) {
-              feedProvider.pauseAll();
-            } else if (newInternalIndex == 0 && internalIndex != 0) {
-              feedProvider.resumeCurrent();
-            }
-
-            if (newInternalIndex == 3) {
-              // Messages (internal index 3)
-              Provider.of<UnreadStateProvider>(
-                context,
-                listen: false,
-              ).markMessagesAsViewed();
-            }
-
-            navProvider.setTab(newInternalIndex);
-          },
-          showUnselectedLabels: false,
-          iconSize: 24,
-          enableFeedback: true,
-          unselectedItemColor: visualIndex == 0
-              ? Colors.white54
-              : Theme.of(context).brightness == Brightness.dark
-              ? Colors.white54
-              : Colors.black45,
-          selectedItemColor: const Color(0xFF1A8927),
-          backgroundColor: visualIndex == 0
-              ? Colors.black
-              : Theme.of(context).cardColor,
-          elevation: 8,
-          items: [
-            // Android
-            if (Platform.isAndroid) ...[
-              const BottomNavigationBarItem(
-                icon: FaIcon(FontAwesomeIcons.solidHouse),
-                label: "Home",
-              ),
-              const BottomNavigationBarItem(
-                icon: Icon(CupertinoIcons.compass_fill),
-                label: 'Discover',
-              ),
-
-              // PLUS BUTTON - only for creators
-              if (isCreator)
-                BottomNavigationBarItem(
-                  icon: Container(
-                    width: 48,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.black, width: 2),
-                    ),
-                    child: const Center(
-                      child: Icon(Icons.add, color: Colors.black, size: 24),
-                    ),
-                  ),
-                  label: 'Create',
-                ),
-
-              const BottomNavigationBarItem(
-                icon: FaIcon(FontAwesomeIcons.solidBookmark, size: 24.0),
-                label: 'Watchlist',
-              ),
-              BottomNavigationBarItem(
-                icon: Consumer<UnreadStateProvider>(
-                  builder: (context, unreadProvider, child) {
-                    return Badge(
-                      isLabelVisible: unreadProvider.hasNewActivity,
-                      smallSize: 8,
-                      label: null,
-                      backgroundColor: const Color(0xFF1A8927),
-                      child: Transform(
-                        alignment: Alignment.center,
-                        transform: Matrix4.rotationY(3.14159),
-                        child: const FaIcon(FontAwesomeIcons.signalMessenger),
-                      ),
-                    );
-                  },
-                ),
-                label: "Messages",
-              ),
-              const BottomNavigationBarItem(
-                icon: FaIcon(FontAwesomeIcons.imagePortrait, size: 24.0),
-                label: 'Profile',
-              ),
-            ],
-
-            // iOS
-            if (Platform.isIOS) ...[
-              const BottomNavigationBarItem(
-                icon: FaIcon(FontAwesomeIcons.solidHouse),
-                label: "Home",
-              ),
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.explore),
-                label: 'Discover',
-              ),
-
-              // PLUS BUTTON - only for creators
-              if (isCreator)
-                BottomNavigationBarItem(
-                  icon: Container(
-                    width: 42,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE50914), // Finishd Red
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.add, color: Colors.white, size: 20),
-                  ),
-                  label: 'Create',
-                ),
-
-              const BottomNavigationBarItem(
-                icon: FaIcon(FontAwesomeIcons.bookmark, size: 24.0),
-                label: 'Watchlist',
-              ),
-              BottomNavigationBarItem(
-                icon: Consumer<UnreadStateProvider>(
-                  builder: (context, unreadProvider, child) {
-                    return Badge(
-                      isLabelVisible: unreadProvider.hasNewActivity,
-                      smallSize: 8,
-                      label: null,
-                      backgroundColor: const Color(0xFF1A8927),
-                      child: Transform(
-                        alignment: Alignment.center,
-                        transform: Matrix4.rotationY(3.14159),
-                        child: const FaIcon(FontAwesomeIcons.solidMessage),
-                      ),
-                    );
-                  },
-                ),
-                label: "Messages",
-              ),
-              const BottomNavigationBarItem(
-                icon: FaIcon(FontAwesomeIcons.imagePortrait, size: 24.0),
-                label: 'Profile',
-              ),
-            ],
-          ],
-        ),
+        bottomNavigationBar: isCreator
+            ? _buildCreatorNavbar(isDark, internalIndex, handleTabTap, context)
+            : _buildUserNavbar(isDark, internalIndex, handleTabTap),
       ),
+    );
+  }
+
+  /// Glassmorphic navbar with center FAB for creators
+  Widget _buildCreatorNavbar(
+    bool isDark,
+    int internalIndex,
+    void Function(int) onTap,
+    BuildContext context,
+  ) {
+    // Map internal (0-5) to visual (0-6, skipping center slot 3)
+    final visualIndex = internalIndex >= 3 ? internalIndex + 1 : internalIndex;
+
+    final navItems = <GlassNavItem>[
+      const GlassNavItem(icon: Icons.home_rounded, label: 'Home'),
+      const GlassNavItem(icon: Icons.explore_rounded, label: 'Discover'),
+      const GlassNavItem(icon: Icons.bookmark_rounded, label: 'Watchlist'),
+      const GlassNavItem(icon: Icons.add, label: ''),
+      const GlassNavItem(icon: Icons.people_rounded, label: 'Comms'),
+      const GlassNavItem(icon: Icons.chat_bubble_rounded, label: 'Inbox'),
+      const GlassNavItem(icon: Icons.person_rounded, label: 'Profile'),
+    ];
+
+    return GlassMotionNavBar(
+      items: navItems,
+      borderRadius: BorderRadius.circular(25),
+      height: 70,
+      selectedIndex: visualIndex,
+      onItemTapped: (tappedVisualIndex) {
+        // Map visual index back to internal index (skip center slot 3)
+        // Visual 0->0, 1->1, 2->2, 4->3, 5->4, 6->5
+        final newInternalIndex = tappedVisualIndex > 3
+            ? tappedVisualIndex - 1
+            : tappedVisualIndex;
+        onTap(newInternalIndex);
+      },
+      onCenterTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const VideoUploadScreen()),
+        );
+      },
+      accentColor: const Color(0xFF1A8927),
+      inactiveColor: isDark ? Colors.white54 : Colors.grey.shade500,
+      backgroundColor: isDark
+          ? Colors.black.withOpacity(0.3)
+          : Colors.white.withOpacity(0.6),
+      showLabels: true,
+    );
+  }
+
+  /// Standard navbar for regular users (no center "+" button)
+  Widget _buildUserNavbar(
+    bool isDark,
+    int internalIndex,
+    void Function(int) onTap,
+  ) {
+    return BottomNavigationBar(
+      type: BottomNavigationBarType.fixed,
+      currentIndex: internalIndex,
+      onTap: onTap,
+      showUnselectedLabels: true,
+      iconSize: 22,
+      selectedFontSize: 11,
+      unselectedFontSize: 10,
+      enableFeedback: true,
+      selectedItemColor: const Color(0xFF1A8927),
+      unselectedItemColor: isDark ? Colors.white54 : Colors.grey.shade500,
+      backgroundColor: isDark ? Colors.black : Colors.white,
+      elevation: 8,
+      items: const [
+        BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.explore_rounded),
+          label: 'Discover',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.bookmark_rounded),
+          label: 'Watchlist',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.people_rounded),
+          label: 'Comms',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.chat_bubble_rounded),
+          label: 'Inbox',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person_rounded),
+          label: 'Profile',
+        ),
+      ],
     );
   }
 }

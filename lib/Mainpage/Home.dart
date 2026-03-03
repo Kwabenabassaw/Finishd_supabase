@@ -1,4 +1,4 @@
-import 'package:finishd/Home/homescreen_v2.dart';
+import 'package:finishd/Feed/feed_tabs_wrapper.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -12,6 +12,6 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
-    return const HomeScreenV2();
+    return const FeedTabsWrapper();
   }
 }

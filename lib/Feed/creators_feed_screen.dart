@@ -1,0 +1,250 @@
+import 'package:finishd/LoadingWidget/LogoLoading.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../provider/creators_feed_provider.dart';
+import '../provider/app_navigation_provider.dart';
+import '../core/video_controller_pool.dart';
+import '../core/tiktok_scroll_physics.dart';
+import '../core/cache/feed_cache_manager.dart';
+import 'creator_video_player.dart';
+
+/// TikTok-style vertical feed for creator videos.
+///
+/// ── Architecture ────────────────────────────────────────────────────────────
+/// This screen delegates ALL controller lifecycle to [VideoControllerPool].
+/// [CreatorVideoPlayer] is a dumb display widget — it receives a controller,
+/// it never creates one.
+///
+/// ── Memory Contract ────────────────────────────────────────────────────────
+/// Maximum 3 controllers alive at any time (current - 1, current, current + 1).
+/// The next controller is pre-created so swiping forward is instant.
+/// Controllers outside the window are disposed immediately on page change.
+///
+/// ── Lifecycle ──────────────────────────────────────────────────────────────
+/// Uses [WidgetsBindingObserver] to pause all playback when the app enters
+/// background and resume the current video when it returns.
+/// Also listens to [AppNavigationProvider] to pause when the user switches
+/// away from the Home tab and resume when they return.
+class CreatorsFeedScreen extends StatefulWidget {
+  const CreatorsFeedScreen({super.key});
+
+  @override
+  State<CreatorsFeedScreen> createState() => _CreatorsFeedScreenState();
+}
+
+class _CreatorsFeedScreenState extends State<CreatorsFeedScreen>
+    with WidgetsBindingObserver {
+  late final PageController _pageController;
+  late final VideoControllerPool _pool;
+  final FeedCacheManager _cacheManager = FeedCacheManager();
+
+  int _currentIndex = 0;
+  late CreatorsFeedProvider _provider;
+
+  /// Tracks whether playback is paused due to nav tab switch
+  bool _pausedByNav = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
+    // CRITICAL: keepPage: false prevents Flutter from keeping all pages alive
+    _pageController = PageController(keepPage: false, viewportFraction: 1.0);
+
+    _pool = VideoControllerPool();
+
+    // Configure image cache limits on init
+    _cacheManager.configureImageCache();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      _provider = context.read<CreatorsFeedProvider>();
+      await _provider.initialize();
+      if (mounted && _provider.videos.isNotEmpty) {
+        _pool.setVideos(_provider.videos);
+        await _pool.onPageChanged(0);
+        if (mounted) setState(() {});
+      }
+
+      // Listen to bottom nav changes — pause when leaving Home tab
+      if (mounted) {
+        context.read<AppNavigationProvider>().addListener(_onNavChanged);
+      }
+    });
+  }
+
+  /// Called when bottom nav tab changes
+  void _onNavChanged() {
+    if (!mounted) return;
+    final navIndex = context.read<AppNavigationProvider>().currentIndex;
+    if (navIndex != 0 && !_pausedByNav) {
+      // User left the Home tab — pause all creator video playback
+      _pausedByNav = true;
+      _pool.pauseAll();
+    } else if (navIndex == 0 && _pausedByNav) {
+      // User returned to Home tab — resume current video
+      _pausedByNav = false;
+      _pool.resumeCurrent();
+    }
+  }
+
+  // ─── App Lifecycle ───────────────────────────────────────────────────────
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+        _pool.pauseAll();
+        break;
+      case AppLifecycleState.resumed:
+        if (!_pausedByNav) {
+          _pool.resumeCurrent();
+        }
+        break;
+      default:
+        break;
+    }
+  }
+
+  @override
+  void dispose() {
+    // Remove nav listener
+    try {
+      context.read<AppNavigationProvider>().removeListener(_onNavChanged);
+    } catch (_) {}
+    WidgetsBinding.instance.removeObserver(this);
+    _pageController.dispose();
+    _pool.disposeAll();
+    super.dispose();
+  }
+
+  // ─── Page change handler ─────────────────────────────────────────────────
+
+  void _onPageChanged(int index) {
+    if (_currentIndex == index) return;
+    _currentIndex = index;
+
+    // Trigger pagination when nearing the end.
+    if (index >= _provider.videos.length - 4) {
+      _provider.fetchMoreDebounced();
+    }
+
+    // Update pool with latest video list (may have grown from pagination)
+    _pool.setVideos(_provider.videos);
+
+    // Activate new page in pool (handles play/pause/dispose/preload)
+    _pool.onPageChanged(index).then((_) {
+      if (mounted) setState(() {});
+    });
+
+    // Record view via data source
+    _provider.recordView(index);
+  }
+
+  // ─── Build ────────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<CreatorsFeedProvider>(
+      builder: (context, provider, _) {
+        _provider = provider;
+
+        if (provider.videos.isEmpty && provider.isLoading) {
+          return const Center(
+            child: LogoLoadingScreen(),
+          );
+        }
+
+        if (provider.error != null && provider.videos.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  color: Colors.white54,
+                  size: 48,
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Could not load videos',
+                  style: TextStyle(color: Colors.white),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () async {
+                    await provider.refresh();
+                    if (mounted && provider.videos.isNotEmpty) {
+                      _pool.reset();
+                      _pool.setVideos(provider.videos);
+                      await _pool.onPageChanged(0);
+                      setState(() {});
+                    }
+                  },
+                  child: const Text(
+                    'Retry',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        // Sync pool with provider's video list (handles pagination appends)
+        if (provider.videos.length != _pool.videoCount) {
+          _pool.setVideos(provider.videos);
+        }
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            _pool.disposeAll();
+            await provider.refresh();
+            if (mounted && provider.videos.isNotEmpty) {
+              _pool.reset();
+              _pool.setVideos(provider.videos);
+              _currentIndex = 0;
+              // Jump the PageView back to page 0
+              if (_pageController.hasClients) {
+                _pageController.jumpToPage(0);
+              }
+              await _pool.onPageChanged(0);
+              setState(() {});
+            }
+          },
+          child: PageView.builder(
+            controller: _pageController,
+            scrollDirection: Axis.vertical,
+            physics: const TikTokScrollPhysics(),
+            itemCount: provider.videos.length,
+            onPageChanged: _onPageChanged,
+            allowImplicitScrolling: false,
+            itemBuilder: (context, index) {
+              final video = provider.videos[index];
+              final controller = _pool.getController(index);
+              final thumbnailUrl = _pool.getThumbnailUrl(index);
+
+              return CreatorVideoPlayer(
+                key: ValueKey(video.id),
+                video: video,
+                controller: controller,
+                isVisible: index == _currentIndex,
+                resolvedThumbnailUrl: thumbnailUrl,
+                onLike: () {
+                  provider.toggleLike(index);
+                },
+                onComment: () {
+                  // TODO: show comment bottom sheet
+                },
+                onShare: () {
+                  // TODO: share
+                },
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+}

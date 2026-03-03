@@ -1,6 +1,5 @@
 import 'package:finishd/Chat/chatlist.dart';
 import 'package:finishd/Mainpage/Tabs/recs_tab.dart';
-import 'package:finishd/Mainpage/Tabs/comms_tab.dart';
 import 'package:finishd/Chat/NewChat.dart';
 import 'package:finishd/theme/app_theme.dart';
 import 'package:finishd/provider/chat_provider.dart';
@@ -23,9 +22,9 @@ class _MessagesState extends State<Messages>
   void initState() {
     super.initState();
     _tabController = TabController(
-      length: 3,
+      length: 2,
       vsync: this,
-      initialIndex: 1,
+      initialIndex: 0,
     ); // Default to Recs
     _tabController.addListener(_handleTabSelection);
   }
@@ -83,7 +82,6 @@ class _MessagesState extends State<Messages>
                     indicatorWeight: 3,
                     labelStyle: const TextStyle(fontWeight: FontWeight.bold),
                     tabs: [
-                      const Tab(text: 'Comms'),
                       const Tab(text: 'Recs'),
                       Tab(
                         child: Row(
@@ -118,11 +116,9 @@ class _MessagesState extends State<Messages>
                   )
                 : null,
           ),
-          floatingActionButton: _tabController.index == 2
+          floatingActionButton: _tabController.index == 1
               ? Padding(
-                  padding: const EdgeInsets.only(
-                    bottom: 30.0,
-                  ),
+                  padding: const EdgeInsets.only(bottom: 30.0),
                   child: FloatingActionButton(
                     backgroundColor: const Color(0xFF1A8927),
                     child: const Icon(Icons.add, color: Colors.white),
@@ -139,11 +135,7 @@ class _MessagesState extends State<Messages>
               : null,
           body: TabBarView(
             controller: _tabController,
-            children: [
-              const CommsTab(), // Community tab
-              const RecsTab(),
-              const ChatListScreen(),
-            ],
+            children: [const RecsTab(), const ChatListScreen()],
           ),
         );
       },
@@ -153,7 +145,7 @@ class _MessagesState extends State<Messages>
   Widget _buildCustomSegmentedControl(bool isDark, int unreadCount) {
     return Container(
       height: 40,
-      width: 280,
+      width: 200,
       decoration: BoxDecoration(
         color: isDark
             ? Colors.white.withOpacity(0.08)
@@ -167,12 +159,10 @@ class _MessagesState extends State<Messages>
             curve: Curves.easeInOut,
             alignment: _tabController.index == 0
                 ? Alignment.centerLeft
-                : (_tabController.index == 1
-                      ? Alignment.center
-                      : Alignment.centerRight),
+                : Alignment.centerRight,
             child: Container(
               margin: const EdgeInsets.all(2),
-              width: 90,
+              width: 95,
               decoration: BoxDecoration(
                 color: isDark ? Colors.white : AppTheme.primaryGreen,
                 borderRadius: BorderRadius.circular(18),
@@ -188,9 +178,8 @@ class _MessagesState extends State<Messages>
           ),
           Row(
             children: [
-              _buildTabItem(0, "Comms", isDark),
-              _buildTabItem(1, "Recs", isDark),
-              _buildTabItem(2, "Convos", isDark, badgeCount: unreadCount),
+              _buildTabItem(0, "Recs", isDark),
+              _buildTabItem(1, "Convos", isDark, badgeCount: unreadCount),
             ],
           ),
         ],
