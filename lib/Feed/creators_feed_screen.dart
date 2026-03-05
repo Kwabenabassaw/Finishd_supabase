@@ -1,6 +1,9 @@
 import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../Widget/comments/comment_sheet.dart';
 import '../provider/creators_feed_provider.dart';
 import '../provider/app_navigation_provider.dart';
 import '../core/video_controller_pool.dart';
@@ -81,10 +84,12 @@ class _CreatorsFeedScreenState extends State<CreatorsFeedScreen>
       // User left the Home tab — pause all creator video playback
       _pausedByNav = true;
       _pool.pauseAll();
+      _provider.pauseTracking();
     } else if (navIndex == 0 && _pausedByNav) {
       // User returned to Home tab — resume current video
       _pausedByNav = false;
       _pool.resumeCurrent();
+      _provider.resumeTracking();
     }
   }
 
@@ -96,10 +101,12 @@ class _CreatorsFeedScreenState extends State<CreatorsFeedScreen>
       case AppLifecycleState.paused:
       case AppLifecycleState.inactive:
         _pool.pauseAll();
+        _provider.pauseTracking();
         break;
       case AppLifecycleState.resumed:
         if (!_pausedByNav) {
           _pool.resumeCurrent();
+          _provider.resumeTracking();
         }
         break;
       default:
@@ -151,9 +158,7 @@ class _CreatorsFeedScreenState extends State<CreatorsFeedScreen>
         _provider = provider;
 
         if (provider.videos.isEmpty && provider.isLoading) {
-          return const Center(
-            child: LogoLoadingScreen(),
-          );
+          return const Center(child: LogoLoadingScreen());
         }
 
         if (provider.error != null && provider.videos.isEmpty) {
@@ -235,10 +240,26 @@ class _CreatorsFeedScreenState extends State<CreatorsFeedScreen>
                   provider.toggleLike(index);
                 },
                 onComment: () {
-                  // TODO: show comment bottom sheet
+                  final user = Supabase.instance.client.auth.currentUser;
+                  if (user == null) return;
+
+                  final metadata = user.userMetadata;
+                  CommentSheet.show(
+                    context: context,
+                    videoId: video.id,
+                    userId: user.id,
+                    userName: metadata?['username'] ?? 'User',
+                    userAvatar: metadata?['avatar_url'],
+                  );
                 },
                 onShare: () {
-                  // TODO: share
+                  provider.recordShare(index);
+                  Share.share(
+                    'Check out this video on Finishd!\n\n${video.videoUrl}',
+                    subject: video.title.isNotEmpty
+                        ? video.title
+                        : 'Finishd Video',
+                  );
                 },
               );
             },

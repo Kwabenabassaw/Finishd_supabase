@@ -3,15 +3,17 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/creator_video.dart';
 import '../services/creator_url_cache.dart';
+import '../services/video_interaction_tracker.dart';
 import '../data/supabase_feed_datasource.dart';
 
 /// Provider for the Creators Tab (TikTok-style Vertical Feed).
 ///
 /// KEY FEATURES:
-/// - Cursor-based pagination (engagement_score + created_at)
-/// - Integrated URL pre-resolution via CreatorUrlCache
+/// - Cursor-based pagination via [SupabaseFeedDataSource.getRankedFeed]
+/// - Integrated URL pre-resolution via [CreatorUrlCache]
 /// - Debounce guard on fetchMore to prevent overlapping queries
-/// - Atomic view/like tracking via SupabaseFeedDataSource
+/// - Atomic view/like/share tracking via [SupabaseFeedDataSource]
+/// - Watch-time/completion/skip tracking via [VideoInteractionTracker]
 /// - Realtime subscription for live stats on current video
 class CreatorsFeedProvider extends ChangeNotifier {
   final List<CreatorVideo> _videos = [];
@@ -20,15 +22,17 @@ class CreatorsFeedProvider extends ChangeNotifier {
   bool _hasMore = true;
   String? _error;
 
-  // Cursor state — tracks last seen position for stable pagination.
-  double? _lastEngagementScore;
-  DateTime? _lastCreatedAt;
+  // Since the DB uses feed_sessions to dedup seen videos,
+  // we do not need strict cursor state for pagination anymore.
 
   // Debounce timer for fetchMore
   Timer? _fetchMoreDebounce;
 
   // Data source for Supabase operations
   final SupabaseFeedDataSource _dataSource = SupabaseFeedDataSource();
+
+  // Interaction tracker — watch_time, completion, skip detection
+  final VideoInteractionTracker _tracker = VideoInteractionTracker();
 
   // Realtime subscription for current video's live stats
   RealtimeChannel? _statsChannel;
@@ -56,16 +60,32 @@ class CreatorsFeedProvider extends ChangeNotifier {
     _isLoading = true;
     _error = null;
     _hasMore = true;
-    _lastEngagementScore = null;
-    _lastCreatedAt = null;
     notifyListeners();
 
+    // Stop any active interaction tracking
+    _tracker.stopTracking();
+
     try {
-      final data = await _fetchPage(isFirstPage: true);
+      final data = await _dataSource.getRankedFeed(
+        limit: _pageSize,
+        coldStart: false,
+      );
       _videos.clear();
       _videos.addAll(data);
       _updateCursor();
       if (data.length < _pageSize) _hasMore = false;
+
+      // Log impressions
+      if (data.isNotEmpty) {
+        final impressions = data.asMap().entries.map((entry) {
+          return {
+            'video_id': entry.value.id,
+            'position': entry.key,
+            'feed_source': entry.value.feedSource ?? 'explore',
+          };
+        }).toList();
+        _dataSource.batchInsertImpressions(impressions);
+      }
 
       // Pre-resolve URLs for first 3 videos so controller manager has them fast.
       _prefetchUrls(0, 3);
@@ -98,7 +118,10 @@ class CreatorsFeedProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final data = await _fetchPage(isFirstPage: false);
+      final data = await _dataSource.getRankedFeed(
+        limit: _pageSize,
+        coldStart: false,
+      );
 
       if (data.isEmpty) {
         _hasMore = false;
@@ -106,6 +129,17 @@ class CreatorsFeedProvider extends ChangeNotifier {
         _videos.addAll(data);
         _updateCursor();
         if (data.length < _pageSize) _hasMore = false;
+
+        // Log impressions
+        final startIndex = _videos.length - data.length;
+        final impressions = data.asMap().entries.map((entry) {
+          return {
+            'video_id': entry.value.id,
+            'position': startIndex + entry.key,
+            'feed_source': entry.value.feedSource ?? 'explore',
+          };
+        }).toList();
+        _dataSource.batchInsertImpressions(impressions);
 
         // Pre-resolve URLs for incoming videos.
         _prefetchUrls(_videos.length - data.length, _videos.length);
@@ -121,9 +155,20 @@ class CreatorsFeedProvider extends ChangeNotifier {
   // ─── Engagement Tracking ────────────────────────────────────────────────
 
   /// Record a view for the video at [index]. Called on page change.
+  ///
+  /// Also starts interaction tracking (watch-time, completion, skip)
+  /// and stops tracking the previous video.
   void recordView(int index) {
     if (index < 0 || index >= _videos.length) return;
     final video = _videos[index];
+
+    // Stop tracking the previous video (flushes watch data)
+    _tracker.stopTracking();
+
+    // Start tracking the new video
+    _tracker.startTracking(video.id, video.durationMs);
+
+    // Increment view count
     _dataSource.recordView(video.id);
 
     // Update Realtime subscription to new video
@@ -147,6 +192,12 @@ class CreatorsFeedProvider extends ChangeNotifier {
   /// Check if a video is liked locally.
   bool isLiked(String videoId) => _likedVideos[videoId] ?? false;
 
+  /// Record a share for the video at [index]. Atomic increment.
+  void recordShare(int index) {
+    if (index < 0 || index >= _videos.length) return;
+    _dataSource.recordShare(_videos[index].id);
+  }
+
   /// Pre-warms the URL cache for the given range of video indices.
   void prefetchUrlsForIndex(int currentIndex) {
     // Prefetch next 2 video URLs into the cache.
@@ -155,6 +206,14 @@ class CreatorsFeedProvider extends ChangeNotifier {
 
   Future<String> resolveVideoUrl(String pathOrUrl) =>
       CreatorUrlCache.instance.resolve(pathOrUrl);
+
+  // ─── App Lifecycle ─────────────────────────────────────────────────────
+
+  /// Pause interaction tracking (e.g. app backgrounded).
+  void pauseTracking() => _tracker.pause();
+
+  /// Resume interaction tracking (e.g. app returned to foreground).
+  void resumeTracking() => _tracker.resume();
 
   // ─── Realtime ───────────────────────────────────────────────────────────
 
@@ -184,41 +243,9 @@ class CreatorsFeedProvider extends ChangeNotifier {
 
   // ─── Private ─────────────────────────────────────────────────────────────
 
-  Future<List<CreatorVideo>> _fetchPage({required bool isFirstPage}) async {
-    var query = Supabase.instance.client
-        .from('creator_videos')
-        .select('''
-          *,
-          profiles!creator_videos_creator_id_fkey(username, avatar_url)
-        ''')
-        .eq('status', 'approved')
-        .isFilter('deleted_at', null);
-
-    if (!isFirstPage &&
-        _lastEngagementScore != null &&
-        _lastCreatedAt != null) {
-      // Cursor: fetch rows that come after the last seen combination.
-      // This is stable even when new rows are inserted at the top.
-      query = query.or(
-        'engagement_score.lt.$_lastEngagementScore,'
-        'and(engagement_score.eq.$_lastEngagementScore,created_at.lt.${_lastCreatedAt!.toIso8601String()})',
-      );
-    }
-
-    final response = await query
-        .order('engagement_score', ascending: false)
-        .order('created_at', ascending: false)
-        .limit(_pageSize);
-
-    final List<dynamic> data = response as List<dynamic>;
-    return data.map((json) => CreatorVideo.fromJson(json)).toList();
-  }
-
   void _updateCursor() {
-    if (_videos.isEmpty) return;
-    final last = _videos.last;
-    _lastEngagementScore = last.engagementScore;
-    _lastCreatedAt = last.createdAt;
+    // State removed: _lastCreatedAt
+    // We rely solely on the session dedup array now.
   }
 
   void _prefetchUrls(int start, int end) {
@@ -237,6 +264,7 @@ class CreatorsFeedProvider extends ChangeNotifier {
   @override
   void dispose() {
     _fetchMoreDebounce?.cancel();
+    _tracker.stopTracking();
     if (_statsChannel != null) {
       _dataSource.unsubscribe(_statsChannel!);
     }

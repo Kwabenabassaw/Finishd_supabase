@@ -74,19 +74,19 @@ class SupabaseFeedDataSource {
 
   // ── Feed Fetching ───────────────────────────────────────────────────────
 
-  /// Fetch ranked feed using the Supabase RPC.
-  /// Uses cursor-based pagination — never offset pagination.
+  /// Fetch personalized feed using the Supabase RPC.
   Future<List<CreatorVideo>> getRankedFeed({
     int limit = 15,
-    DateTime? cursorCreatedAt,
+    bool coldStart = false,
   }) async {
     try {
       final response = await _client.rpc(
-        'get_ranked_feed',
+        'get_personalized_feed',
         params: {
           'p_session_id': _sessionId,
           'p_limit': limit,
-          'p_cursor_created_at': cursorCreatedAt?.toIso8601String(),
+          'p_user_id': _client.auth.currentUser?.id,
+          'p_cold_start': coldStart,
         },
       );
 
@@ -98,11 +98,11 @@ class SupabaseFeedDataSource {
         _markSeen(newIds);
       }
 
-      return data.map((json) => _mapRpcToCreatorVideo(json)).toList();
+      return data.map((json) => CreatorVideo.fromRpcJson(json)).toList();
     } catch (e) {
       debugPrint('[FeedDataSource] getRankedFeed failed: $e');
       // Fallback: direct query without dedup
-      return _fallbackFetch(limit: limit, cursorCreatedAt: cursorCreatedAt);
+      return _fallbackFetch(limit: limit, cursorCreatedAt: null);
     }
   }
 
@@ -133,25 +133,19 @@ class SupabaseFeedDataSource {
     return data.map((json) => CreatorVideo.fromJson(json)).toList();
   }
 
-  /// Map the RPC response to CreatorVideo model.
-  CreatorVideo _mapRpcToCreatorVideo(Map<String, dynamic> json) {
-    return CreatorVideo(
-      id: json['id'] as String,
-      creatorId: json['creator_id'] as String,
-      videoUrl: json['video_url'] as String,
-      thumbnailUrl: json['thumbnail_url'] ?? '',
-      title: json['title'] ?? '',
-      description: json['description'] ?? '',
-      viewCount: json['view_count'] as int? ?? 0,
-      likeCount: json['like_count'] as int? ?? 0,
-      commentCount: json['comment_count'] as int? ?? 0,
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
-          : DateTime.now(),
-      engagementScore: (json['engagement_score'] as num?)?.toDouble() ?? 0.0,
-      creatorName: json['creator_username'] ?? 'Unknown Creator',
-      creatorAvatarUrl: json['creator_avatar_url'] ?? '',
-    );
+  /// Batch insert feed impressions.
+  Future<void> batchInsertImpressions(
+    List<Map<String, dynamic>> impressions,
+  ) async {
+    if (impressions.isEmpty) return;
+    try {
+      await _client.rpc(
+        'batch_insert_impressions',
+        params: {'p_impressions': impressions},
+      );
+    } catch (e) {
+      debugPrint('[FeedDataSource] batchInsertImpressions failed: $e');
+    }
   }
 
   // ── Engagement Tracking ─────────────────────────────────────────────────
@@ -177,6 +171,18 @@ class SupabaseFeedDataSource {
       );
     } catch (e) {
       debugPrint('[FeedDataSource] toggleLike failed: $e');
+    }
+  }
+
+  /// Record a share (atomic increment).
+  Future<void> recordShare(String videoId) async {
+    try {
+      await _client.rpc(
+        'increment_video_shares',
+        params: {'p_video_id': videoId},
+      );
+    } catch (e) {
+      debugPrint('[FeedDataSource] recordShare failed: $e');
     }
   }
 

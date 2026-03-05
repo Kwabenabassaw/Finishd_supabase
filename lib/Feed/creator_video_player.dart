@@ -12,7 +12,13 @@ import '../models/creator_video.dart';
 ///   separate subtree from the [VideoPlayer]. Like taps NEVER trigger a
 ///   rebuild of the video layer.
 /// - Wrapped in [RepaintBoundary] at the widget level.
-class CreatorVideoPlayer extends StatelessWidget {
+///
+/// LOADING UX (TikTok-style):
+/// - Shows thumbnail (poster / first frame) immediately with a shimmer pulse.
+/// - Once the controller is initialized, crossfades (~300ms) from thumbnail
+///   to live video playback.
+/// - If buffering mid-play, shows a subtle loading indicator over the video.
+class CreatorVideoPlayer extends StatefulWidget {
   final CreatorVideo video;
   final VideoPlayerController? controller;
   final bool isVisible;
@@ -33,9 +39,68 @@ class CreatorVideoPlayer extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final ctrl = controller;
+  State<CreatorVideoPlayer> createState() => _CreatorVideoPlayerState();
+}
+
+class _CreatorVideoPlayerState extends State<CreatorVideoPlayer>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _fadeController;
+  late final Animation<double> _fadeAnimation;
+
+  /// Track whether we've already crossfaded to avoid re-running on rebuilds.
+  bool _hasRevealedVideo = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOut,
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant CreatorVideoPlayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    final ctrl = widget.controller;
     final bool hasVideo = ctrl != null && ctrl.value.isInitialized;
+
+    // Trigger crossfade exactly once when video becomes ready
+    if (hasVideo && !_hasRevealedVideo) {
+      _hasRevealedVideo = true;
+      _fadeController.forward();
+    }
+
+    // If the controller changed entirely (new video), reset the fade
+    if (widget.controller != oldWidget.controller) {
+      final newCtrl = widget.controller;
+      final newHasVideo = newCtrl != null && newCtrl.value.isInitialized;
+      if (!newHasVideo) {
+        _hasRevealedVideo = false;
+        _fadeController.reset();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ctrl = widget.controller;
+    final bool hasVideo = ctrl != null && ctrl.value.isInitialized;
+
+    // Check if the controller is initialized but still buffering
+    final bool isBuffering =
+        hasVideo && ctrl.value.isBuffering && !ctrl.value.isCompleted;
 
     return RepaintBoundary(
       child: GestureDetector(
@@ -49,22 +114,32 @@ class CreatorVideoPlayer extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // ── Video layer ─────────────────────────────────────────────────
-            // Black background fills the screen. The video is rendered at its
-            // native aspect ratio using FittedBox(contain), centered in the
-            // available space. No cropping, no stretching.
+            // ── Base: Black background ─────────────────────────────────────
             const ColoredBox(color: Colors.black),
-            if (hasVideo)
-              Center(
-                child: AspectRatio(
-                  aspectRatio: ctrl.value.aspectRatio,
-                  child: VideoPlayer(ctrl),
-                ),
-              )
-            else
-              _Thumbnail(thumbnailUrl: resolvedThumbnailUrl),
 
-            // ── Gradient overlay (static — never repaints) ──────────────────
+            // ── Layer 1: Thumbnail (always rendered underneath) ─────────────
+            // Stays visible until the video fades in on top.
+            _Thumbnail(
+              thumbnailUrl: widget.resolvedThumbnailUrl,
+              isLoading: !hasVideo,
+            ),
+
+            // ── Layer 2: Video (fades in over thumbnail) ───────────────────
+            if (hasVideo)
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: Center(
+                  child: AspectRatio(
+                    aspectRatio: ctrl.value.aspectRatio,
+                    child: VideoPlayer(ctrl),
+                  ),
+                ),
+              ),
+
+            // ── Layer 3: Buffering indicator (mid-play) ────────────────────
+            if (isBuffering) const _BufferingIndicator(),
+
+            // ── Layer 4: Gradient overlay (static — never repaints) ────────
             const IgnorePointer(
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -77,13 +152,13 @@ class CreatorVideoPlayer extends StatelessWidget {
               ),
             ),
 
-            // ── Interactive overlay (isolated subtree) ───────────────────────
+            // ── Layer 5: Interactive overlay (isolated subtree) ────────────
             RepaintBoundary(
               child: _VideoOverlay(
-                video: video,
-                onLike: onLike,
-                onComment: onComment,
-                onShare: onShare,
+                video: widget.video,
+                onLike: widget.onLike,
+                onComment: widget.onComment,
+                onShare: widget.onShare,
               ),
             ),
           ],
@@ -94,24 +169,122 @@ class CreatorVideoPlayer extends StatelessWidget {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Thumbnail shown before the controller is ready
+// Thumbnail with shimmer/pulse loading effect
+// Shows the poster image (first frame) with a pulsing overlay while loading.
 // ──────────────────────────────────────────────────────────────────────────────
 
-class _Thumbnail extends StatelessWidget {
+class _Thumbnail extends StatefulWidget {
   final String? thumbnailUrl;
-  const _Thumbnail({this.thumbnailUrl});
+  final bool isLoading;
+
+  const _Thumbnail({this.thumbnailUrl, required this.isLoading});
+
+  @override
+  State<_Thumbnail> createState() => _ThumbnailState();
+}
+
+class _ThumbnailState extends State<_Thumbnail>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _shimmerController;
+  late final Animation<double> _shimmerAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _shimmerAnimation = Tween<double>(begin: 0.08, end: 0.25).animate(
+      CurvedAnimation(parent: _shimmerController, curve: Curves.easeInOut),
+    );
+    if (widget.isLoading) {
+      _shimmerController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _Thumbnail oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isLoading && !_shimmerController.isAnimating) {
+      _shimmerController.repeat(reverse: true);
+    } else if (!widget.isLoading && _shimmerController.isAnimating) {
+      _shimmerController.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _shimmerController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final url = thumbnailUrl;
-    if (url == null || url.isEmpty) {
-      return const ColoredBox(color: Colors.black);
-    }
-    return CachedNetworkImage(
-      imageUrl: url,
-      fit: BoxFit.cover,
-      placeholder: (ctx, url) => const ColoredBox(color: Colors.black),
-      errorWidget: (ctx, url, err) => const ColoredBox(color: Colors.black),
+    final url = widget.thumbnailUrl;
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // The actual thumbnail image (or black if unavailable)
+        if (url != null && url.isNotEmpty)
+          CachedNetworkImage(
+            imageUrl: url,
+            fit: BoxFit.cover,
+            placeholder: (ctx, url) => const ColoredBox(color: Colors.black),
+            errorWidget: (ctx, url, err) =>
+                const ColoredBox(color: Colors.black),
+          )
+        else
+          const ColoredBox(color: Colors.black),
+
+        // Shimmer pulse overlay — only while loading
+        if (widget.isLoading)
+          AnimatedBuilder(
+            animation: _shimmerAnimation,
+            builder: (context, child) {
+              return Container(
+                color: Colors.white.withOpacity(_shimmerAnimation.value),
+              );
+            },
+          ),
+
+        // Small centered loading spinner while loading
+        if (widget.isLoading)
+          const Center(
+            child: SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: Colors.white70,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Buffering indicator shown over video when it pauses to buffer mid-play.
+// Matches TikTok's subtle center spinner on a semi-transparent scrim.
+// ──────────────────────────────────────────────────────────────────────────────
+
+class _BufferingIndicator extends StatelessWidget {
+  const _BufferingIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: SizedBox(
+        width: 36,
+        height: 36,
+        child: CircularProgressIndicator(
+          strokeWidth: 2.5,
+          color: Colors.white60,
+        ),
+      ),
     );
   }
 }
