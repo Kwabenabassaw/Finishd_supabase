@@ -80,6 +80,7 @@ dependencies:
   video_compress: ^3.1.4
   flutter_cache_manager: ^3.4.1
   uuid: ^4.5.1
+  google_sign_in: ^7.2.0
 
   
 

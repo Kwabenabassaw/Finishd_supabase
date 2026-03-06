@@ -6,7 +6,7 @@ import 'package:finishd/theme/app_theme.dart';
 import 'package:finishd/provider/chat_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:io';
+import 'dart:io';import 'package:finishd/provider/app_navigation_provider.dart';
 
 class Messages extends StatefulWidget {
   const Messages({super.key});
@@ -18,6 +18,7 @@ class Messages extends StatefulWidget {
 class _MessagesState extends State<Messages>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  int _lastNavIndex = 3;
 
   @override
   void initState() {
@@ -25,9 +26,29 @@ class _MessagesState extends State<Messages>
     _tabController = TabController(
       length: 3,
       vsync: this,
-      initialIndex: 0,
-    ); // Default to Recs
+      initialIndex: 2, // Default to Convos
+    );
     _tabController.addListener(_handleTabSelection);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    // Listen to global app navigation changes
+    final nav = Provider.of<AppNavigationProvider>(context);
+    
+    // If we just navigated TO the Inbox tab (index 3), reset internal tab to Convos (index 2)
+    if (nav.currentIndex == 3 && _lastNavIndex != 3) {
+      if (_tabController.index != 2) {
+        // Schedule tab change after build phase completes
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _tabController.animateTo(2);
+        });
+      }
+    }
+    
+    _lastNavIndex = nav.currentIndex;
   }
 
   void _handleTabSelection() {
@@ -120,7 +141,7 @@ class _MessagesState extends State<Messages>
           ),
           floatingActionButton: _tabController.index == 2
               ? Padding(
-                  padding: const EdgeInsets.only(bottom: 30.0),
+                  padding: const EdgeInsets.only(bottom: 85.0),
                   child: FloatingActionButton(
                     backgroundColor: const Color(0xFF1A8927),
                     child: const Icon(Icons.add, color: Colors.white),

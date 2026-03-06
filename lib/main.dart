@@ -37,7 +37,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart'; // Added for SystemNavigator
 import 'package:provider/provider.dart';
-import 'package:glassmotion_navbar/glassmotion_navbar.dart';
+import 'package:finishd/widgets/dynamic_nav_bar.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:finishd/services/auth_service.dart';
@@ -292,39 +292,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final navProvider = context.watch<AppNavigationProvider>();
-    final userProvider = context.watch<UserProvider>();
-    final user = userProvider.currentUser;
-    final internalIndex = navProvider.currentIndex; // 0..5 (6 pages)
-
-    // Check if user is an approved creator
-    final isCreator =
-        user != null &&
-        user.role == 'creator' &&
-        user.creatorStatus == 'approved';
-
-    final isSystemDark = Theme.of(context).brightness == Brightness.dark;
-    // Always force the navbar to be dark when viewing video feeds (Home tab, index 0).
-    final isDark = internalIndex == 0 ? true : isSystemDark;
-
-    // Shared tap handler for both navbars
-    void handleTabTap(int newInternalIndex) {
-      final feedProvider = context.read<YoutubeFeedProvider>();
-      if (newInternalIndex != 0) {
-        feedProvider.pauseAll();
-      } else if (newInternalIndex == 0 && internalIndex != 0) {
-        feedProvider.resumeCurrent();
-      }
-
-      if (newInternalIndex == 3) {
-        // Messages (internal index 3)
-        Provider.of<UnreadStateProvider>(
-          context,
-          listen: false,
-        ).markMessagesAsViewed();
-      }
-
-      navProvider.setTab(newInternalIndex);
-    }
+    final internalIndex = navProvider.currentIndex;
 
     return PopScope(
       canPop: false,
@@ -333,100 +301,13 @@ class _HomePageState extends State<HomePage> {
         _handleBackPress(context);
       },
       child: Scaffold(
-        extendBody: isCreator,
+        extendBody: true,
         body: IndexedStack(index: internalIndex, children: _pages),
-        bottomNavigationBar: isCreator
-            ? _buildCreatorNavbar(isDark, internalIndex, handleTabTap, context)
-            : _buildUserNavbar(isDark, internalIndex, handleTabTap),
+        floatingActionButton: const DynamicNavFab(),
+        floatingActionButtonLocation:
+            FloatingActionButtonLocation.centerDocked,
+        bottomNavigationBar: const DynamicNavBar(),
       ),
-    );
-  }
-
-  /// Glassmorphic navbar with center FAB for creators
-  Widget _buildCreatorNavbar(
-    bool isDark,
-    int internalIndex,
-    void Function(int) onTap,
-    BuildContext context,
-  ) {
-    // Map internal (0-4) to visual (0-5, skipping center slot 2)
-    final visualIndex = internalIndex >= 2 ? internalIndex + 1 : internalIndex;
-
-    final navItems = <GlassNavItem>[
-      const GlassNavItem(icon: Icons.home_rounded, label: 'Home'),
-      const GlassNavItem(icon: Icons.explore_rounded, label: 'Discover'),
-      const GlassNavItem(icon: Icons.add, label: ''),
-      const GlassNavItem(icon: Icons.people_rounded, label: 'Comms'),
-      const GlassNavItem(icon: Icons.chat_bubble_rounded, label: 'Inbox'),
-      const GlassNavItem(icon: Icons.person_rounded, label: 'Profile'),
-    ];
-
-    return GlassMotionNavBar(
-      items: navItems,
-      borderRadius: BorderRadius.circular(25),
-      height: 70,
-      selectedIndex: visualIndex,
-      onItemTapped: (tappedVisualIndex) {
-        // Map visual index back to internal index (skip center slot 2)
-        // Visual 0->0, 1->1, 3->2, 4->3, 5->4
-        final newInternalIndex = tappedVisualIndex > 2
-            ? tappedVisualIndex - 1
-            : tappedVisualIndex;
-        onTap(newInternalIndex);
-      },
-      onCenterTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const VideoUploadScreen()),
-        );
-      },
-      accentColor: const Color(0xFF1A8927),
-      inactiveColor: isDark ? Colors.white54 : Colors.grey.shade500,
-      backgroundColor: isDark
-          ? Colors.black.withOpacity(0.3)
-          : Colors.white.withOpacity(0.6),
-      showLabels: true,
-    );
-  }
-
-  /// Standard navbar for regular users (no center "+" button)
-  Widget _buildUserNavbar(
-    bool isDark,
-    int internalIndex,
-    void Function(int) onTap,
-  ) {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      currentIndex: internalIndex,
-      onTap: onTap,
-      showUnselectedLabels: true,
-      iconSize: 22,
-      selectedFontSize: 11,
-      unselectedFontSize: 10,
-      enableFeedback: true,
-      selectedItemColor: const Color(0xFF1A8927),
-      unselectedItemColor: isDark ? Colors.white54 : Colors.grey.shade500,
-      backgroundColor: isDark ? Colors.black : Colors.white,
-      elevation: 8,
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.explore_rounded),
-          label: 'Discover',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.people_rounded),
-          label: 'Comms',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.chat_bubble_rounded),
-          label: 'Inbox',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person_rounded),
-          label: 'Profile',
-        ),
-      ],
     );
   }
 }
