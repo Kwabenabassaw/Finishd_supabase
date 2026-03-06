@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:finishd/models/creator_video.dart';
 
 Future<void> main() async {
   await Supabase.initialize(
@@ -10,25 +11,24 @@ Future<void> main() async {
   final client = Supabase.instance.client;
 
   try {
-    final response = await client
-        .from('creator_videos')
-        .select('id, title, creator_id, status')
-        .eq('status', 'approved')
-        .limit(100);
+    final response = await client.rpc(
+      'get_personalized_feed',
+      params: {'p_limit': 6, 'p_cold_start': true},
+    );
 
-    print('Approved videos found: \${response.length}');
-    Map<String, int> creatorCounts = {};
-    for (var v in response) {
-      print('- \${v['title']} (Creator: \${v['creator_id']})');
-      String creatorId = v['creator_id'].toString();
-      creatorCounts[creatorId] = (creatorCounts[creatorId] ?? 0) + 1;
+    final List<dynamic> data = response as List<dynamic>;
+    print('Fetched \${data.length} videos from RPC');
+
+    for (var json in data) {
+      try {
+        final video = CreatorVideo.fromRpcJson(json);
+        print('Successfully parsed: \${video.title}');
+      } catch (e, stack) {
+        print('Error parsing video from JSON: \$e');
+        print(stack);
+      }
     }
-    print('--- Creator Counts ---');
-    creatorCounts.forEach((key, value) {
-      print('Creator \${key}: \${value} videos');
-    });
   } catch (e) {
-    print('Error: \$e');
+    print('RPC Error: \$e');
   }
 }
-
