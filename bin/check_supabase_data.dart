@@ -12,15 +12,23 @@ Future<void> main() async {
   try {
     final response = await client
         .from('creator_videos')
-        .select('id, title, status')
+        .select('id, title, creator_id, status')
         .eq('status', 'approved')
-        .limit(5);
+        .limit(100);
 
-    print('Approved videos found: ${response.length}');
+    print('Approved videos found: \${response.length}');
+    Map<String, int> creatorCounts = {};
     for (var v in response) {
-      print('- ${v['title']} (${v['status']})');
+      print('- \${v['title']} (Creator: \${v['creator_id']})');
+      String creatorId = v['creator_id'].toString();
+      creatorCounts[creatorId] = (creatorCounts[creatorId] ?? 0) + 1;
     }
+    print('--- Creator Counts ---');
+    creatorCounts.forEach((key, value) {
+      print('Creator \${key}: \${value} videos');
+    });
   } catch (e) {
-    print('Error: $e');
+    print('Error: \$e');
   }
 }
+

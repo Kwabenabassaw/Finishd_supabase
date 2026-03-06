@@ -49,7 +49,7 @@ BEGIN
   RETURN QUERY
   WITH candidates AS (
     -- 1. Personalized (from user's liked/watched titles)
-    (SELECT v.*, 'personalized'::TEXT as source, 1.0::FLOAT as interest_score
+    (SELECT v.*, 'personalized'::TEXT as source, 1.0::DOUBLE PRECISION as interest_score
     FROM public.creator_videos v
     JOIN public.user_titles ut ON v.tmdb_id::text = ut.title_id
     WHERE v_resolved_user_id IS NOT NULL 
@@ -64,7 +64,7 @@ BEGIN
     UNION ALL
 
     -- 2. Social (videos liked by friends)
-    (SELECT v.*, 'social'::TEXT as source, 0.8::FLOAT as interest_score
+    (SELECT v.*, 'social'::TEXT as source, 0.8::DOUBLE PRECISION as interest_score
     FROM public.creator_videos v
     JOIN public.video_interactions vi ON v.id = vi.video_id
     JOIN public.follows f ON vi.user_id = f.following_id
@@ -80,7 +80,7 @@ BEGIN
     UNION ALL
 
     -- 3. Trending
-    (SELECT v.*, 'trending'::TEXT as source, 0.5::FLOAT as interest_score
+    (SELECT v.*, 'trending'::TEXT as source, 0.5::DOUBLE PRECISION as interest_score
     FROM public.creator_videos v
     WHERE v.status = 'approved' AND v.deleted_at IS NULL
       AND NOT (v.id = ANY(v_seen_ids))
@@ -90,7 +90,7 @@ BEGIN
     UNION ALL
 
     -- 4. Explore (Recent global)
-    (SELECT v.*, 'explore'::TEXT as source, 0.2::FLOAT as interest_score
+    (SELECT v.*, 'explore'::TEXT as source, 0.2::DOUBLE PRECISION as interest_score
     FROM public.creator_videos v
     WHERE v.status = 'approved' AND v.deleted_at IS NULL
       AND NOT (v.id = ANY(v_seen_ids))
@@ -104,7 +104,7 @@ BEGIN
        c.interest_score * 0.35 + 
        -- Recency score: 1.0 for now, decreasing as hours go by
        (1.0 / (EXTRACT(EPOCH FROM (now() - c.created_at))/3600.0 + 1.0)) * 0.20
-      ) as final_score
+      ) * (0.9 + random() * 0.2) as final_score
     FROM candidates c
   ),
   deduplicated AS (
@@ -126,7 +126,7 @@ BEGIN
     COALESCE(f.like_count, 0),
     COALESCE(f.comment_count, 0),
     COALESCE(f.share_count, 0),
-    COALESCE(f.engagement_score, 0.0),
+    COALESCE(f.engagement_score, 0.0::DOUBLE PRECISION),
     f.created_at,
     COALESCE(p.username, 'Unknown Creator'),
     COALESCE(p.avatar_url, ''),
@@ -139,7 +139,7 @@ BEGIN
     f.source
   FROM filtered_creators f
   LEFT JOIN public.profiles p ON p.id = f.creator_id
-  WHERE f.creator_rank <= 2 -- Anti-spam: max 2 per creator per batch
+  WHERE f.creator_rank <= 10 -- Anti-spam limit relaxed (was 2) for testing/early stage with few creators
   ORDER BY f.final_score DESC
   LIMIT p_limit;
 END;
