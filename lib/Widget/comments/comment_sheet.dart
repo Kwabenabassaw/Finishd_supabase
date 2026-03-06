@@ -262,7 +262,7 @@ class _CommentSheetState extends State<CommentSheet> {
               bottom: 12 + bottomPadding,
             ),
             decoration: BoxDecoration(
-              color: Colors.grey[850],
+              color: const Color(0xFF303030),
               border: Border(top: BorderSide(color: Colors.grey[800]!)),
             ),
             child: SafeArea(
@@ -354,7 +354,11 @@ class _CommentSheetState extends State<CommentSheet> {
         children: [
           Transform.flip(
             flipX: true,
-            child: Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey[600]),
+            child: Icon(
+              Icons.chat_bubble_outline,
+              size: 64,
+              color: Colors.grey[600],
+            ),
           ),
           const SizedBox(height: 16),
           Text(

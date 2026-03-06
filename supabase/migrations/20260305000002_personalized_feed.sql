@@ -49,7 +49,7 @@ BEGIN
   RETURN QUERY
   WITH candidates AS (
     -- 1. Personalized (from user's liked/watched titles)
-    SELECT v.*, 'personalized'::TEXT as source, 1.0 as interest_score
+    (SELECT v.*, 'personalized'::TEXT as source, 1.0::FLOAT as interest_score
     FROM public.creator_videos v
     JOIN public.user_titles ut ON v.tmdb_id::text = ut.title_id
     WHERE v_resolved_user_id IS NOT NULL 
@@ -59,12 +59,12 @@ BEGIN
       AND v.status = 'approved' AND v.deleted_at IS NULL
       AND NOT (v.id = ANY(v_seen_ids))
     ORDER BY v.created_at DESC
-    LIMIT 100
+    LIMIT 100)
 
     UNION ALL
 
     -- 2. Social (videos liked by friends)
-    SELECT v.*, 'social'::TEXT as source, 0.8 as interest_score
+    (SELECT v.*, 'social'::TEXT as source, 0.8::FLOAT as interest_score
     FROM public.creator_videos v
     JOIN public.video_interactions vi ON v.id = vi.video_id
     JOIN public.follows f ON vi.user_id = f.following_id
@@ -75,27 +75,27 @@ BEGIN
       AND v.status = 'approved' AND v.deleted_at IS NULL
       AND NOT (v.id = ANY(v_seen_ids))
     ORDER BY v.created_at DESC
-    LIMIT 50
+    LIMIT 50)
 
     UNION ALL
 
     -- 3. Trending
-    SELECT v.*, 'trending'::TEXT as source, 0.5 as interest_score
+    (SELECT v.*, 'trending'::TEXT as source, 0.5::FLOAT as interest_score
     FROM public.creator_videos v
     WHERE v.status = 'approved' AND v.deleted_at IS NULL
       AND NOT (v.id = ANY(v_seen_ids))
     ORDER BY v.engagement_score DESC
-    LIMIT 100
+    LIMIT 100)
 
     UNION ALL
 
     -- 4. Explore (Recent global)
-    SELECT v.*, 'explore'::TEXT as source, 0.2 as interest_score
+    (SELECT v.*, 'explore'::TEXT as source, 0.2::FLOAT as interest_score
     FROM public.creator_videos v
     WHERE v.status = 'approved' AND v.deleted_at IS NULL
       AND NOT (v.id = ANY(v_seen_ids))
     ORDER BY v.created_at DESC
-    LIMIT 50
+    LIMIT 50)
   ),
   ranked_candidates AS (
     SELECT c.*,

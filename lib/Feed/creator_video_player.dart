@@ -1,6 +1,13 @@
+import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import 'package:sizer/sizer.dart';
+import 'package:provider/provider.dart';
+import 'package:finishd/MovieDetails/movie_details_screen.dart';
+import 'package:finishd/provider/MovieProvider.dart';
+import 'package:finishd/Model/trending.dart';
+import 'package:finishd/profile/profileScreen.dart';
 import '../models/creator_video.dart';
 
 /// A single video cell for the Creators TikTok-style feed.
@@ -20,6 +27,7 @@ import '../models/creator_video.dart';
 /// - If buffering mid-play, shows a subtle loading indicator over the video.
 class CreatorVideoPlayer extends StatefulWidget {
   final CreatorVideo video;
+  final bool isLiked;
   final VideoPlayerController? controller;
   final bool isVisible;
   final String? resolvedThumbnailUrl;
@@ -30,6 +38,7 @@ class CreatorVideoPlayer extends StatefulWidget {
   const CreatorVideoPlayer({
     super.key,
     required this.video,
+    required this.isLiked,
     required this.controller,
     required this.isVisible,
     this.resolvedThumbnailUrl,
@@ -49,6 +58,9 @@ class _CreatorVideoPlayerState extends State<CreatorVideoPlayer>
 
   /// Track whether we've already crossfaded to avoid re-running on rebuilds.
   bool _hasRevealedVideo = false;
+
+  /// Track if the user has opted to see a video that contains spoilers
+  bool _spoilerAcknowledged = false;
 
   @override
   void initState() {
@@ -105,6 +117,12 @@ class _CreatorVideoPlayerState extends State<CreatorVideoPlayer>
     return RepaintBoundary(
       child: GestureDetector(
         onTap: () {
+          if (widget.video.spoiler && !_spoilerAcknowledged) {
+            setState(() {
+              _spoilerAcknowledged = true;
+            });
+            return;
+          }
           if (ctrl != null && ctrl.value.isPlaying) {
             ctrl.pause();
           } else {
@@ -131,7 +149,60 @@ class _CreatorVideoPlayerState extends State<CreatorVideoPlayer>
                 child: Center(
                   child: AspectRatio(
                     aspectRatio: ctrl.value.aspectRatio,
-                    child: VideoPlayer(ctrl),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        VideoPlayer(ctrl),
+                        if (widget.video.spoiler && !_spoilerAcknowledged)
+                          ClipRect(
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+                              child: Container(
+                                color: Colors.black.withOpacity(0.4),
+                                alignment: Alignment.center,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.visibility_off,
+                                      color: Colors.white,
+                                      size: 32.sp,
+                                    ),
+                                    SizedBox(height: 1.h),
+                                    Text(
+                                      "Contains Spoilers",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 14.sp,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(height: 1.h),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 4.w,
+                                        vertical: 1.h,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white24,
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        "Tap to view",
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12.sp,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -156,11 +227,30 @@ class _CreatorVideoPlayerState extends State<CreatorVideoPlayer>
             RepaintBoundary(
               child: _VideoOverlay(
                 video: widget.video,
+                isLiked: widget.isLiked,
                 onLike: widget.onLike,
                 onComment: widget.onComment,
                 onShare: widget.onShare,
               ),
             ),
+
+            // ── Layer 6: Progress Bar ──────────────────────────────────────
+            if (hasVideo)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: VideoProgressIndicator(
+                  ctrl,
+                  allowScrubbing: true,
+                  padding: EdgeInsets.zero,
+                  colors: const VideoProgressColors(
+                    playedColor: Color(0xFF1A8927), // App accent color
+                    backgroundColor: Colors.white24,
+                    bufferedColor: Colors.white54,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -230,7 +320,7 @@ class _ThumbnailState extends State<_Thumbnail>
         if (url != null && url.isNotEmpty)
           CachedNetworkImage(
             imageUrl: url,
-            fit: BoxFit.cover,
+            fit: BoxFit.contain, // Replaces cover so video back is dark
             placeholder: (ctx, url) => const ColoredBox(color: Colors.black),
             errorWidget: (ctx, url, err) =>
                 const ColoredBox(color: Colors.black),
@@ -238,27 +328,27 @@ class _ThumbnailState extends State<_Thumbnail>
         else
           const ColoredBox(color: Colors.black),
 
-        // Shimmer pulse overlay — only while loading
-        if (widget.isLoading)
-          AnimatedBuilder(
-            animation: _shimmerAnimation,
-            builder: (context, child) {
-              return Container(
-                color: Colors.white.withOpacity(_shimmerAnimation.value),
-              );
-            },
-          ),
+        // Shimmer pulse overlay — removed for a cleaner theatrical look as requested.
+        // Instead of white pulse, we just play an animated loading bar from the center.
 
-        // Small centered loading spinner while loading
+        // Center outward loading animation
         if (widget.isLoading)
-          const Center(
-            child: SizedBox(
-              width: 28,
-              height: 28,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                color: Colors.white70,
-              ),
+          Center(
+            child: AnimatedBuilder(
+              animation: _shimmerAnimation,
+              builder: (context, child) {
+                // shimmerAnimation goes from 0.08 to 0.25 (originally). Let's map it
+                // to a scale width. Map [0.08, 0.25] to [0.0, 1.0] roughly.
+                final scale = (_shimmerAnimation.value - 0.08) / (0.25 - 0.08);
+                return Container(
+                  width: 30.w * scale,
+                  height: 3,
+                  decoration: BoxDecoration(
+                    color: Colors.white70,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                );
+              },
             ),
           ),
       ],
@@ -296,12 +386,14 @@ class _BufferingIndicator extends StatelessWidget {
 
 class _VideoOverlay extends StatefulWidget {
   final CreatorVideo video;
+  final bool isLiked;
   final VoidCallback onLike;
   final VoidCallback onComment;
   final VoidCallback onShare;
 
   const _VideoOverlay({
     required this.video,
+    required this.isLiked,
     required this.onLike,
     required this.onComment,
     required this.onShare,
@@ -312,22 +404,48 @@ class _VideoOverlay extends StatefulWidget {
 }
 
 class _VideoOverlayState extends State<_VideoOverlay> {
-  late bool _isLiked;
-  late int _likeCount;
+  // We use the widget's isLiked initially, but optimistic updates within
+  // this local state machine make it respond instantly until the parent
+  // rebuilds with the true updated state.
 
   @override
   void initState() {
     super.initState();
-    _isLiked = false;
-    _likeCount = widget.video.likeCount;
   }
 
-  void _toggleLike() {
-    setState(() {
-      _isLiked = !_isLiked;
-      _likeCount += _isLiked ? 1 : -1;
-    });
-    widget.onLike();
+  void _onAvatarTap() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ProfileScreen(uid: widget.video.creatorId),
+      ),
+    );
+  }
+
+  void _onTitleTap() {
+    if (widget.video.tmdbId == null) return;
+
+    final item = MediaItem(
+      id: widget.video.tmdbId!,
+      title: widget.video.tmdbTitle ?? 'Unknown',
+      overview: "",
+      imageUrl: "",
+      voteAverage: 0.0,
+      mediaType: widget.video.tmdbType ?? "movie",
+      backdropPath: "",
+      posterPath: "",
+      releaseDate: "",
+      genreIds: [],
+    );
+
+    final provider = Provider.of<MovieProvider>(context, listen: false);
+    final result = provider.convertMediaItemToResult(item);
+    provider.selectSearchItem([result], 0);
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const GenericDetailsScreen()),
+    );
   }
 
   @override
@@ -337,38 +455,65 @@ class _VideoOverlayState extends State<_VideoOverlay> {
       children: [
         // Right action column
         Positioned(
-          right: 12,
-          bottom: 80,
+          right: 3.w, // originally 12
+          bottom: 10
+              .h, // originally 80, adjusted slightly for nav/progress bar visually
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               _ActionButton(
-                icon: _isLiked ? Icons.favorite : Icons.favorite_border,
-                label: '$_likeCount',
-                color: _isLiked ? Colors.red : Colors.white,
-                onTap: _toggleLike,
+                icon: widget.isLiked ? Icons.favorite : Icons.favorite_border,
+                label: '${widget.video.likeCount}',
+                color: widget.isLiked ? Colors.red : Colors.white,
+                onTap: widget.onLike,
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: 2.5.h), // originally 20
               _ActionButton(
                 icon: Icons.chat_bubble_outline,
                 label: '${widget.video.commentCount}',
                 onTap: widget.onComment,
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: 2.5.h),
               _ActionButton(
                 icon: Icons.share,
-                label: 'Share',
+                label: '${widget.video.shareCount}',
                 onTap: widget.onShare,
               ),
-              const SizedBox(height: 20),
-              CircleAvatar(
-                radius: 20,
-                backgroundImage: widget.video.creatorAvatarUrl.isNotEmpty
-                    ? CachedNetworkImageProvider(widget.video.creatorAvatarUrl)
-                    : null,
-                child: widget.video.creatorAvatarUrl.isEmpty
-                    ? const Icon(Icons.person)
-                    : null,
+              SizedBox(height: 2.5.h),
+              GestureDetector(
+                onTap: _onAvatarTap,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.bottomCenter,
+                  children: [
+                    CircleAvatar(
+                      radius: 20.sp, // originally 20
+                      backgroundImage: widget.video.creatorAvatarUrl.isNotEmpty
+                          ? CachedNetworkImageProvider(
+                              widget.video.creatorAvatarUrl,
+                            )
+                          : null,
+                      child: widget.video.creatorAvatarUrl.isEmpty
+                          ? Icon(Icons.person, size: 20.sp)
+                          : null,
+                    ),
+                    Positioned(
+                      bottom: -8,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A8927), // Theme primary
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.add,
+                          color: Colors.white,
+                          size: 14.sp,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -376,26 +521,94 @@ class _VideoOverlayState extends State<_VideoOverlay> {
 
         // Bottom-left metadata
         Positioned(
-          left: 12,
-          bottom: 70,
-          right: 72,
+          left: 3.w, // originally 12
+          bottom: 8.h, // originally 70
+          right: 18.w, // originally 72
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                '@${widget.video.creatorName}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+              if (widget.video.title.isNotEmpty) ...[
+                GestureDetector(
+                  onTap: _onTitleTap,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 2.w,
+                      vertical: 0.5.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(
+                        0xFF1A8927,
+                      ).withOpacity(0.8), // Theme primary color
+                      borderRadius: BorderRadius.circular(8.sp),
+                      border: Border.all(color: Colors.white24, width: 0.5),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.movie_creation_outlined,
+                          color: Colors.white,
+                          size: 12.sp,
+                        ),
+                        SizedBox(width: 1.w),
+                        Flexible(
+                          child: Text(
+                            widget.video.title,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        SizedBox(width: 1.w),
+                        Icon(
+                          Icons.chevron_right,
+                          color: Colors.white,
+                          size: 12.sp,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(height: 1.h),
+              ],
+              GestureDetector(
+                onTap: _onAvatarTap,
+                child: Text(
+                  '@${widget.video.creatorName}',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14.sp, // originally 16
+                    shadows: const [
+                      Shadow(
+                        color: Colors.black87,
+                        blurRadius: 4,
+                        offset: Offset(1, 1),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               if (widget.video.description.isNotEmpty) ...[
-                const SizedBox(height: 8),
+                SizedBox(height: 1.h), // originally 8
                 Text(
                   widget.video.description,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12.sp, // originally 14
+                    shadows: const [
+                      Shadow(
+                        color: Colors.black87,
+                        blurRadius: 4,
+                        offset: Offset(1, 1),
+                      ),
+                    ],
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -431,14 +644,21 @@ class _ActionButton extends StatelessWidget {
       onTap: onTap,
       child: Column(
         children: [
-          Icon(icon, color: color, size: 32),
-          const SizedBox(height: 4),
+          Icon(icon, color: color, size: 24.sp), // originally 32
+          SizedBox(height: 0.5.h), // originally 4
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white,
-              fontSize: 12,
+              fontSize: 10.sp, // originally 12
               fontWeight: FontWeight.bold,
+              shadows: const [
+                Shadow(
+                  color: Colors.black54,
+                  blurRadius: 2,
+                  offset: Offset(1, 1),
+                ),
+              ],
             ),
           ),
         ],

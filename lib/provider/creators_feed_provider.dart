@@ -87,8 +87,16 @@ class CreatorsFeedProvider extends ChangeNotifier {
         _dataSource.batchInsertImpressions(impressions);
       }
 
-      // Pre-resolve URLs for first 3 videos so controller manager has them fast.
+      // Prefetch URLs first
       _prefetchUrls(0, 3);
+
+      // Fetch like states for these videos
+      if (data.isNotEmpty) {
+        final videoIds = data.map((v) => v.id).toList();
+        final likeStates = await _dataSource.fetchUserLikeStates(videoIds);
+        _likedVideos.clear();
+        _likedVideos.addAll(likeStates);
+      }
 
       // Reset realtime subscription (old video IDs are stale after refresh)
       _currentViewIndex = -1;
@@ -143,6 +151,11 @@ class CreatorsFeedProvider extends ChangeNotifier {
 
         // Pre-resolve URLs for incoming videos.
         _prefetchUrls(_videos.length - data.length, _videos.length);
+
+        // Fetch like states for incoming videos
+        final videoIds = data.map((v) => v.id).toList();
+        final likeStates = await _dataSource.fetchUserLikeStates(videoIds);
+        _likedVideos.addAll(likeStates);
       }
     } catch (e) {
       debugPrint('[CreatorsFeed] Error fetching more: $e');
@@ -196,6 +209,22 @@ class CreatorsFeedProvider extends ChangeNotifier {
   void recordShare(int index) {
     if (index < 0 || index >= _videos.length) return;
     _dataSource.recordShare(_videos[index].id);
+
+    // Optimistic UI update
+    final video = _videos[index];
+    _videos[index] = video.copyWith(shareCount: video.shareCount + 1);
+    notifyListeners();
+  }
+
+  /// Record a comment for the video at [index]. Updates interaction flag.
+  void recordComment(int index) {
+    if (index < 0 || index >= _videos.length) return;
+    _dataSource.recordComment(_videos[index].id);
+
+    // Local optimistic update for the comment count
+    final video = _videos[index];
+    _videos[index] = video.copyWith(commentCount: video.commentCount + 1);
+    notifyListeners();
   }
 
   /// Pre-warms the URL cache for the given range of video indices.
@@ -233,10 +262,19 @@ class CreatorsFeedProvider extends ChangeNotifier {
     _statsChannel = _dataSource.subscribeLiveStats(video.id, (newRecord) {
       // Update local video data with live stats
       if (index < _videos.length && _videos[index].id == video.id) {
-        // CreatorVideo is immutable — for now just log
-        debugPrint(
-          '[CreatorsFeed] Live stats update: likes=${newRecord['like_count']}, views=${newRecord['view_count']}',
+        final currentVideo = _videos[index];
+        _videos[index] = currentVideo.copyWith(
+          likeCount: newRecord['like_count'] as int? ?? currentVideo.likeCount,
+          viewCount: newRecord['view_count'] as int? ?? currentVideo.viewCount,
+          commentCount:
+              newRecord['comment_count'] as int? ?? currentVideo.commentCount,
+          shareCount:
+              newRecord['share_count'] as int? ?? currentVideo.shareCount,
+          engagementScore:
+              (newRecord['engagement_score'] as num?)?.toDouble() ??
+              currentVideo.engagementScore,
         );
+        notifyListeners();
       }
     });
   }

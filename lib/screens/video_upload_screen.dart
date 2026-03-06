@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:sizer/sizer.dart';
 
 class VideoUploadScreen extends StatefulWidget {
   const VideoUploadScreen({super.key});
@@ -133,35 +134,40 @@ class _VideoUploadScreenState extends State<VideoUploadScreen> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.close, color: Colors.white),
+            icon: Icon(Icons.close, color: Theme.of(context).iconTheme.color),
             onPressed: () => Navigator.pop(context),
           ),
-          title: const Text(
+          title: Text(
             'New Post',
-            style: TextStyle(fontWeight: FontWeight.bold),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           actions: [
             TextButton(
               onPressed: () {
                 // Save as draft logic
               },
-              child: const Text('Drafts', style: TextStyle(color: Colors.red)),
+              child: Text(
+                'Drafts',
+                style: TextStyle(color: Theme.of(context).colorScheme.primary),
+              ),
             ),
           ],
         ),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(4.w),
           child: Column(
             children: [
               // Preview Area
               GestureDetector(
                 onTap: _pickVideo,
                 child: Container(
-                  height: 400,
+                  height: 45.h,
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E1E1E),
-                    borderRadius: BorderRadius.circular(16),
+                    color: Theme.of(context).cardTheme.color,
+                    borderRadius: BorderRadius.circular(4.w),
                     image: _videoFile == null
                         ? null
                         : (_thumbnailFile != null
@@ -176,18 +182,27 @@ class _VideoUploadScreenState extends State<VideoUploadScreen> {
                               : null),
                   ),
                   child: _videoFile == null
-                      ? const Column(
+                      ? Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
                               Icons.video_library,
-                              color: Colors.white54,
-                              size: 48,
+                              color: Theme.of(
+                                context,
+                              ).iconTheme.color?.withOpacity(0.5),
+                              size: 40.sp,
                             ),
-                            SizedBox(height: 12),
+                            SizedBox(height: 2.h),
                             Text(
                               'Tap to select video',
-                              style: TextStyle(color: Colors.white54),
+                              style: Theme.of(context).textTheme.bodyLarge
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .textTheme
+                                        .bodyLarge
+                                        ?.color
+                                        ?.withOpacity(0.6),
+                                  ),
                             ),
                           ],
                         )
@@ -205,25 +220,29 @@ class _VideoUploadScreenState extends State<VideoUploadScreen> {
 
                             // Play icon overlay
                             Container(
-                              padding: const EdgeInsets.all(12),
+                              padding: EdgeInsets.all(3.w),
                               decoration: BoxDecoration(
                                 color: Colors.white.withOpacity(0.2),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.play_arrow,
                                 color: Colors.white,
-                                size: 32,
+                                size: 24.sp,
                               ),
                             ),
 
                             // Edit/Crop button
                             Positioned(
-                              bottom: 16,
-                              right: 16,
+                              bottom: 2.h,
+                              right: 4.w,
                               child: IconButton(
                                 onPressed: _pickVideo, // Re-pick
-                                icon: const Icon(Icons.crop_rotate),
+                                icon: Icon(
+                                  Icons.crop_rotate,
+                                  size: 16.sp,
+                                  color: Colors.white,
+                                ),
                                 style: IconButton.styleFrom(
                                   backgroundColor: Colors.black54,
                                 ),
@@ -233,22 +252,30 @@ class _VideoUploadScreenState extends State<VideoUploadScreen> {
                         ),
                 ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 2.h),
 
               // Thumbnail Picker Button
               if (_videoFile != null)
                 TextButton.icon(
                   onPressed: _pickThumbnail,
-                  icon: const Icon(Icons.image, color: Colors.white70),
+                  icon: Icon(
+                    Icons.image,
+                    color: Theme.of(context).iconTheme.color?.withOpacity(0.7),
+                    size: 16.sp,
+                  ),
                   label: Text(
                     _thumbnailFile == null
                         ? 'Select Cover Image'
                         : 'Change Cover Image',
-                    style: const TextStyle(color: Colors.white70),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.color?.withOpacity(0.7),
+                    ),
                   ),
                 ),
 
-              const SizedBox(height: 24),
+              SizedBox(height: 3.h),
 
               // Tag Title
               _buildSectionTitle('Tag Title'),
@@ -257,45 +284,54 @@ class _VideoUploadScreenState extends State<VideoUploadScreen> {
                   _showTmdbSearchSheet();
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E1E1E),
-                    borderRadius: BorderRadius.circular(12),
+                    color: Theme.of(context).cardTheme.color,
+                    borderRadius: BorderRadius.circular(3.w),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.movie, color: Colors.red, size: 20),
-                      const SizedBox(width: 12),
+                      Icon(
+                        Icons.movie,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 16.sp,
+                      ),
+                      SizedBox(width: 3.w),
                       Expanded(
                         child: Text(
                           _titleController.text.isEmpty
                               ? 'Search Movies or TV Shows...'
                               : _titleController.text,
-                          style: TextStyle(
-                            color: _titleController.text.isEmpty
-                                ? Colors.white38
-                                : Colors.white,
-                            fontSize: 16,
-                          ),
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(
+                                color: _titleController.text.isEmpty
+                                    ? Theme.of(context)
+                                          .textTheme
+                                          .bodyLarge
+                                          ?.color
+                                          ?.withOpacity(0.4)
+                                    : Theme.of(
+                                        context,
+                                      ).textTheme.bodyLarge?.color,
+                              ),
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 1.5.w,
+                          vertical: 0.5.h,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(4),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(1.w),
                         ),
-                        child: const Text(
+                        child: Text(
                           'TMDB',
                           style: TextStyle(
-                            color: Colors.red,
-                            fontSize: 10,
+                            color: Theme.of(context).colorScheme.primary,
+                            fontSize: 10.sp,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -304,96 +340,116 @@ class _VideoUploadScreenState extends State<VideoUploadScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: 3.h),
 
               // Caption
               _buildSectionTitle('Caption', trailing: '0/2200'),
               TextField(
                 controller: _captionController,
-                style: const TextStyle(color: Colors.white),
+                style: Theme.of(context).textTheme.bodyLarge,
                 maxLines: 4,
                 decoration: InputDecoration(
                   hintText: 'What did you think? Share your review here...',
-                  hintStyle: const TextStyle(color: Colors.white38),
+                  hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: Theme.of(
+                      context,
+                    ).textTheme.bodyLarge?.color?.withOpacity(0.4),
+                  ),
                   filled: true,
-                  fillColor: const Color(0xFF1E1E1E),
+                  fillColor: Theme.of(context).cardTheme.color,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(3.w),
                     borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(3.w),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(3.w),
+                    borderSide: BorderSide(
+                      color: Theme.of(context).colorScheme.primary,
+                      width: 1.5,
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: 3.h),
 
               // Spoilers Toggle
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
+                padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E1E1E),
-                  borderRadius: BorderRadius.circular(12),
+                  color: Theme.of(context).cardTheme.color,
+                  borderRadius: BorderRadius.circular(3.w),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Column(
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'Contains Spoilers?',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         Text(
                           'Mark to blur preview for others',
-                          style: TextStyle(color: Colors.white54, fontSize: 12),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).textTheme.bodySmall?.color?.withOpacity(0.7),
+                              ),
                         ),
                       ],
                     ),
                     Switch(
                       value: _containsSpoilers,
                       onChanged: (v) => setState(() => _containsSpoilers = v),
-                      activeColor: Colors.red,
+                      activeColor: Theme.of(context).colorScheme.primary,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
+              SizedBox(height: 4.h),
 
               // Submit Button
               SizedBox(
                 width: double.infinity,
-                height: 56,
+                height: 7.h,
                 child: ElevatedButton(
                   onPressed: _submitVideo,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE50914),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(28),
+                      borderRadius: BorderRadius.circular(8.w),
                     ),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         'Submit for Review',
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 14.sp,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: Colors
+                              .white, // Elevated button text remains explicitly light
                         ),
                       ),
-                      SizedBox(width: 8),
-                      Icon(Icons.arrow_forward, color: Colors.white),
+                      SizedBox(width: 2.w),
+                      Icon(
+                        Icons.arrow_forward,
+                        color: Colors.white,
+                        size: 16.sp,
+                      ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 32),
+              SizedBox(height: 4.h),
             ],
           ),
         ),
@@ -430,22 +486,23 @@ class _VideoUploadScreenState extends State<VideoUploadScreen> {
 
   Widget _buildSectionTitle(String title, {String? trailing}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.only(bottom: 1.h),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             title,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: Theme.of(context).textTheme.titleMedium?.color?.withOpacity(0.7),
               fontWeight: FontWeight.bold,
             ),
           ),
           if (trailing != null)
             Text(
               trailing,
-              style: const TextStyle(color: Colors.white38, fontSize: 12),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.4),
+              ),
             ),
         ],
       ),
@@ -511,34 +568,36 @@ class _TmdbSearchContentState extends State<_TmdbSearchContent> {
       children: [
         // Handle
         Container(
-          width: 40,
-          height: 4,
-          margin: const EdgeInsets.symmetric(vertical: 12),
+          width: 10.w,
+          height: 0.6.h,
+          margin: EdgeInsets.symmetric(vertical: 1.5.h),
           decoration: BoxDecoration(
-            color: Colors.grey[700],
-            borderRadius: BorderRadius.circular(2),
+            color: Theme.of(context).dividerTheme.color,
+            borderRadius: BorderRadius.circular(1.w),
           ),
         ),
 
         // Search Bar
         Padding(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(4.w),
           child: TextField(
             controller: _searchController,
             autofocus: true,
-            style: const TextStyle(color: Colors.white),
+            style: Theme.of(context).textTheme.bodyLarge,
             onChanged: _onSearchChanged,
             decoration: InputDecoration(
               hintText: 'Search movies & TV shows...',
-              hintStyle: const TextStyle(color: Colors.white38),
-              prefixIcon: const Icon(Icons.search, color: Colors.white54),
+              hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(0.4),
+              ),
+              prefixIcon: Icon(Icons.search, color: Theme.of(context).iconTheme.color?.withOpacity(0.5)),
               filled: true,
-              fillColor: Colors.black26,
+              fillColor: Theme.of(context).cardTheme.color,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(3.w),
                 borderSide: BorderSide.none,
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              contentPadding: EdgeInsets.symmetric(horizontal: 4.w),
             ),
           ),
         ),
@@ -546,8 +605,8 @@ class _TmdbSearchContentState extends State<_TmdbSearchContent> {
         // Results
         Expanded(
           child: _isLoading
-              ? const Center(
-                  child: CircularProgressIndicator(color: Colors.red),
+              ? Center(
+                  child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
                 )
               : _results.isEmpty
               ? Center(
@@ -556,67 +615,73 @@ class _TmdbSearchContentState extends State<_TmdbSearchContent> {
                     children: [
                       Icon(
                         Icons.movie_filter,
-                        size: 48,
-                        color: Colors.grey[800],
+                        size: 40.sp,
+                        color: Theme.of(context).iconTheme.color?.withOpacity(0.2),
                       ),
-                      const SizedBox(height: 16),
-                      const Text(
+                      SizedBox(height: 2.h),
+                      Text(
                         'Search for a title to tag',
-                        style: TextStyle(color: Colors.white38),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.4),
+                        ),
                       ),
                     ],
                   ),
                 )
               : ListView.builder(
                   itemCount: _results.length,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: EdgeInsets.symmetric(horizontal: 4.w),
                   itemBuilder: (context, index) {
                     final item = _results[index];
                     return ListTile(
                       onTap: () => widget.onSelect(item),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                      contentPadding: EdgeInsets.symmetric(vertical: 1.h),
                       leading: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(2.w),
                         child: item.posterPath.isNotEmpty
                             ? Image.network(
                                 'https://image.tmdb.org/t/p/w92${item.posterPath}',
-                                width: 50,
-                                height: 75,
+                                width: 13.w,
+                                height: 9.h,
                                 fit: BoxFit.cover,
                                 errorBuilder: (_, __, ___) => Container(
-                                  width: 50,
-                                  height: 75,
-                                  color: Colors.grey[800],
-                                  child: const Icon(
+                                  width: 13.w,
+                                  height: 9.h,
+                                  color: Theme.of(context).cardTheme.color,
+                                  child: Icon(
                                     Icons.broken_image,
-                                    size: 20,
+                                    size: 16.sp,
+                                    color: Theme.of(context).iconTheme.color?.withOpacity(0.3),
                                   ),
                                 ),
                               )
                             : Container(
-                                width: 50,
-                                height: 75,
-                                color: Colors.grey[800],
-                                child: const Icon(
+                                width: 13.w,
+                                height: 9.h,
+                                color: Theme.of(context).cardTheme.color,
+                                child: Icon(
                                   Icons.movie,
-                                  color: Colors.white24,
+                                  color: Theme.of(context).iconTheme.color?.withOpacity(0.2),
+                                  size: 16.sp,
                                 ),
                               ),
                       ),
                       title: Text(
                         item.title,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       subtitle: Text(
                         '${item.mediaType.toUpperCase()} • ${item.releaseDate.split('-').first}',
-                        style: const TextStyle(color: Colors.white54),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.6),
+                        ),
                       ),
-                      trailing: const Icon(
+                      trailing: Icon(
                         Icons.add_circle_outline,
-                        color: Colors.white38,
+                        color: Theme.of(context).iconTheme.color?.withOpacity(0.4),
+                        size: 20.sp,
                       ),
                     );
                   },

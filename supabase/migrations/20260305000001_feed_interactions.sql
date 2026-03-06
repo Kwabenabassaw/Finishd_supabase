@@ -51,29 +51,30 @@ CREATE POLICY "Creators view interactions on their videos"
     WHERE id = video_id AND creator_id = auth.uid()
   ));
 
--- ── Feed Impressions ────────────────────────────────────────────────────────
--- Tracks which videos were served to each user and from which source.
+-- ── Feed Impressions (ALTER existing table from 20250215000008) ──────────────
+-- The table already exists with columns: user_id, video_id, clicked, shown_at.
+-- We add the missing columns needed by the personalized feed pipeline.
 
-CREATE TABLE IF NOT EXISTS public.feed_impressions (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  video_id    UUID NOT NULL REFERENCES public.creator_videos(id) ON DELETE CASCADE,
-  position    INT NOT NULL,
-  feed_source TEXT NOT NULL CHECK (feed_source IN (
-    'personalized', 'trending', 'social', 'explore'
-  )),
-  served_at   TIMESTAMPTZ DEFAULT NOW(),
-  watched     BOOLEAN DEFAULT FALSE
-);
+ALTER TABLE public.feed_impressions
+  ADD COLUMN IF NOT EXISTS position    INT DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS feed_source TEXT DEFAULT 'explore',
+  ADD COLUMN IF NOT EXISTS watched     BOOLEAN DEFAULT FALSE;
 
-CREATE INDEX idx_fi_user_served ON public.feed_impressions(user_id, served_at DESC);
-CREATE INDEX idx_fi_video       ON public.feed_impressions(video_id);
+-- Create index on shown_at (reuse existing column name instead of served_at)
+CREATE INDEX IF NOT EXISTS idx_fi_feed_source ON public.feed_impressions(feed_source);
 
-ALTER TABLE public.feed_impressions ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users manage own impressions"
-  ON public.feed_impressions FOR ALL
-  USING (auth.uid() = user_id);
+-- RLS policy for full CRUD (existing policies only cover INSERT and SELECT)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'feed_impressions' AND policyname = 'Users manage own impressions'
+  ) THEN
+    CREATE POLICY "Users manage own impressions"
+      ON public.feed_impressions FOR ALL
+      USING (auth.uid() = user_id);
+  END IF;
+END $$;
 
 -- ── Add share_count to creator_videos ────────────────────────────────────────
 

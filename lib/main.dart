@@ -304,7 +304,9 @@ class _HomePageState extends State<HomePage> {
         user.role == 'creator' &&
         user.creatorStatus == 'approved';
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isSystemDark = Theme.of(context).brightness == Brightness.dark;
+    // Always force the navbar to be dark when viewing video feeds (Home tab, index 0).
+    final isDark = internalIndex == 0 ? true : isSystemDark;
 
     // Shared tap handler for both navbars
     void handleTabTap(int newInternalIndex) {

@@ -27,7 +27,8 @@ class _FeedTabsWrapperState extends State<FeedTabsWrapper> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<YoutubeFeedProvider>();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Force dark mode for the top area since videos are rendered on black backgrounds.
+    final isDark = true;
 
     // Map FeedType to tab index
     int selectedIndex;

@@ -26,10 +26,11 @@ class CommentService {
         .single();
 
     // Map response back to CommentData
-    // Note: userName and userAvatar are currently not in video_comments table,
-    // they should be joined from profiles if needed, or we keep them in CommentData
-    // as it's a UI model.
-    return CommentData.fromJson(response);
+    // Note: The insert response only returns the video_comments row, so we need to
+    // explicitly supply the userName and userAvatar that we have on the client
+    // so it doesn't show up as 'Anonymous' until refresh.
+    final comment = CommentData.fromJson(response);
+    return comment.copyWith(userName: userName, userAvatar: userAvatar);
   }
 
   /// Delete a comment

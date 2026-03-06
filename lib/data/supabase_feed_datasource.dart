@@ -162,27 +162,143 @@ class SupabaseFeedDataSource {
     }
   }
 
-  /// Toggle like (atomic increment/decrement).
+  /// Toggle like (insert/delete from video_reactions and upsert video_interactions flag)
   Future<void> toggleLike(String videoId, bool isLiked) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return;
+
     try {
+      if (isLiked) {
+        await _client.from('video_reactions').upsert({
+          'video_id': videoId,
+          'user_id': userId,
+          'reaction_type': 'heart',
+        }, onConflict: 'video_id, user_id');
+      } else {
+        await _client.from('video_reactions').delete().match({
+          'video_id': videoId,
+          'user_id': userId,
+          'reaction_type': 'heart',
+        });
+      }
+
+      // Update interaction flag
       await _client.rpc(
-        isLiked ? 'increment_video_likes' : 'decrement_video_likes',
-        params: {'p_video_id': videoId},
+        'upsert_video_interaction',
+        params: {
+          'p_video_id': videoId,
+          'p_watch_time_ms': 0,
+          'p_duration_ms': 0,
+          'p_completed': false,
+          'p_skipped': false,
+          'p_rewatched': false,
+        },
       );
+
+      // Direct update of the `liked` flag since upsert_video_interaction
+      // doesn't expose it directly yet.
+      await _client
+          .from('video_interactions')
+          .update({
+            'liked': isLiked,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .match({'video_id': videoId, 'user_id': userId});
     } catch (e) {
       debugPrint('[FeedDataSource] toggleLike failed: $e');
     }
   }
 
-  /// Record a share (atomic increment).
+  /// Fetch like states for the current user for a list of video IDs
+  Future<Map<String, bool>> fetchUserLikeStates(List<String> videoIds) async {
+    if (videoIds.isEmpty) return {};
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return {};
+
+    try {
+      final response = await _client
+          .from('video_reactions')
+          .select('video_id')
+          .eq('user_id', userId)
+          .eq('reaction_type', 'heart')
+          .inFilter('video_id', videoIds);
+
+      final Map<String, bool> likedMap = {};
+      final List<dynamic> data = response as List<dynamic>;
+      for (var row in data) {
+        likedMap[row['video_id'] as String] = true;
+      }
+      return likedMap;
+    } catch (e) {
+      debugPrint('[FeedDataSource] fetchUserLikeStates failed: $e');
+      return {};
+    }
+  }
+
+  /// Record a share (atomic increment + set shared interaction flag).
   Future<void> recordShare(String videoId) async {
+    final userId = _client.auth.currentUser?.id;
     try {
       await _client.rpc(
         'increment_video_shares',
         params: {'p_video_id': videoId},
       );
+
+      if (userId != null) {
+        // Ensure an interaction row exists
+        await _client.rpc(
+          'upsert_video_interaction',
+          params: {
+            'p_video_id': videoId,
+            'p_watch_time_ms': 0,
+            'p_duration_ms': 0,
+            'p_completed': false,
+            'p_skipped': false,
+            'p_rewatched': false,
+          },
+        );
+
+        await _client
+            .from('video_interactions')
+            .update({
+              'shared': true,
+              'updated_at': DateTime.now().toIso8601String(),
+            })
+            .match({'video_id': videoId, 'user_id': userId});
+      }
     } catch (e) {
       debugPrint('[FeedDataSource] recordShare failed: $e');
+    }
+  }
+
+  /// Set the commented interaction flag
+  Future<void> recordComment(String videoId) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    try {
+      // Ensure an interaction row exists
+      await _client.rpc(
+        'upsert_video_interaction',
+        params: {
+          'p_video_id': videoId,
+          'p_watch_time_ms': 0,
+          'p_duration_ms': 0,
+          'p_completed': false,
+          'p_skipped': false,
+          'p_rewatched': false,
+        },
+      );
+
+      await _client
+          .from('video_interactions')
+          .update({
+            'commented': true,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .match({'video_id': videoId, 'user_id': userId});
+    } catch (e) {
+      debugPrint('[FeedDataSource] recordComment failed: $e');
     }
   }
 

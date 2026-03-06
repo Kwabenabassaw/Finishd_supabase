@@ -2,6 +2,7 @@ import 'package:finishd/LoadingWidget/LogoLoading.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:sizer/sizer.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../Widget/comments/comment_sheet.dart';
 import '../provider/creators_feed_provider.dart';
@@ -9,6 +10,7 @@ import '../provider/app_navigation_provider.dart';
 import '../core/video_controller_pool.dart';
 import '../core/tiktok_scroll_physics.dart';
 import '../core/cache/feed_cache_manager.dart';
+import '../main.dart';
 import 'creator_video_player.dart';
 
 /// TikTok-style vertical feed for creator videos.
@@ -36,7 +38,7 @@ class CreatorsFeedScreen extends StatefulWidget {
 }
 
 class _CreatorsFeedScreenState extends State<CreatorsFeedScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, RouteAware {
   late final PageController _pageController;
   late final VideoControllerPool _pool;
   final FeedCacheManager _cacheManager = FeedCacheManager();
@@ -74,6 +76,12 @@ class _CreatorsFeedScreenState extends State<CreatorsFeedScreen>
         context.read<AppNavigationProvider>().addListener(_onNavChanged);
       }
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
   }
 
   /// Called when bottom nav tab changes
@@ -115,7 +123,24 @@ class _CreatorsFeedScreenState extends State<CreatorsFeedScreen>
   }
 
   @override
+  void didPushNext() {
+    // Route was pushed onto navigator and is now on top of this route.
+    _pool.pauseAll();
+    _provider.pauseTracking();
+  }
+
+  @override
+  void didPopNext() {
+    // Covering route was popped off the navigator.
+    if (!_pausedByNav) {
+      _pool.resumeCurrent();
+      _provider.resumeTracking();
+    }
+  }
+
+  @override
   void dispose() {
+    routeObserver.unsubscribe(this);
     // Remove nav listener
     try {
       context.read<AppNavigationProvider>().removeListener(_onNavChanged);
@@ -166,17 +191,17 @@ class _CreatorsFeedScreenState extends State<CreatorsFeedScreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
+                Icon(
                   Icons.error_outline,
                   color: Colors.white54,
-                  size: 48,
+                  size: 32.sp, // replaced 48
                 ),
-                const SizedBox(height: 12),
-                const Text(
+                SizedBox(height: 1.5.h), // replaced 12
+                Text(
                   'Could not load videos',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(color: Colors.white, fontSize: 14.sp),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 1.h), // replaced 8
                 TextButton(
                   onPressed: () async {
                     await provider.refresh();
@@ -233,18 +258,23 @@ class _CreatorsFeedScreenState extends State<CreatorsFeedScreen>
               return CreatorVideoPlayer(
                 key: ValueKey(video.id),
                 video: video,
+                isLiked: provider.isLiked(video.id),
                 controller: controller,
                 isVisible: index == _currentIndex,
                 resolvedThumbnailUrl: thumbnailUrl,
                 onLike: () {
                   provider.toggleLike(index);
                 },
-                onComment: () {
+                onComment: () async {
                   final user = Supabase.instance.client.auth.currentUser;
                   if (user == null) return;
 
                   final metadata = user.userMetadata;
-                  CommentSheet.show(
+                  // We record the interaction right away for simply opening the comments,
+                  // or we could do it after. Let's do it immediately.
+                  provider.recordComment(index);
+
+                  await CommentSheet.show(
                     context: context,
                     videoId: video.id,
                     userId: user.id,

@@ -116,4 +116,52 @@ class CreatorVideo {
       feedSource: json['feed_source'] as String?,
     );
   }
+
+  CreatorVideo copyWith({
+    String? id,
+    String? creatorId,
+    String? videoUrl,
+    String? thumbnailUrl,
+    String? title,
+    String? description,
+    int? viewCount,
+    int? likeCount,
+    int? commentCount,
+    int? shareCount,
+    DateTime? createdAt,
+    double? engagementScore,
+    int? tmdbId,
+    String? tmdbType,
+    String? tmdbTitle,
+    int? durationSeconds,
+    bool? spoiler,
+    List<String>? tags,
+    String? feedSource,
+    String? creatorName,
+    String? creatorAvatarUrl,
+  }) {
+    return CreatorVideo(
+      id: id ?? this.id,
+      creatorId: creatorId ?? this.creatorId,
+      videoUrl: videoUrl ?? this.videoUrl,
+      thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      viewCount: viewCount ?? this.viewCount,
+      likeCount: likeCount ?? this.likeCount,
+      commentCount: commentCount ?? this.commentCount,
+      shareCount: shareCount ?? this.shareCount,
+      createdAt: createdAt ?? this.createdAt,
+      engagementScore: engagementScore ?? this.engagementScore,
+      tmdbId: tmdbId ?? this.tmdbId,
+      tmdbType: tmdbType ?? this.tmdbType,
+      tmdbTitle: tmdbTitle ?? this.tmdbTitle,
+      durationSeconds: durationSeconds ?? this.durationSeconds,
+      spoiler: spoiler ?? this.spoiler,
+      tags: tags ?? this.tags,
+      feedSource: feedSource ?? this.feedSource,
+      creatorName: creatorName ?? this.creatorName,
+      creatorAvatarUrl: creatorAvatarUrl ?? this.creatorAvatarUrl,
+    );
+  }
 }
