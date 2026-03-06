@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:finishd/db/app_database.dart';
 import 'package:finishd/services/chat_sync_service.dart';
 import 'package:finishd/services/moderation_listener_service.dart';
@@ -89,12 +90,15 @@ class AuthService {
     }
   }
 
-  Future<String> _generateUniqueUsername(String firstName, String lastName) async {
+  Future<String> _generateUniqueUsername(
+    String firstName,
+    String lastName,
+  ) async {
     String base = (firstName + lastName)
         .toLowerCase()
         .replaceAll(RegExp(r'\s+'), '')
         .replaceAll(RegExp(r'[^a-z0-9]'), '');
-    
+
     if (base.isEmpty) {
       base = 'user${DateTime.now().millisecondsSinceEpoch}';
     }
@@ -105,7 +109,7 @@ class AuthService {
       "$base${random.nextInt(99)}",
       "$base${random.nextInt(999)}",
       "${base}_${random.nextInt(9)}",
-      "$base${DateTime.now().millisecond}"
+      "$base${DateTime.now().millisecond}",
     ];
 
     for (String suggestion in suggestions) {
@@ -118,7 +122,7 @@ class AuthService {
         return suggestion;
       }
     }
-    
+
     return "$base${DateTime.now().millisecondsSinceEpoch}";
   }
 
@@ -130,7 +134,10 @@ class AuthService {
     required String lastName,
   }) async {
     try {
-      final generatedUsername = await _generateUniqueUsername(firstName, lastName);
+      final generatedUsername = await _generateUniqueUsername(
+        firstName,
+        lastName,
+      );
 
       final result = await _supabase.auth.signUp(
         email: email,
@@ -214,20 +221,65 @@ class AuthService {
   }
 
   // Sign In with Google
-  // Uses Supabase OAuth
   Future<Map<String, dynamic>?> signInWithGoogle() async {
     try {
-      // Perform web-based OAuth with deep link redirect
-      // The redirectTo must match the scheme configured in AndroidManifest.xml
-      // and be added to Supabase Auth settings as an allowed redirect URL
-      await _supabase.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: 'finishd://login-callback',
+      /// TODO: Replace these with your actual IDs from Google Cloud Console
+      /// Instructions are provided in the google_sign_in_setup.md
+      const webClientId =
+          '754154797926-9mfabsqvs26ou257su2aqe785aspahsc.apps.googleusercontent.com';
+      const iosClientId =
+          '754154797926-o4jqbud7ml3bsucnqj0d36eeepffa7tc.apps.googleusercontent.com';
+
+      final GoogleSignIn signIn = GoogleSignIn.instance;
+
+      await signIn.initialize(
+        clientId: iosClientId,
+        serverClientId: webClientId,
       );
 
-      // The session is handled via deep link callback (DeepLinkService)
-      // Returns null here and let the auth state stream handle the session
-      return null;
+      late GoogleSignInAccount googleUser;
+      if (signIn.supportsAuthenticate()) {
+        googleUser = await signIn.authenticate();
+      } else {
+        throw 'Interactive sign-in not supported on this platform directly via authenticate().';
+      }
+
+      final googleAuth = await googleUser.authentication;
+      final idToken = googleAuth.idToken;
+
+      final authorization = await googleUser.authorizationClient
+          .authorizationForScopes([]);
+      final accessToken = authorization?.accessToken;
+
+      if (idToken == null) {
+        throw 'No ID Token found.';
+      }
+
+      final AuthResponse res = await _supabase.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+        accessToken: accessToken,
+      );
+
+      // Re-initialize Chat Sync
+      try {
+        await ChatSyncService.instance.reinitialize();
+      } catch (e) {
+        print('Error re-initializing chat sync: $e');
+      }
+
+      // Check onboarding state if there's a user
+      bool onboardingCompleted = false;
+      if (res.user != null) {
+        onboardingCompleted = await hasCompletedOnboarding(res.user!.id);
+      }
+
+      return {
+        'credential': res,
+        'isNewUser':
+            false, // signInWithIdToken doesn't return user creation stat easily, safely assume false
+        'onboardingCompleted': onboardingCompleted,
+      };
     } catch (e) {
       throw 'Google sign-in failed: $e';
     }
