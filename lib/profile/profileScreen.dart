@@ -364,7 +364,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           // Username
                           Text(
-                            user.username,
+                            '@${user.username}',
                             style: const TextStyle(
                               fontSize: 14,
                               color: Colors.grey,

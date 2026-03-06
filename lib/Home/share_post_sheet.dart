@@ -81,7 +81,7 @@ class _SharePostSheetState extends State<SharePostSheet> {
   }
 
   void _filterFriends() {
-    final query = _searchController.text.toLowerCase();
+    final query = _searchController.text.toLowerCase().replaceAll('@', '');
     setState(() {
       if (query.isEmpty) {
         _filteredFriends = _friends;
@@ -397,7 +397,7 @@ class _SharePostSheetState extends State<SharePostSheet> {
         ],
       ),
       title: Text(
-        user.username,
+        '@${user.username}',
         style: theme.textTheme.bodyMedium?.copyWith(
           fontWeight: FontWeight.bold,
         ),

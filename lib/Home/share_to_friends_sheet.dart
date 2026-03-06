@@ -102,7 +102,7 @@ class _ShareToFriendsSheetState extends State<ShareToFriendsSheet> {
   }
 
   void _filterFriends() {
-    final query = _searchController.text.toLowerCase();
+    final query = _searchController.text.toLowerCase().replaceAll('@', '');
     setState(() {
       if (query.isEmpty) {
         _filteredFriends = _friends;
@@ -396,7 +396,7 @@ class _ShareToFriendsSheetState extends State<ShareToFriendsSheet> {
         ],
       ),
       title: Text(
-        user.username.isNotEmpty ? user.username : 'User',
+        user.username.isNotEmpty ? '@${user.username}' : 'User',
         style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
       ),
       subtitle: user.firstName.isNotEmpty

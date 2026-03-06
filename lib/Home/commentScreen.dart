@@ -228,7 +228,7 @@ class CommentItem extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      comment.username,
+                      '@${comment.username}',
                       style: TextStyle(
                         color: Colors.grey.shade600,
                         fontSize: 13,

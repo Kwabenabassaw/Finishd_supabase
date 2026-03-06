@@ -111,10 +111,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Future<void> _register() async {
     if (_emailController.text.isEmpty ||
         _passwordController.text.isEmpty ||
-        _firstNameController.text.isEmpty ||
-        _lastNameController.text.isEmpty) {
+        _firstNameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all fields')),
+        const SnackBar(content: Text('Please fill in all required fields')),
+      );
+      return;
+    }
+
+    if (_firstNameController.text.trim().length < 2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('First name must be at least 2 characters')),
       );
       return;
     }
@@ -299,7 +305,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       // Last Name Field
                       Expanded(
                         child: LabeledTextField(
-                          label: 'Last Name',
+                          label: 'Last Name (Optional)',
                           hintText: 'Doe',
                           controller: _lastNameController,
                           textCapitalization: TextCapitalization.words,

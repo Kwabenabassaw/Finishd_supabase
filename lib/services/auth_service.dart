@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:finishd/db/app_database.dart';
 import 'package:finishd/services/chat_sync_service.dart';
@@ -88,6 +89,39 @@ class AuthService {
     }
   }
 
+  Future<String> _generateUniqueUsername(String firstName, String lastName) async {
+    String base = (firstName + lastName)
+        .toLowerCase()
+        .replaceAll(RegExp(r'\s+'), '')
+        .replaceAll(RegExp(r'[^a-z0-9]'), '');
+    
+    if (base.isEmpty) {
+      base = 'user${DateTime.now().millisecondsSinceEpoch}';
+    }
+
+    final random = Random();
+    final suggestions = [
+      base,
+      "$base${random.nextInt(99)}",
+      "$base${random.nextInt(999)}",
+      "${base}_${random.nextInt(9)}",
+      "$base${DateTime.now().millisecond}"
+    ];
+
+    for (String suggestion in suggestions) {
+      final response = await _supabase
+          .from('profiles')
+          .select('username')
+          .eq('username', suggestion)
+          .maybeSingle();
+      if (response == null) {
+        return suggestion;
+      }
+    }
+    
+    return "$base${DateTime.now().millisecondsSinceEpoch}";
+  }
+
   // Sign Up with Email & Password
   Future<Map<String, dynamic>> signUpWithEmailAndPassword({
     required String email,
@@ -96,13 +130,15 @@ class AuthService {
     required String lastName,
   }) async {
     try {
+      final generatedUsername = await _generateUniqueUsername(firstName, lastName);
+
       final result = await _supabase.auth.signUp(
         email: email,
         password: password,
         data: {
           'first_name': firstName,
           'last_name': lastName,
-          'username': '$firstName $lastName'.trim(),
+          'username': generatedUsername,
         },
       );
 

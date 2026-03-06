@@ -7,7 +7,6 @@ import 'package:finishd/Mainpage/Discover.dart';
 import 'package:finishd/Mainpage/Home.dart';
 import 'package:finishd/Mainpage/Messages.dart';
 import 'package:finishd/Mainpage/Profile.dart';
-import 'package:finishd/Mainpage/Watchlist.dart';
 import 'package:finishd/Mainpage/Tabs/comms_tab.dart';
 import 'package:finishd/notification/mainScreent.dart';
 import 'package:finishd/provider/MovieProvider.dart';
@@ -237,7 +236,6 @@ class HomePage extends StatefulWidget {
 final List<Widget> _pages = [
   Home(),
   Discover(),
-  Watchlist(),
   const CommsTab(),
   Messages(),
   Profile(),
@@ -317,8 +315,8 @@ class _HomePageState extends State<HomePage> {
         feedProvider.resumeCurrent();
       }
 
-      if (newInternalIndex == 4) {
-        // Messages (internal index 4)
+      if (newInternalIndex == 3) {
+        // Messages (internal index 3)
         Provider.of<UnreadStateProvider>(
           context,
           listen: false,
@@ -351,13 +349,12 @@ class _HomePageState extends State<HomePage> {
     void Function(int) onTap,
     BuildContext context,
   ) {
-    // Map internal (0-5) to visual (0-6, skipping center slot 3)
-    final visualIndex = internalIndex >= 3 ? internalIndex + 1 : internalIndex;
+    // Map internal (0-4) to visual (0-5, skipping center slot 2)
+    final visualIndex = internalIndex >= 2 ? internalIndex + 1 : internalIndex;
 
     final navItems = <GlassNavItem>[
       const GlassNavItem(icon: Icons.home_rounded, label: 'Home'),
       const GlassNavItem(icon: Icons.explore_rounded, label: 'Discover'),
-      const GlassNavItem(icon: Icons.bookmark_rounded, label: 'Watchlist'),
       const GlassNavItem(icon: Icons.add, label: ''),
       const GlassNavItem(icon: Icons.people_rounded, label: 'Comms'),
       const GlassNavItem(icon: Icons.chat_bubble_rounded, label: 'Inbox'),
@@ -370,9 +367,9 @@ class _HomePageState extends State<HomePage> {
       height: 70,
       selectedIndex: visualIndex,
       onItemTapped: (tappedVisualIndex) {
-        // Map visual index back to internal index (skip center slot 3)
-        // Visual 0->0, 1->1, 2->2, 4->3, 5->4, 6->5
-        final newInternalIndex = tappedVisualIndex > 3
+        // Map visual index back to internal index (skip center slot 2)
+        // Visual 0->0, 1->1, 3->2, 4->3, 5->4
+        final newInternalIndex = tappedVisualIndex > 2
             ? tappedVisualIndex - 1
             : tappedVisualIndex;
         onTap(newInternalIndex);
@@ -416,10 +413,6 @@ class _HomePageState extends State<HomePage> {
         BottomNavigationBarItem(
           icon: Icon(Icons.explore_rounded),
           label: 'Discover',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.bookmark_rounded),
-          label: 'Watchlist',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.people_rounded),

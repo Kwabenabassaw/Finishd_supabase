@@ -1,4 +1,5 @@
 import 'package:finishd/Chat/chatlist.dart';
+import 'package:finishd/Mainpage/Tabs/friends_tab.dart';
 import 'package:finishd/Mainpage/Tabs/recs_tab.dart';
 import 'package:finishd/Chat/NewChat.dart';
 import 'package:finishd/theme/app_theme.dart';
@@ -22,7 +23,7 @@ class _MessagesState extends State<Messages>
   void initState() {
     super.initState();
     _tabController = TabController(
-      length: 2,
+      length: 3,
       vsync: this,
       initialIndex: 0,
     ); // Default to Recs
@@ -83,6 +84,7 @@ class _MessagesState extends State<Messages>
                     labelStyle: const TextStyle(fontWeight: FontWeight.bold),
                     tabs: [
                       const Tab(text: 'Recs'),
+                      const Tab(text: 'Friends'),
                       Tab(
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -116,7 +118,7 @@ class _MessagesState extends State<Messages>
                   )
                 : null,
           ),
-          floatingActionButton: _tabController.index == 1
+          floatingActionButton: _tabController.index == 2
               ? Padding(
                   padding: const EdgeInsets.only(bottom: 30.0),
                   child: FloatingActionButton(
@@ -135,7 +137,7 @@ class _MessagesState extends State<Messages>
               : null,
           body: TabBarView(
             controller: _tabController,
-            children: [const RecsTab(), const ChatListScreen()],
+            children: [const RecsTab(), const FriendsTab(), const ChatListScreen()],
           ),
         );
       },
@@ -145,7 +147,7 @@ class _MessagesState extends State<Messages>
   Widget _buildCustomSegmentedControl(bool isDark, int unreadCount) {
     return Container(
       height: 40,
-      width: 200,
+      width: 240,
       decoration: BoxDecoration(
         color: isDark
             ? Colors.white.withOpacity(0.08)
@@ -159,10 +161,12 @@ class _MessagesState extends State<Messages>
             curve: Curves.easeInOut,
             alignment: _tabController.index == 0
                 ? Alignment.centerLeft
-                : Alignment.centerRight,
+                : _tabController.index == 1
+                    ? Alignment.center
+                    : Alignment.centerRight,
             child: Container(
               margin: const EdgeInsets.all(2),
-              width: 95,
+              width: 75,
               decoration: BoxDecoration(
                 color: isDark ? Colors.white : AppTheme.primaryGreen,
                 borderRadius: BorderRadius.circular(18),
@@ -179,7 +183,8 @@ class _MessagesState extends State<Messages>
           Row(
             children: [
               _buildTabItem(0, "Recs", isDark),
-              _buildTabItem(1, "Convos", isDark, badgeCount: unreadCount),
+              _buildTabItem(1, "Friends", isDark),
+              _buildTabItem(2, "Convos", isDark, badgeCount: unreadCount),
             ],
           ),
         ],

@@ -498,7 +498,7 @@ class _FriendSelectionScreenState extends State<FriendSelectionScreen> {
                                         children: [
                                           Text(
                                             user.username.isNotEmpty
-                                                ? user.username
+                                                ? '@${user.username}'
                                                 : 'User',
                                             style: Theme.of(context)
                                                 .textTheme

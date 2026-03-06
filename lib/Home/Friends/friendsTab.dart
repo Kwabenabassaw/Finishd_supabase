@@ -173,7 +173,7 @@ class _FriendsScreenState extends State<FriendsScreen>
       return;
     }
 
-    final searchLower = query.toLowerCase();
+    final searchLower = query.toLowerCase().replaceAll('@', '');
 
     setState(() {
       _filteredMyFriends = _myFriends.where((user) {
@@ -246,7 +246,7 @@ class _FriendsScreenState extends State<FriendsScreen>
           ),
         ),
         title: Text(
-          user.username.isNotEmpty ? user.username : 'No Name',
+          user.username.isNotEmpty ? '@${user.username}' : 'No Name',
           style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
