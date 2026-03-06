@@ -357,7 +357,7 @@ class _RecsTabState extends State<RecsTab> {
                           Expanded(
                             child: Text(
                               recommenderCount == 1
-                                  ? 'Recommended by $firstUsername'
+                                  ? 'Recommended by @$firstUsername'
                                   : 'Recommended by $recommenderCount friends',
                               style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(
