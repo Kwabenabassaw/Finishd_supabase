@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:finishd/services/cache/streaming_cache_service.dart';
+import 'package:finishd/config/env.dart';
 
 /// Represents a streaming provider from Watchmode API
 class StreamingProvider {
@@ -51,8 +52,7 @@ class StreamingProvider {
 class WatchmodeService {
   static const String _baseUrl = 'https://api.watchmode.com/v1';
   // ⚠️ TODO: Move this to a secure config or environment variable
-  static const String _apiKey =
-      'pCVeStIEFu2Uki6NuXvKKuJFBFz8z4IpwINxga83'; // Replace with actual key
+  static String get _apiKey => Env.watchmodeApiKey; // Replace with actual key
 
   /// Priority order for streaming types (subscription first, then free, then rent/buy)
   static const List<String> _typePriority = ['sub', 'free', 'rent', 'buy'];

@@ -19,6 +19,9 @@ import 'package:finishd/Discover/provider_content_screen.dart';
 import 'package:finishd/Discover/see_all_screen.dart';
 import 'package:finishd/services/genre_discover_service.dart';
 import 'package:finishd/services/social_discovery_service.dart';
+import 'package:finishd/repository/release_schedule_repository.dart';
+import 'package:finishd/models/simkl/simkl_models.dart';
+import 'package:finishd/Discover/schedule_section.dart';
 
 final Trending movieApi = Trending();
 final Fetchdiscover getDiscover = Fetchdiscover();
@@ -52,7 +55,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
   String? error;
   final UserPreferencesService _prefsService = UserPreferencesService();
   final DiscoverCacheService _cacheService = DiscoverCacheService();
+  final ReleaseScheduleRepository _scheduleRepo = ReleaseScheduleRepository();
   UserPreferences? _userPreferences;
+  List<ShowRelease> _scheduleItems = [];
 
   @override
   void initState() {
@@ -132,6 +137,16 @@ class _ExploreScreenState extends State<ExploreScreen> {
         DiscoverCacheService.keyTopRatedTv,
         () => movieApi.TopRatedTv(),
       );
+
+      // Fetch SIMKL Schedule
+      try {
+        await _scheduleRepo.init();
+        final schedule = await _scheduleRepo.getSchedule();
+        _scheduleItems = schedule.shows;
+      } catch (e) {
+        debugPrint("Error loading schedule: $e");
+        _scheduleItems = [];
+      }
 
       final uid = Supabase.instance.client.auth.currentUser?.id;
       List<int> genresToFetch = [28, 18, 35, 878]; // Default fallbacks
@@ -364,6 +379,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     CommunityAvatarList(),
 
                     const SizedBox(height: 16),
+                    if (_scheduleItems.isNotEmpty)
+                      ScheduleSection(scheduleItems: _scheduleItems),
+                    const SizedBox(height: 16),
 
                     // Social Section: Friends Are Watching
                     if (provider.friendsWatching.isNotEmpty)
@@ -420,7 +438,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         provider.discover,
                       ),
                     ),
-                    const SizedBox(height: 8),
+
                     MovieSection(
                       title: "Trending Movies",
                       items: provider.movies,

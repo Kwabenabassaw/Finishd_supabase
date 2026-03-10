@@ -49,10 +49,16 @@ import 'package:finishd/provider/chat_provider.dart'; // Chat state management
 import 'package:finishd/services/deep_link_service.dart';
 import 'package:finishd/services/seen_sync_service.dart'; // Video deduplication sync
 import 'package:finishd/services/moderation_listener_service.dart'; // Real-time moderation
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:workmanager/workmanager.dart';
+import 'package:finishd/models/simkl/simkl_models.dart';
+import 'package:finishd/workers/schedule_worker.dart';
 import 'package:finishd/services/moderation_notification_handler.dart'; // Moderation warnings
 import 'package:finishd/screens/video_upload_screen.dart';
 import 'package:finishd/provider/video_upload_provider.dart';
 import 'package:finishd/widgets/upload_progress_overlay.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:finishd/config/env.dart';
 
 // GLOBAL ROUTE OBSERVER
 final RouteObserver<ModalRoute<void>> routeObserver =
@@ -63,6 +69,10 @@ void main() async {
     WidgetsFlutterBinding.ensureInitialized();
     debugPrint('DEBUG: WidgetsFlutterBinding initialized');
 
+    // Initialize dotenv
+    debugPrint('DEBUG: Loading .env file');
+    await dotenv.load(fileName: ".env");
+
     // Feed-safe image cache limits (avoid bitmap growth during long scroll sessions).
     PaintingBinding.instance.imageCache.maximumSize = 150;
     PaintingBinding.instance.imageCache.maximumSizeBytes = 120 << 20; // 120 MB
@@ -70,9 +80,8 @@ void main() async {
     // Initialize Supabase
     debugPrint('DEBUG: Initializing Supabase...');
     await Supabase.initialize(
-      url: 'https://lihaddxlyychswpkswbp.supabase.co',
-      anonKey:
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpaGFkZHhseXljaHN3cGtzd2JwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkzNDA5MzQsImV4cCI6MjA4NDkxNjkzNH0.DrBUuz2ayMRCIicYAFNqH2ws3gbRu8ycsbATF54BuFM',
+      url: Env.supabaseUrl,
+      anonKey: Env.supabaseAnonKey,
     );
     debugPrint('DEBUG: Supabase initialized');
 
@@ -80,6 +89,38 @@ void main() async {
     debugPrint('DEBUG: Initializing ObjectBox...');
     await ObjectBoxStore.create();
     debugPrint('DEBUG: ObjectBox initialized');
+
+    // Initialize Hive for Schedule Caching
+    debugPrint('DEBUG: Initializing Hive...');
+    await Hive.initFlutter();
+    if (!Hive.isAdapterRegistered(100)) {
+      Hive.registerAdapter(ShowReleaseAdapter());
+    }
+    if (!Hive.isAdapterRegistered(101)) {
+      Hive.registerAdapter(ReleaseScheduleAdapter());
+    }
+    debugPrint('DEBUG: Hive initialized');
+
+    // Calculate delay until 9 AM GMT
+    final now = DateTime.now().toUtc();
+    var next9AmGmt = DateTime.utc(now.year, now.month, now.day, 9, 0);
+    if (now.isAfter(next9AmGmt)) {
+      next9AmGmt = next9AmGmt.add(const Duration(days: 1));
+    }
+    final initialDelay = next9AmGmt.difference(now);
+
+    // Initialize Workmanager for Daily Schedule Notifications
+    debugPrint('DEBUG: Initializing Workmanager...');
+    Workmanager().initialize(callbackDispatcher);
+    // Register the daily background task
+    Workmanager().registerPeriodicTask(
+      "dailyReleaseScheduleTask",
+      releaseScheduleTask,
+      frequency: const Duration(hours: 24),
+      initialDelay: initialDelay,
+      constraints: Constraints(networkType: NetworkType.connected),
+    );
+    debugPrint('DEBUG: Workmanager initialized');
 
     // Initialize ChatSyncService (after ObjectBox is ready)
     debugPrint('DEBUG: Initializing ChatSyncService...');
@@ -304,8 +345,7 @@ class _HomePageState extends State<HomePage> {
         extendBody: true,
         body: IndexedStack(index: internalIndex, children: _pages),
         floatingActionButton: const DynamicNavFab(),
-        floatingActionButtonLocation:
-            FloatingActionButtonLocation.centerDocked,
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
         bottomNavigationBar: const DynamicNavBar(),
       ),
     );

@@ -375,47 +375,6 @@ class ApiClient {
         : {'movies': [], 'shows': []};
   }
 
-  Future<List<Map<String, dynamic>>> getUpcomingEpisodes({int days = 7}) async {
-    final response = await get(
-      '/episodes/upcoming',
-      queryParams: {'days': days.toString()},
-    );
-    return response.statusCode == 200
-        ? (jsonDecode(response.body)['upcoming'] as List? ?? [])
-              .cast<Map<String, dynamic>>()
-        : [];
-  }
-
-  Future<List<Map<String, dynamic>>> getTVNotifications({
-    int limit = 50,
-  }) async {
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user == null) return [];
-    final response = await get(
-      '/notifications/tv/${user.id}',
-      queryParams: {'limit': limit.toString()},
-    );
-    return response.statusCode == 200
-        ? (jsonDecode(response.body)['notifications'] as List? ?? [])
-              .cast<Map<String, dynamic>>()
-        : [];
-  }
-
-  Future<List<Map<String, dynamic>>> getRecommendations({
-    int limit = 10,
-  }) async {
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user == null) return [];
-    final response = await get(
-      '/feed/recommendations/${user.id}',
-      queryParams: {'limit': limit.toString()},
-    );
-    return response.statusCode == 200
-        ? (jsonDecode(response.body)['recommendations'] as List? ?? [])
-              .cast<Map<String, dynamic>>()
-        : [];
-  }
-
   Future<bool> sendChatNotification({
     required String receiverUid,
     required String senderUid,
@@ -457,45 +416,6 @@ class ApiClient {
               .map((v) => FeedVideo.fromJson(v))
               .toList()
         : [];
-  }
-
-  // ... other methods ...
-  Future<List<Map<String, dynamic>>> checkNewEpisodes() async {
-    return [];
-  }
-
-  Future<List<Map<String, dynamic>>> getEpisodeAlertsFast({
-    int limit = 50,
-  }) async {
-    return [];
-  }
-
-  // --- Notifications (Missing) ---
-
-  Future<List<Map<String, dynamic>>> getNotifications({
-    int limit = 20,
-    bool unreadOnly = false,
-  }) async {
-    final queryParams = {
-      'limit': limit.toString(),
-      if (unreadOnly) 'unread_only': 'true',
-    };
-    final response = await get('/notifications', queryParams: queryParams);
-    if (response.statusCode == 200) {
-      return (jsonDecode(response.body)['notifications'] as List? ?? [])
-          .cast<Map<String, dynamic>>();
-    }
-    return [];
-  }
-
-  Future<bool> markNotificationRead(String notificationId) async {
-    final response = await post('/notifications/$notificationId/read');
-    return response.statusCode == 200;
-  }
-
-  Future<bool> markAllNotificationsRead() async {
-    final response = await post('/notifications/mark-all-read');
-    return response.statusCode == 200;
   }
 
   // --- Feed Triggers ---
