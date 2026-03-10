@@ -27,6 +27,7 @@ class ChatProvider with ChangeNotifier {
   List<LocalMessage> _messages = [];
   List<LocalMessage> get messages => _messages;
   StreamSubscription? _msgSub;
+  StreamSubscription? _authSub;
   String? _currentConversationId;
 
   // User cache for display
@@ -47,8 +48,8 @@ class ChatProvider with ChangeNotifier {
     _subscribeToConversations();
 
     // Listen to user changes to re-sync
-    // Listen to user changes to re-sync
-    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+    _authSub?.cancel();
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       final AuthChangeEvent event = data.event;
       final Session? session = data.session;
 
@@ -61,7 +62,7 @@ class ChatProvider with ChangeNotifier {
       } else if (event == AuthChangeEvent.signedOut) {
         _conversations = [];
         _messages = [];
-        notifyListeners();
+        Future.microtask(() => notifyListeners());
       }
     });
   }
@@ -70,6 +71,7 @@ class ChatProvider with ChangeNotifier {
   void dispose() {
     _convSub?.cancel();
     _msgSub?.cancel();
+    _authSub?.cancel();
     super.dispose();
   }
 
@@ -81,7 +83,7 @@ class ChatProvider with ChangeNotifier {
     _convSub?.cancel();
     _convSub = _syncService.watchConversations().listen((convs) {
       _conversations = convs;
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
     });
   }
 
@@ -122,12 +124,12 @@ class ChatProvider with ChangeNotifier {
 
     _currentConversationId = conversationId;
     _messages = [];
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
 
     _msgSub?.cancel();
     _msgSub = _syncService.watchMessages(conversationId).listen((msgs) {
       _messages = msgs;
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
     });
 
     // Mark as read
@@ -143,6 +145,7 @@ class ChatProvider with ChangeNotifier {
     _msgSub = null;
     _currentConversationId = null;
     _messages = [];
+    Future.microtask(() => notifyListeners());
   }
 
   // ============================================================

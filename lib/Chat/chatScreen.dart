@@ -181,6 +181,7 @@ class _ChatScreenState extends State<ChatScreen> {
       );
 
       if (caption == null) return; // User cancelled
+      if (!mounted) return;
 
       setState(() => _isUploadingMedia = true);
 
@@ -212,7 +213,9 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       }
 
-      _scrollToBottom();
+      if (mounted) {
+        _scrollToBottom();
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -243,7 +246,9 @@ class _ChatScreenState extends State<ChatScreen> {
         gifUrl: gif.gifUrl,
       );
 
-      _scrollToBottom();
+      if (mounted) {
+        _scrollToBottom();
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -343,13 +348,17 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ],
       ),
-      body: WillPopScope(
-        onWillPop: () async {
-          context.read<ChatProvider>().closeConversation();
-          return true;
+      body: PopScope(
+        canPop: true,
+        onPopInvoked: (didPop) {
+          if (mounted) {
+            context.read<ChatProvider>().closeConversation();
+          }
         },
-        child: Column(
-          children: [
+        child: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Column(
+            children: [
             Expanded(
               child: Consumer<ChatProvider>(
                 builder: (context, chatProvider, child) {
@@ -596,23 +605,24 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
             _buildMessageInput(isDark),
-            if (_showEmojiPicker)
-              SizedBox(
-                height: 250,
-                child: EmojiPicker(
-                  onEmojiSelected: (category, emoji) {
-                    _messageController.text += emoji.emoji;
-                  },
-                  config: const Config(
-                    checkPlatformCompatibility: true,
-                    emojiViewConfig: EmojiViewConfig(
-                      columns: 7,
-                      emojiSizeMax: 28,
+              if (_showEmojiPicker)
+                SizedBox(
+                  height: 250,
+                  child: EmojiPicker(
+                    onEmojiSelected: (category, emoji) {
+                      _messageController.text += emoji.emoji;
+                    },
+                    config: const Config(
+                      checkPlatformCompatibility: true,
+                      emojiViewConfig: EmojiViewConfig(
+                        columns: 7,
+                        emojiSizeMax: 28,
+                      ),
                     ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

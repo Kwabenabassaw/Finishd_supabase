@@ -315,6 +315,18 @@ class ChatSyncService {
       return; // Message deleted locally
     }
 
+    // Check retry count
+    final queueEntry = _queueBox.query(PendingMessageQueue_.messageLocalId.equals(localId)).build().findFirst();
+    if (queueEntry != null && queueEntry.retryCount >= 5) {
+      print('❌ [ChatSync] Message $localId exceeded retry limit. Marking as failed.');
+      message.status = MessageStatus.failed;
+      message.isPending = false;
+      _msgBox.put(message);
+      _pendingQueue.removeFirst();
+      _removeItemFromQueue(localId);
+      return;
+    }
+
     try {
       // Insert into Supabase 'messages' table
       // Note: 'conversationId' in LocalMessage maps to 'chat_id' in Supabase
@@ -359,6 +371,11 @@ class ChatSyncService {
       _removeItemFromQueue(localId);
     } catch (e) {
       print('❌ [ChatSync] Error sending message: $e');
+      if (queueEntry != null) {
+        queueEntry.retryCount += 1;
+        queueEntry.lastError = e.toString();
+        _queueBox.put(queueEntry);
+      }
       // Keep in queue, retry later
     }
   }
@@ -382,6 +399,7 @@ class ChatSyncService {
   int get pendingMessageCount => _pendingQueue.length;
 
   Future<void> syncAllConversations() async {
+    if (!_isOnline) return;
     try {
       final userId = _currentUserId;
       if (userId.isEmpty) return;
@@ -450,6 +468,7 @@ class ChatSyncService {
   }
 
   Future<void> syncConversation(String conversationId) async {
+    if (!_isOnline) return;
     try {
       // Fetch last 50 messages
       final messages = await _supabase
@@ -482,6 +501,22 @@ class ChatSyncService {
             isPending: false,
             firestoreId: msgId,
           );
+
+          if (msgRow['metadata'] != null) {
+              final metadata = msgRow['metadata'] as Map<String, dynamic>;
+              if (newMsg.type == 'recommendation') {
+                newMsg.movieId = metadata['movieId'];
+                newMsg.movieTitle = metadata['movieTitle'];
+                newMsg.moviePoster = metadata['moviePoster'];
+                newMsg.mediaType = metadata['mediaType'];
+              } else if (newMsg.type == 'video_share') {
+                newMsg.videoId = metadata['videoId'];
+                newMsg.videoTitle = metadata['videoTitle'];
+                newMsg.videoThumbnail = metadata['videoThumbnail'];
+                newMsg.videoChannel = metadata['videoChannel'];
+              }
+            }
+
           _msgBox.put(newMsg);
         }
       }
@@ -491,6 +526,8 @@ class ChatSyncService {
   }
 
   void _startGlobalListener() {
+    _globalChannel?.unsubscribe();
+
     // Listen for NEW messages in any chat the user is part of
     final myId = _currentUserId;
     if (myId.isEmpty) return;
@@ -525,6 +562,19 @@ class ChatSyncService {
               return;
             }
 
+            // Deduplication part 2: Match optimistically sent messages without firestoreId
+            final isOptimisticMatch = _msgBox.query(
+                LocalMessage_.conversationId.equals(chatId as String)
+                    .and(LocalMessage_.senderId.equals(senderId as String))
+                    .and(LocalMessage_.content.equals((newRecord['content'] as String?) ?? ''))
+                    .and(LocalMessage_.firestoreId.isNull())
+              ).build().count() > 0;
+
+            if (isOptimisticMatch) {
+               print('⚠️ [ChatSync] Ignored duplicate matching optimistic message: $msgId');
+               return; // Skip, it was sent by us on another device or we haven't synced ID yet
+            }
+
             // Check if we have this chat locally
             var conv = _convBox
                 .query(LocalConversation_.firestoreId.equals(chatId))
@@ -555,6 +605,22 @@ class ChatSyncService {
               isPending: false,
               firestoreId: msgId,
             );
+
+            // Parse metadata if present
+            if (newRecord['metadata'] != null) {
+              final metadata = newRecord['metadata'] as Map<String, dynamic>;
+              if (newMsg.type == 'recommendation') {
+                newMsg.movieId = metadata['movieId'];
+                newMsg.movieTitle = metadata['movieTitle'];
+                newMsg.moviePoster = metadata['moviePoster'];
+                newMsg.mediaType = metadata['mediaType'];
+              } else if (newMsg.type == 'video_share') {
+                newMsg.videoId = metadata['videoId'];
+                newMsg.videoTitle = metadata['videoTitle'];
+                newMsg.videoThumbnail = metadata['videoThumbnail'];
+                newMsg.videoChannel = metadata['videoChannel'];
+              }
+            }
 
             _msgBox.put(newMsg);
 
@@ -612,10 +678,26 @@ class ChatSyncService {
   }
 
   Future<void> markAsRead(String conversationId) async {
-    // Use RPC to mark as read in chat_participants
-    await _supabase.rpc(
-      'mark_chat_read',
-      params: {'p_chat_id': conversationId},
-    );
+    try {
+      if (_isOnline) {
+        // Use RPC to mark as read in chat_participants
+        await _supabase.rpc(
+          'mark_chat_read',
+          params: {'p_chat_id': conversationId},
+        );
+      }
+    } catch (e) {
+      print('Error marking as read on server: $e');
+    }
+
+    // Update local DB instantly
+    var conv = _convBox
+        .query(LocalConversation_.firestoreId.equals(conversationId))
+        .build()
+        .findFirst();
+    if (conv != null) {
+      conv.unreadCount = 0;
+      _convBox.put(conv);
+    }
   }
 }
