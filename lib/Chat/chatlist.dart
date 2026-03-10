@@ -208,6 +208,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     delegate: SliverChildBuilderDelegate((context, index) {
                       final conv = conversations[index];
                       return _ConversationTile(
+                        key: ValueKey(conv.firestoreId),
                         conversation: conv,
                         searchQuery: _searchQuery,
                         chatProvider: chatProvider,
@@ -265,49 +266,75 @@ class _ChatListScreenState extends State<ChatListScreen> {
 }
 
 /// Individual conversation tile with user resolution.
-class _ConversationTile extends StatelessWidget {
+class _ConversationTile extends StatefulWidget {
   final LocalConversation conversation;
   final String searchQuery;
   final ChatProvider chatProvider;
 
   const _ConversationTile({
+    super.key,
     required this.conversation,
     required this.searchQuery,
     required this.chatProvider,
   });
 
   @override
+  State<_ConversationTile> createState() => _ConversationTileState();
+}
+
+class _ConversationTileState extends State<_ConversationTile> {
+  UserModel? _otherUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUser();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ConversationTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.conversation.firestoreId != oldWidget.conversation.firestoreId) {
+      _fetchUser();
+    }
+  }
+
+  Future<void> _fetchUser() async {
+    final user = await widget.chatProvider.getOtherUser(widget.conversation);
+    if (mounted) {
+      setState(() {
+        _otherUser = user;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_otherUser == null) return const SizedBox.shrink();
+
+    // Search filter
+    if (widget.searchQuery.isNotEmpty) {
+      final name = _otherUser!.username.toLowerCase();
+      final realName = _otherUser!.firstName.toLowerCase();
+      if (!name.contains(widget.searchQuery) && !realName.contains(widget.searchQuery)) {
+        return const SizedBox.shrink();
+      }
+    }
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : Colors.black87;
 
-    return FutureBuilder<UserModel?>(
-      future: chatProvider.getOtherUser(conversation),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return const SizedBox.shrink();
+    final isUnread = widget.conversation.unreadCount > 0;
+    final timeString = _formatTime(widget.conversation.lastMessageAt);
 
-        final otherUser = snapshot.data!;
-
-        // Search filter
-        if (searchQuery.isNotEmpty) {
-          final name = otherUser.username.toLowerCase();
-          final realName = otherUser.firstName.toLowerCase();
-          if (!name.contains(searchQuery) && !realName.contains(searchQuery)) {
-            return const SizedBox.shrink();
-          }
-        }
-
-        final isUnread = conversation.unreadCount > 0;
-        final timeString = _formatTime(conversation.lastMessageAt);
-
-        return InkWell(
+    return InkWell(
           onTap: () {
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => ChatScreen(
-                  chatId: conversation.firestoreId,
-                  otherUser: otherUser,
+                  chatId: widget.conversation.firestoreId,
+                  otherUser: _otherUser!,
                 ),
               ),
             );
@@ -318,11 +345,11 @@ class _ConversationTile extends StatelessWidget {
               children: [
                 UserAvatar(
                   radius: 30,
-                  profileImageUrl: otherUser.profileImage,
-                  username: otherUser.username,
-                  firstName: otherUser.firstName,
-                  lastName: otherUser.lastName,
-                  userId: otherUser.uid,
+                  profileImageUrl: _otherUser!.profileImage,
+                  username: _otherUser!.username,
+                  firstName: _otherUser!.firstName,
+                  lastName: _otherUser!.lastName,
+                  userId: _otherUser!.uid,
                 ),
                 const SizedBox(width: 15),
                 Expanded(
@@ -334,7 +361,7 @@ class _ConversationTile extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              otherUser.username,
+                              _otherUser!.username,
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -360,7 +387,7 @@ class _ConversationTile extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              conversation.lastMessageText ?? '',
+                              widget.conversation.lastMessageText ?? '',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -392,8 +419,6 @@ class _ConversationTile extends StatelessWidget {
             ),
           ),
         );
-      },
-    );
   }
 
   String _formatTime(DateTime? msgTime) {
