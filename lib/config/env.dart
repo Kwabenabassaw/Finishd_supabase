@@ -18,4 +18,7 @@ class Env {
       dotenv.env['GOOGLE_WEB_CLIENT_ID'] ?? '';
   static String get googleIosClientId =>
       dotenv.env['GOOGLE_IOS_CLIENT_ID'] ?? '';
+  static String get traktClientId => dotenv.env['TRAKT_CLIENT_ID'] ?? '';
+  static String get traktClientSecret =>
+      dotenv.env['TRAKT_CLIENT_SECRET'] ?? '';
 }

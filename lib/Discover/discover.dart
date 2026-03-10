@@ -379,6 +379,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     CommunityAvatarList(),
 
                     const SizedBox(height: 16),
+                    if (_scheduleItems.isNotEmpty)
+                      ScheduleSection(scheduleItems: _scheduleItems),
+                    const SizedBox(height: 16),
 
                     // Social Section: Friends Are Watching
                     if (provider.friendsWatching.isNotEmpty)
@@ -435,12 +438,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         provider.discover,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    if (_scheduleItems.isNotEmpty)
-                      ScheduleSection(
-                        scheduleItems: _scheduleItems,
-                      ),
-                    const SizedBox(height: 8),
+
                     MovieSection(
                       title: "Trending Movies",
                       items: provider.movies,

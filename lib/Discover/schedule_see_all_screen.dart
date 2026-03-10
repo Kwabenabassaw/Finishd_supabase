@@ -1,23 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:finishd/models/simkl/simkl_models.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:finishd/Model/tvdetail.dart';
+import 'package:finishd/MovieDetails/Tvshowscreen.dart';
 
 class ScheduleSeeAllScreen extends StatefulWidget {
   final List<ShowRelease> scheduleItems;
 
-  const ScheduleSeeAllScreen({
-    super.key,
-    required this.scheduleItems,
-  });
+  const ScheduleSeeAllScreen({super.key, required this.scheduleItems});
 
   @override
   State<ScheduleSeeAllScreen> createState() => _ScheduleSeeAllScreenState();
 }
 
 class _ScheduleSeeAllScreenState extends State<ScheduleSeeAllScreen> {
-  final Map<String, List<ShowRelease>> _groupedSchedule = {};
+  final List<dynamic> _flattenedSchedule = [];
   final List<String> _sortedDates = [];
+  final Map<String, int> _itemCounts = {};
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
+  bool _isSearching = false;
+  String _searchQuery = "";
 
   // Track the currently visible date for sticky header effect
   String _currentHeader = "";
@@ -31,34 +35,64 @@ class _ScheduleSeeAllScreenState extends State<ScheduleSeeAllScreen> {
       _currentHeader = _sortedDates.first;
     }
 
+    _searchController.addListener(_onSearchChanged);
     // Add listener for scroll-based header changes
     _scrollController.addListener(_onScroll);
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text.toLowerCase();
+      _groupAndSortSchedule();
+    });
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
   void _groupAndSortSchedule() {
+    _flattenedSchedule.clear();
+    _sortedDates.clear();
+    _itemCounts.clear();
+
+    final Map<String, List<ShowRelease>> groupedSchedule = {};
     for (var item in widget.scheduleItems) {
-      final dateKey = _formatDateKey(item.date);
-      if (!_groupedSchedule.containsKey(dateKey)) {
-        _groupedSchedule[dateKey] = [];
+      if (_searchQuery.isNotEmpty &&
+          !item.title.toLowerCase().contains(_searchQuery)) {
+        continue;
       }
-      _groupedSchedule[dateKey]!.add(item);
+
+      final dateKey = _formatDateKey(item.date);
+      if (!groupedSchedule.containsKey(dateKey)) {
+        groupedSchedule[dateKey] = [];
+      }
+      groupedSchedule[dateKey]!.add(item);
     }
 
-    _sortedDates.addAll(_groupedSchedule.keys);
+    _sortedDates.addAll(groupedSchedule.keys);
     _sortedDates.sort((a, b) {
-      // Parse the 'yyyy-MM-dd' formatted date key back to DateTime for proper sorting
-      // But we just formatted them beautifully (e.g., 'Today', 'Tomorrow', 'Mar 12')
-      // Let's re-extract the real dates to sort
-      final originalA = _groupedSchedule[a]!.first.date;
-      final originalB = _groupedSchedule[b]!.first.date;
+      final originalA = groupedSchedule[a]!.first.date;
+      final originalB = groupedSchedule[b]!.first.date;
       return originalA.compareTo(originalB);
     });
+
+    for (var dateKey in _sortedDates) {
+      _flattenedSchedule.add(dateKey);
+      _flattenedSchedule.addAll(groupedSchedule[dateKey]!);
+      _itemCounts[dateKey] = groupedSchedule[dateKey]!.length;
+    }
+
+    if (_sortedDates.isNotEmpty) {
+      if (!_sortedDates.contains(_currentHeader)) {
+        _currentHeader = _sortedDates.first;
+      }
+    } else {
+      _currentHeader = "";
+    }
   }
 
   String _formatDateKey(String rawDate) {
@@ -94,10 +128,10 @@ class _ScheduleSeeAllScreenState extends State<ScheduleSeeAllScreen> {
 
     for (int i = 0; i < _sortedDates.length; i++) {
       String dateKey = _sortedDates[i];
-      int itemCount = _groupedSchedule[dateKey]!.length;
+      int itemCount = _itemCounts[dateKey]!;
 
-      // Rough height of this group: header(50) + padding(16) + (itemCount * 80)
-      double sectionHeight = 50.0 + 16.0 + (itemCount * 80.0);
+      // Rough height of this group: header(48) + padding(16) + (itemCount * 84)
+      double sectionHeight = 48.0 + 16.0 + (itemCount * 84.0);
 
       if (offset >= currentPos && offset < currentPos + sectionHeight) {
         if (_currentHeader != dateKey) {
@@ -113,38 +147,90 @@ class _ScheduleSeeAllScreenState extends State<ScheduleSeeAllScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: Colors.black, // Dark theme as per project
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
-          "TV Release Schedule",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        backgroundColor: Colors.black,
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+                decoration: InputDecoration(
+                  hintText: "Search shows...",
+                  border: InputBorder.none,
+                  hintStyle: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.hintColor.withValues(alpha: 0.5),
+                  ),
+                ),
+              )
+            : const Text(
+                "TV Release Schedule",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(_isSearching ? Icons.close : Icons.search),
+            onPressed: () {
+              setState(() {
+                if (_isSearching) {
+                  _isSearching = false;
+                  _searchController.clear();
+                } else {
+                  _isSearching = true;
+                }
+              });
+            },
+          ),
+        ],
       ),
       body: Stack(
         children: [
-          ListView.builder(
-            controller: _scrollController,
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.only(top: 60, bottom: 40), // Space for floating header
-            itemCount: _sortedDates.length,
-            itemBuilder: (context, index) {
-              final dateKey = _sortedDates[index];
-              final items = _groupedSchedule[dateKey]!;
+          _flattenedSchedule.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.search_off_rounded,
+                        size: 64,
+                        color: theme.hintColor.withValues(alpha: 0.3),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        "No shows found",
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: theme.hintColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  controller: _scrollController,
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.only(
+                    top: 60,
+                    bottom: 40,
+                  ), // Space for floating header
+                  itemCount: _flattenedSchedule.length,
+                  itemBuilder: (context, index) {
+                    final item = _flattenedSchedule[index];
 
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionHeader(dateKey),
-                  ...items.map((item) => _buildScheduleRowItem(item)),
-                  const SizedBox(height: 16),
-                ],
-              );
-            },
-          ),
+                    if (item is String) {
+                      return _buildSectionHeader(item);
+                    } else if (item is ShowRelease) {
+                      return _buildScheduleRowItem(item);
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
 
           // Floating Sticky Header with Animation
           Positioned(
@@ -159,28 +245,35 @@ class _ScheduleSeeAllScreenState extends State<ScheduleSeeAllScreen> {
                     begin: const Offset(0.0, -0.5),
                     end: Offset.zero,
                   ).animate(animation),
-                  child: FadeTransition(
-                    opacity: animation,
-                    child: child,
-                  ),
+                  child: FadeTransition(opacity: animation, child: child),
                 );
               },
               child: Container(
                 key: ValueKey<String>(_currentHeader),
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.95), // Slight transparency for floating effect
-                  border: const Border(
-                    bottom: BorderSide(color: Colors.white12, width: 1),
+                  color: Theme.of(
+                    context,
+                  ).scaffoldBackgroundColor.withValues(alpha: 0.95),
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Theme.of(
+                        context,
+                      ).dividerColor.withValues(alpha: 0.1),
+                      width: 1,
+                    ),
                   ),
                 ),
                 child: Text(
                   _currentHeader,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: Colors.green, // Highlight color
+                    color: Theme.of(context).primaryColor, // Highlight color
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -194,13 +287,16 @@ class _ScheduleSeeAllScreenState extends State<ScheduleSeeAllScreen> {
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
       child: Text(
         title,
-        style: const TextStyle(
-          fontSize: 16,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.bold,
-          color: Colors.white70,
+          color:
+              Theme.of(
+                context,
+              ).textTheme.bodyLarge?.color?.withValues(alpha: 0.6) ??
+              Colors.grey,
         ),
       ),
     );
@@ -209,7 +305,8 @@ class _ScheduleSeeAllScreenState extends State<ScheduleSeeAllScreen> {
   Widget _buildScheduleRowItem(ShowRelease item) {
     String episodeText = '';
     if (item.season != null && item.episode != null) {
-      episodeText = "S${item.season.toString().padLeft(2, '0')}E${item.episode.toString().padLeft(2, '0')}";
+      episodeText =
+          "S${item.season.toString().padLeft(2, '0')}E${item.episode.toString().padLeft(2, '0')}";
     } else {
       episodeText = "Series Premiere / TBA";
     }
@@ -217,44 +314,114 @@ class _ScheduleSeeAllScreenState extends State<ScheduleSeeAllScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF161616),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white10),
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.05),
+        ),
       ),
       child: ListTile(
+        onTap: () {
+          if (item.tmdbId != null) {
+            final shallowShow = TvShowDetails(
+              id: item.tmdbId!,
+              name: item.title,
+              originalName: item.title,
+              overview: '',
+              posterPath: null,
+              backdropPath: null,
+              firstAirDate: item.date,
+              inProduction: false,
+              genres: [],
+              languages: [],
+              networks: [],
+              numberOfEpisodes: 0,
+              numberOfSeasons: 0,
+              seasons: [],
+              status: 'Loading...',
+              type: 'tv',
+              voteAverage: 0.0,
+              voteCount: 0,
+            );
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ShowDetailsScreen(movie: shallowShow),
+              ),
+            );
+          }
+        },
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: Container(
           width: 50,
           height: 50,
           decoration: BoxDecoration(
-            color: Colors.green.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(8),
+            color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
           ),
-          child: const Center(
-            child: Icon(Icons.play_circle_filled_rounded, color: Colors.green, size: 28),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: item.tmdbId != null
+                ? CachedNetworkImage(
+                    imageUrl:
+                        "https://image.tmdb.org/t/p/w200/${item.tmdbId}", // Small resolution avatar
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Center(
+                      child: Icon(
+                        Icons.tv_rounded,
+                        color: Theme.of(
+                          context,
+                        ).primaryColor.withValues(alpha: 0.5),
+                        size: 24,
+                      ),
+                    ),
+                    errorWidget: (context, url, error) => Center(
+                      child: Icon(
+                        Icons.play_circle_filled_rounded,
+                        color: Theme.of(context).primaryColor,
+                        size: 28,
+                      ),
+                    ),
+                  )
+                : Center(
+                    child: Icon(
+                      Icons.play_circle_filled_rounded,
+                      color: Theme.of(context).primaryColor,
+                      size: 28,
+                    ),
+                  ),
           ),
         ),
         title: Text(
           item.title,
-          style: const TextStyle(
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
             fontSize: 15,
-            color: Colors.white,
           ),
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 4),
           child: Row(
             children: [
-              Icon(Icons.tv_rounded, size: 14, color: Colors.white54),
+              Icon(
+                Icons.tv_rounded,
+                size: 14,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               const SizedBox(width: 4),
               Text(
                 episodeText,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Colors.white60,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500),
               ),
             ],
           ),

@@ -101,6 +101,14 @@ void main() async {
     }
     debugPrint('DEBUG: Hive initialized');
 
+    // Calculate delay until 9 AM GMT
+    final now = DateTime.now().toUtc();
+    var next9AmGmt = DateTime.utc(now.year, now.month, now.day, 9, 0);
+    if (now.isAfter(next9AmGmt)) {
+      next9AmGmt = next9AmGmt.add(const Duration(days: 1));
+    }
+    final initialDelay = next9AmGmt.difference(now);
+
     // Initialize Workmanager for Daily Schedule Notifications
     debugPrint('DEBUG: Initializing Workmanager...');
     Workmanager().initialize(callbackDispatcher);
@@ -109,7 +117,7 @@ void main() async {
       "dailyReleaseScheduleTask",
       releaseScheduleTask,
       frequency: const Duration(hours: 24),
-      initialDelay: const Duration(hours: 2), // Adjust as necessary
+      initialDelay: initialDelay,
       constraints: Constraints(networkType: NetworkType.connected),
     );
     debugPrint('DEBUG: Workmanager initialized');

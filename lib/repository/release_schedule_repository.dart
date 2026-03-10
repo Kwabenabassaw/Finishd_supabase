@@ -1,13 +1,12 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:finishd/models/simkl/simkl_models.dart';
-import 'package:finishd/services/simkl_service.dart';
+import 'package:finishd/tmbd/fetchtrending.dart';
+import 'package:finishd/services/trakt_service.dart';
 
 class ReleaseScheduleRepository {
   static const String _boxName = 'release_schedule_box';
-  final SimklService _simklService;
 
-  ReleaseScheduleRepository({SimklService? simklService})
-      : _simklService = simklService ?? SimklService();
+  ReleaseScheduleRepository();
 
   Future<void> init() async {
     // Make sure adapters are registered before calling init
@@ -40,25 +39,62 @@ class ReleaseScheduleRepository {
   Future<ReleaseSchedule> _fetchAndCacheSchedule() async {
     final box = Hive.box<ReleaseSchedule>(_boxName);
 
-    // Fetch calendar and trending
-    final shows = await _simklService.fetchTvCalendar();
-    final trendingMovies = await _simklService.fetchTrendingMovies();
-    final trendingShows = await _simklService.fetchTrendingTv();
+    try {
+      final trendingApi = Trending();
 
-    // DO NOT merge trending shows with the calendar schedule.
-    // This avoids triggering fake "new episode" alerts for trending shows
-    // when a user is "watching" a trending show (since trending shows lack season/episode data).
-    final newSchedule = ReleaseSchedule(
-      lastFetched: DateTime.now(),
-      shows: shows,
-      trendingShows: trendingShows,
-      movies: trendingMovies,
-    );
+      // 1. Airing Today (for 'calendarData') - Now powered by Trakt
+      final traktService = TraktService();
+      final shows = await traktService.fetchTvCalendar();
 
-    // Save to Hive
-    await box.put('current_schedule', newSchedule);
+      // 2. Trending Movies
+      final tmdbMovies = await trendingApi.fetchTrendingMoviePaginated(1);
+      final trendingMovies = tmdbMovies
+          .map(
+            (item) => ShowRelease(
+              title: item.title,
+              date: item.releaseDate.isNotEmpty
+                  ? item.releaseDate
+                  : DateTime.now().toIso8601String().split('T')[0],
+              tmdbId: item.id,
+              isMovie: true,
+            ),
+          )
+          .toList();
 
-    return newSchedule;
+      // 3. Trending TV
+      final tmdbShows = await trendingApi.fetchTrendingShowPaginated(1);
+      final trendingShows = tmdbShows
+          .map(
+            (item) => ShowRelease(
+              title: item.title,
+              date: item.releaseDate.isNotEmpty
+                  ? item.releaseDate
+                  : DateTime.now().toIso8601String().split('T')[0],
+              tmdbId: item.id,
+              isMovie: false,
+            ),
+          )
+          .toList();
+
+      final newSchedule = ReleaseSchedule(
+        lastFetched: DateTime.now(),
+        shows: shows,
+        trendingShows: trendingShows,
+        movies: trendingMovies,
+      );
+
+      // Save to Hive
+      await box.put('current_schedule', newSchedule);
+      return newSchedule;
+    } catch (e) {
+      print('Error fetching schedule from TMDB: $e');
+      return ReleaseSchedule(
+        lastFetched: DateTime.now(),
+        shows: [],
+        trendingShows: [],
+        movies: [],
+      );
+    }
   }
 
   /// Get today's releases from the cached schedule
