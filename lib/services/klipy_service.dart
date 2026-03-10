@@ -1,12 +1,13 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:finishd/models/gif_model.dart';
+import 'package:finishd/config/env.dart';
 
 /// Service for interacting with the Klipy GIF API
 /// Replaces the previous Giphy integration
 class KlipyService {
   static const String _baseUrl = 'https://api.klipy.com/v2';
-  static const String _apiKey = 'rut7Q1CHHEPpJ8EMb47E00Dfx3281cqViVjx3pgc1ylLMan1MEobFn9yrZq7qLqo';
+  static String get _apiKey => Env.klipyApiKey;
 
   // Cache for recent searches to improve performance
   final Map<String, List<GifModel>> _searchCache = {};

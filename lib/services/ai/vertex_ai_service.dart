@@ -1,4 +1,5 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:finishd/config/env.dart';
 
 class VertexAiService {
   late final GenerativeModel _model;
@@ -6,7 +7,7 @@ class VertexAiService {
   VertexAiService() {
     // Initialize using Google Generative AI SDK
     // Using hardcoded key as requested for migration
-    const apiKey = 'AIzaSyBRKUORBWfivcUSL9augk0q9FNYzE2x3rE';
+    final apiKey = Env.vertexAiApiKey;
 
     _model = GenerativeModel(
       model: 'gemini-1.5-flash',

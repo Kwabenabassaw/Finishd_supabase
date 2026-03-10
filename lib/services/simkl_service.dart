@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:finishd/models/simkl/simkl_models.dart';
+import 'package:finishd/config/env.dart';
 
 class SimklService {
   final Dio _dio;
@@ -8,7 +9,7 @@ class SimklService {
     BaseOptions(
       baseUrl: 'https://api.simkl.com',
       headers: {
-        'simkl-api-key': const String.fromEnvironment('simkl', defaultValue: ''),
+        'simkl-api-key': Env.simklApiKey,
         'Content-Type': 'application/json',
       },
     ),

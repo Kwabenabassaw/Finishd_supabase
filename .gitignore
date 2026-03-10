@@ -57,3 +57,5 @@ node_modules/
 # Flutter/Dart
 .dart_tool/
 build/
+# Environment variables
+.env

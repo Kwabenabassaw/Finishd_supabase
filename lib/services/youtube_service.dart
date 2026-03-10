@@ -2,9 +2,10 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:finishd/models/feed_video.dart';
+import 'package:finishd/config/env.dart';
 
 class YouTubeService {
-  static const String _apiKey = 'AIzaSyAnU2lsmVb7lRZx3823XsltJ_sxGqbCkI0';
+  static String get _apiKey => Env.youtubeApiKey;
   static const String _baseUrl = 'https://www.googleapis.com/youtube/v3/search';
 
   final Random _random = Random();

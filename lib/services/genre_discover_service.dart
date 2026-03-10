@@ -2,9 +2,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:finishd/Model/trending.dart';
 import 'package:finishd/services/discover_cache_service.dart';
+import 'package:finishd/config/env.dart';
 
 class GenreDiscoverService {
-  final String _apiKey = '829afd9e186fc15a71a6dfe50f3d00ad';
+  String get _apiKey => Env.tmdbApiKey;
   final DiscoverCacheService _cacheService = DiscoverCacheService();
 
   /// Fetch content (Movies + TV) for a specific genre ID

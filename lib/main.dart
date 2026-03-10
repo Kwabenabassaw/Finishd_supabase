@@ -57,6 +57,8 @@ import 'package:finishd/services/moderation_notification_handler.dart'; // Moder
 import 'package:finishd/screens/video_upload_screen.dart';
 import 'package:finishd/provider/video_upload_provider.dart';
 import 'package:finishd/widgets/upload_progress_overlay.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:finishd/config/env.dart';
 
 // GLOBAL ROUTE OBSERVER
 final RouteObserver<ModalRoute<void>> routeObserver =
@@ -67,6 +69,10 @@ void main() async {
     WidgetsFlutterBinding.ensureInitialized();
     debugPrint('DEBUG: WidgetsFlutterBinding initialized');
 
+    // Initialize dotenv
+    debugPrint('DEBUG: Loading .env file');
+    await dotenv.load(fileName: ".env");
+
     // Feed-safe image cache limits (avoid bitmap growth during long scroll sessions).
     PaintingBinding.instance.imageCache.maximumSize = 150;
     PaintingBinding.instance.imageCache.maximumSizeBytes = 120 << 20; // 120 MB
@@ -74,8 +80,8 @@ void main() async {
     // Initialize Supabase
     debugPrint('DEBUG: Initializing Supabase...');
     await Supabase.initialize(
-      url: const String.fromEnvironment('SUPABASE_URL', defaultValue: 'https://lihaddxlyychswpkswbp.supabase.co'),
-      anonKey: const String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpaGFkZHhseXljaHN3cGtzd2JwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkzNDA5MzQsImV4cCI6MjA4NDkxNjkzNH0.DrBUuz2ayMRCIicYAFNqH2ws3gbRu8ycsbATF54BuFM'),
+      url: Env.supabaseUrl,
+      anonKey: Env.supabaseAnonKey,
     );
     debugPrint('DEBUG: Supabase initialized');
 
@@ -97,18 +103,14 @@ void main() async {
 
     // Initialize Workmanager for Daily Schedule Notifications
     debugPrint('DEBUG: Initializing Workmanager...');
-    Workmanager().initialize(
-      callbackDispatcher,
-    );
+    Workmanager().initialize(callbackDispatcher);
     // Register the daily background task
     Workmanager().registerPeriodicTask(
       "dailyReleaseScheduleTask",
       releaseScheduleTask,
       frequency: const Duration(hours: 24),
       initialDelay: const Duration(hours: 2), // Adjust as necessary
-      constraints: Constraints(
-        networkType: NetworkType.connected,
-      ),
+      constraints: Constraints(networkType: NetworkType.connected),
     );
     debugPrint('DEBUG: Workmanager initialized');
 
@@ -335,8 +337,7 @@ class _HomePageState extends State<HomePage> {
         extendBody: true,
         body: IndexedStack(index: internalIndex, children: _pages),
         floatingActionButton: const DynamicNavFab(),
-        floatingActionButtonLocation:
-            FloatingActionButtonLocation.centerDocked,
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
         bottomNavigationBar: const DynamicNavBar(),
       ),
     );

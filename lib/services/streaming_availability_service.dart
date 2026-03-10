@@ -2,12 +2,12 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:finishd/Model/streaming_availability.dart';
 import 'package:finishd/services/cache/streaming_cache_service.dart';
+import 'package:finishd/config/env.dart';
 
 class StreamingAvailabilityService {
   static const String _host = 'streaming-availability.p.rapidapi.com';
   // ⚠️ TODO: Move this to a secure config or environment variable
-  static const String _apiKey =
-      '4b246976bcmsha8abf2a7fce59c3p1d0fd5jsn4023c35ebc41';
+  static String get _apiKey => Env.streamingAvailabilityApiKey;
 
   // Fallback logo URLs for known streaming services (using TMDB provider logos - reliable PNG format)
   static const Map<String, String> _fallbackLogos = {

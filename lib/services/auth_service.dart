@@ -6,6 +6,7 @@ import 'package:finishd/services/chat_sync_service.dart';
 import 'package:finishd/services/moderation_listener_service.dart';
 import 'package:finishd/services/moderation_notification_handler.dart';
 import 'package:finishd/services/social_database_helper.dart';
+import 'package:finishd/config/env.dart';
 
 /// Structured moderation status
 class ModerationStatus {
@@ -225,10 +226,8 @@ class AuthService {
     try {
       /// TODO: Replace these with your actual IDs from Google Cloud Console
       /// Instructions are provided in the google_sign_in_setup.md
-      const webClientId =
-          '754154797926-9mfabsqvs26ou257su2aqe785aspahsc.apps.googleusercontent.com';
-      const iosClientId =
-          '754154797926-o4jqbud7ml3bsucnqj0d36eeepffa7tc.apps.googleusercontent.com';
+      final webClientId = Env.googleWebClientId;
+      final iosClientId = Env.googleIosClientId;
 
       final GoogleSignIn signIn = GoogleSignIn.instance;
 

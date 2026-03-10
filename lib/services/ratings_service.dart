@@ -3,14 +3,15 @@ import 'dart:convert';
 import 'package:finishd/Model/movie_ratings_model.dart';
 import 'package:finishd/services/cache/ratings_cache_service.dart';
 import 'package:http/http.dart' as http;
+import 'package:finishd/config/env.dart';
 
 /// Service class for fetching and caching movie ratings from multiple sources
 /// Integrates TMDB API (for IMDb ID) and OMDb API (for ratings)
 /// Implements intelligent caching with 7-day TTL in Firestore
 class RatingsService {
   // API Keys - Replace with your actual keys
-  static const String TMDB_API_KEY = "829afd9e186fc15a71a6dfe50f3d00ad";
-  static const String OMDB_API_KEY = "3ab8a1fe"; // TODO: Add your OMDb API key
+  static String get TMDB_API_KEY => Env.tmdbApiKey;
+  static String get OMDB_API_KEY => Env.omdbApiKey; // TODO: Add your OMDb API key
 
   /// Main entry point: Get ratings with intelligent SQLite caching
   Future<MovieRatings> getRatings(int tmdbId) async {
