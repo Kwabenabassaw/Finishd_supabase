@@ -1,0 +1,22 @@
+Analyzing main.dart...
+
+  error - main.dart:53:8 - Target of URI doesn't exist: 'package:hive_flutter/hive_flutter.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist. - uri_does_not_exist
+  error - main.dart:54:8 - Target of URI doesn't exist: 'package:workmanager/workmanager.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist. - uri_does_not_exist
+  error - main.dart:61:8 - Target of URI doesn't exist: 'package:flutter_dotenv/flutter_dotenv.dart'. Try creating the file referenced by the URI, or try using a URI for a file that does exist. - uri_does_not_exist
+  error - main.dart:75:11 - Undefined name 'dotenv'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - main.dart:96:11 - Undefined name 'Hive'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - main.dart:97:10 - Undefined name 'Hive'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - main.dart:98:7 - Undefined name 'Hive'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - main.dart:100:10 - Undefined name 'Hive'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - main.dart:101:7 - Undefined name 'Hive'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - main.dart:115:5 - The function 'Workmanager' isn't defined. Try importing the library that defines 'Workmanager', correcting the name to the name of an existing function, or defining a function named 'Workmanager'. - undefined_function
+  error - main.dart:117:5 - The function 'Workmanager' isn't defined. Try importing the library that defines 'Workmanager', correcting the name to the name of an existing function, or defining a function named 'Workmanager'. - undefined_function
+  error - main.dart:122:20 - The function 'Constraints' isn't defined. Try importing the library that defines 'Constraints', correcting the name to the name of an existing function, or defining a function named 'Constraints'. - undefined_function
+  error - main.dart:122:45 - Undefined name 'NetworkType'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+   info - main.dart:53:8 - The imported package 'hive_flutter' isn't a dependency of the importing package. Try adding a dependency for 'hive_flutter' in the 'pubspec.yaml' file. - depend_on_referenced_packages
+   info - main.dart:54:8 - The imported package 'workmanager' isn't a dependency of the importing package. Try adding a dependency for 'workmanager' in the 'pubspec.yaml' file. - depend_on_referenced_packages
+   info - main.dart:61:8 - The imported package 'flutter_dotenv' isn't a dependency of the importing package. Try adding a dependency for 'flutter_dotenv' in the 'pubspec.yaml' file. - depend_on_referenced_packages
+   info - main.dart:319:54 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - main.dart:349:7 - 'onPopInvoked' is deprecated and shouldn't be used. Use onPopInvokedWithResult instead. This feature was deprecated after v3.22.0-12.0.pre. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+
+18 issues found.

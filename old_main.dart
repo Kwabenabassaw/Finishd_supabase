@@ -7,7 +7,7 @@ import 'package:finishd/Mainpage/Discover.dart';
 import 'package:finishd/Mainpage/Home.dart';
 import 'package:finishd/Mainpage/Messages.dart';
 import 'package:finishd/Mainpage/Profile.dart';
-import 'package:finishd/Mainpage/Tabs/comms_tab.dart';
+import 'package:finishd/Mainpage/Watchlist.dart';
 import 'package:finishd/notification/mainScreent.dart';
 import 'package:finishd/provider/MovieProvider.dart';
 import 'package:finishd/provider/onboarding_provider.dart';
@@ -17,12 +17,11 @@ import 'package:finishd/provider/community_provider.dart';
 import 'package:finishd/provider/actor_provider.dart';
 import 'package:finishd/provider/ai_assistant_provider.dart';
 import 'package:sizer/sizer.dart';
+import 'dart:io' show Platform;
 
 import 'package:finishd/provider/app_navigation_provider.dart';
 import 'package:finishd/provider/unread_state_provider.dart';
 import 'package:finishd/provider/youtube_feed_provider.dart';
-import 'package:finishd/provider/creators_feed_provider.dart';
-import 'package:finishd/provider/trailers_feed_provider.dart';
 import 'package:finishd/SplashScreen/splash_screen.dart';
 import 'package:finishd/onboarding/CategoriesTypeMove.dart';
 import 'package:finishd/onboarding/Login.dart';
@@ -35,7 +34,6 @@ import 'package:finishd/settings/settimgPage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/painting.dart';
-import 'dart:io' show Platform;
 import 'package:flutter/services.dart'; // Added for SystemNavigator
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
@@ -50,16 +48,8 @@ import 'package:finishd/provider/chat_provider.dart'; // Chat state management
 import 'package:finishd/services/deep_link_service.dart';
 import 'package:finishd/services/seen_sync_service.dart'; // Video deduplication sync
 import 'package:finishd/services/moderation_listener_service.dart'; // Real-time moderation
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:workmanager/workmanager.dart';
-import 'package:finishd/models/simkl/simkl_models.dart';
-import 'package:finishd/workers/schedule_worker.dart';
 import 'package:finishd/services/moderation_notification_handler.dart'; // Moderation warnings
 import 'package:finishd/screens/video_upload_screen.dart';
-import 'package:finishd/provider/video_upload_provider.dart';
-import 'package:finishd/widgets/upload_progress_overlay.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:finishd/config/env.dart';
 
 // GLOBAL ROUTE OBSERVER
 final RouteObserver<ModalRoute<void>> routeObserver =
@@ -70,10 +60,6 @@ void main() async {
     WidgetsFlutterBinding.ensureInitialized();
     debugPrint('DEBUG: WidgetsFlutterBinding initialized');
 
-    // Initialize dotenv
-    debugPrint('DEBUG: Loading .env file');
-    await dotenv.load(fileName: ".env");
-
     // Feed-safe image cache limits (avoid bitmap growth during long scroll sessions).
     PaintingBinding.instance.imageCache.maximumSize = 150;
     PaintingBinding.instance.imageCache.maximumSizeBytes = 120 << 20; // 120 MB
@@ -81,8 +67,9 @@ void main() async {
     // Initialize Supabase
     debugPrint('DEBUG: Initializing Supabase...');
     await Supabase.initialize(
-      url: Env.supabaseUrl,
-      anonKey: Env.supabaseAnonKey,
+      url: 'https://lihaddxlyychswpkswbp.supabase.co',
+      anonKey:
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpaGFkZHhseXljaHN3cGtzd2JwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkzNDA5MzQsImV4cCI6MjA4NDkxNjkzNH0.DrBUuz2ayMRCIicYAFNqH2ws3gbRu8ycsbATF54BuFM',
     );
     debugPrint('DEBUG: Supabase initialized');
 
@@ -90,38 +77,6 @@ void main() async {
     debugPrint('DEBUG: Initializing ObjectBox...');
     await ObjectBoxStore.create();
     debugPrint('DEBUG: ObjectBox initialized');
-
-    // Initialize Hive for Schedule Caching
-    debugPrint('DEBUG: Initializing Hive...');
-    await Hive.initFlutter();
-    if (!Hive.isAdapterRegistered(100)) {
-      Hive.registerAdapter(ShowReleaseAdapter());
-    }
-    if (!Hive.isAdapterRegistered(101)) {
-      Hive.registerAdapter(ReleaseScheduleAdapter());
-    }
-    debugPrint('DEBUG: Hive initialized');
-
-    // Calculate delay until 9 AM GMT
-    final now = DateTime.now().toUtc();
-    var next9AmGmt = DateTime.utc(now.year, now.month, now.day, 9, 0);
-    if (now.isAfter(next9AmGmt)) {
-      next9AmGmt = next9AmGmt.add(const Duration(days: 1));
-    }
-    final initialDelay = next9AmGmt.difference(now);
-
-    // Initialize Workmanager for Daily Schedule Notifications
-    debugPrint('DEBUG: Initializing Workmanager...');
-    Workmanager().initialize(callbackDispatcher);
-    // Register the daily background task
-    Workmanager().registerPeriodicTask(
-      "dailyReleaseScheduleTask",
-      releaseScheduleTask,
-      frequency: const Duration(hours: 24),
-      initialDelay: initialDelay,
-      constraints: Constraints(networkType: NetworkType.connected),
-    );
-    debugPrint('DEBUG: Workmanager initialized');
 
     // Initialize ChatSyncService (after ObjectBox is ready)
     debugPrint('DEBUG: Initializing ChatSyncService...');
@@ -160,9 +115,9 @@ void main() async {
           ChangeNotifierProvider(create: (_) => CommunityProvider()),
           ChangeNotifierProvider(create: (_) => ActorProvider()),
           ChangeNotifierProvider(create: (_) => AppNavigationProvider()),
-          ChangeNotifierProvider(create: (_) => YoutubeFeedProvider()),
-          ChangeNotifierProvider(create: (_) => CreatorsFeedProvider()),
-          ChangeNotifierProvider(create: (_) => TrailersFeedProvider()),
+          ChangeNotifierProvider(
+            create: (_) => YoutubeFeedProvider()..initialize(),
+          ),
           ChangeNotifierProvider(create: (_) => ChatProvider()..initialize()),
           ChangeNotifierProxyProvider<ChatProvider, UnreadStateProvider>(
             create: (context) =>
@@ -170,7 +125,6 @@ void main() async {
             update: (context, chatProvider, unreadProvider) => unreadProvider!,
           ),
           ChangeNotifierProvider(create: (_) => AiAssistantProvider()),
-          ChangeNotifierProvider(create: (_) => VideoUploadProvider()),
           Provider<AuthService>(create: (_) => AuthService()),
         ],
         child: MyApp(navigatorKey: navigatorKey),
@@ -238,11 +192,6 @@ class MyApp extends StatelessWidget {
                 ScreenTimeObserver(), // For our custom screen_view_duration events
               ],
               initialRoute: '/',
-              builder: (context, child) {
-                return UploadProgressOverlay(
-                  child: child ?? const SizedBox.shrink(),
-                );
-              },
               routes: {
                 '/': (context) => const SplashScreen(),
                 '/home': (context) => LandingScreen(),
@@ -277,15 +226,15 @@ class HomePage extends StatefulWidget {
 
 final List<Widget> _pages = [
   Home(),
+
   Discover(),
-  const CommsTab(),
+  Watchlist(),
   Messages(),
   Profile(),
 ];
 
 class _HomePageState extends State<HomePage> {
   DateTime? _lastBackPressTime;
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   Future<void> _handleBackPress(BuildContext context) async {
     final navProvider = Provider.of<AppNavigationProvider>(
@@ -337,12 +286,20 @@ class _HomePageState extends State<HomePage> {
     final navProvider = context.watch<AppNavigationProvider>();
     final userProvider = context.watch<UserProvider>();
     final user = userProvider.currentUser;
-    final internalIndex = navProvider.currentIndex;
-    
+    final internalIndex = navProvider.currentIndex; // 0..4
+
     // Check if user is an approved creator
-    final isCreator = user != null &&
+    final isCreator =
+        user != null &&
         user.role == 'creator' &&
         user.creatorStatus == 'approved';
+
+    // Map internal index to visual index
+    // If creator: skip the + button at visual index 2 (6 items: 0,1,+,3,4,5)
+    // If not creator: no + button (5 items: 0,1,2,3,4)
+    final visualIndex = isCreator
+        ? (internalIndex >= 2 ? internalIndex + 1 : internalIndex)
+        : internalIndex;
 
     return PopScope(
       canPop: false,
@@ -351,118 +308,55 @@ class _HomePageState extends State<HomePage> {
         _handleBackPress(context);
       },
       child: Scaffold(
-        key: _scaffoldKey,
         extendBody: false,
         body: IndexedStack(index: internalIndex, children: _pages),
-        drawer: isCreator
-            ? Drawer(
-                child: ListView(
-                  padding: EdgeInsets.zero,
-                  children: [
-                    DrawerHeader(
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF1A8927),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          CircleAvatar(
-                            radius: 30,
-                            backgroundImage: user.profileImage.isNotEmpty
-                                ? NetworkImage(user.profileImage)
-                                : null,
-                            child: user.profileImage.isEmpty
-                                ? const Icon(Icons.person, size: 30)
-                                : null,
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            user.username,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const Text(
-                            'Creator Studio',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.add_box_rounded),
-                      title: const Text('Create'),
-                      onTap: () {
-                        Navigator.pop(context); // Close drawer first
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const VideoUploadScreen()),
-                        );
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.analytics),
-                      title: const Text('Analytics'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        // TODO: Implement Analytics screen routing
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.help_outline),
-                      title: const Text('Help & Support'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        // TODO: Implement Help screen routing
-                      },
-                    ),
-                  ],
-                ),
-              )
-            : null,
         bottomNavigationBar: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
-          currentIndex: internalIndex,
+          currentIndex: visualIndex,
           onTap: (index) async {
-            // Handle Creator Avatar Tap (Index 4) -> Open Drawer instead of page
-            if (isCreator && index == 4) {
-              _scaffoldKey.currentState?.openDrawer();
+            // Handle Plus Button (Index 2) - only if creator
+            if (isCreator && index == 2) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const VideoUploadScreen()),
+              );
               return;
             }
 
+            // Map visual index back to internal index
+            // If creator: 0->0, 1->1, 3->2, 4->3, 5->4
+            // If not creator: direct mapping 0->0, 1->1, 2->2, 3->3, 4->4
+            final newInternalIndex = isCreator
+                ? (index > 2 ? index - 1 : index)
+                : index;
+
             final feedProvider = context.read<YoutubeFeedProvider>();
-            if (index != 0) {
+            if (newInternalIndex != 0) {
               feedProvider.pauseAll();
-            } else if (index == 0 && internalIndex != 0) {
+            } else if (newInternalIndex == 0 && internalIndex != 0) {
               feedProvider.resumeCurrent();
             }
 
-            if (index == 3) {
-              // Messages
+            if (newInternalIndex == 3) {
+              // Messages (internal index 3)
               Provider.of<UnreadStateProvider>(
                 context,
                 listen: false,
               ).markMessagesAsViewed();
             }
 
-            navProvider.setTab(index);
+            navProvider.setTab(newInternalIndex);
           },
           showUnselectedLabels: false,
           iconSize: 24,
           enableFeedback: true,
-          unselectedItemColor: internalIndex == 0
+          unselectedItemColor: visualIndex == 0
               ? Colors.white54
               : Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white54
-                  : Colors.black45,
+              ? Colors.white54
+              : Colors.black45,
           selectedItemColor: const Color(0xFF1A8927),
-          backgroundColor: internalIndex == 0
+          backgroundColor: visualIndex == 0
               ? Colors.black
               : Theme.of(context).cardColor,
           elevation: 8,
@@ -477,9 +371,28 @@ class _HomePageState extends State<HomePage> {
                 icon: Icon(CupertinoIcons.compass_fill),
                 label: 'Discover',
               ),
+
+              // PLUS BUTTON - only for creators
+              if (isCreator)
+                BottomNavigationBarItem(
+                  icon: Container(
+                    width: 48,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.black, width: 2),
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.add, color: Colors.black, size: 24),
+                    ),
+                  ),
+                  label: 'Create',
+                ),
+
               const BottomNavigationBarItem(
-                icon: FaIcon(FontAwesomeIcons.userGroup, size: 24.0),
-                label: 'Comms',
+                icon: FaIcon(FontAwesomeIcons.solidBookmark, size: 24.0),
+                label: 'Watchlist',
               ),
               BottomNavigationBarItem(
                 icon: Consumer<UnreadStateProvider>(
@@ -499,24 +412,10 @@ class _HomePageState extends State<HomePage> {
                 ),
                 label: "Messages",
               ),
-              if (isCreator)
-                BottomNavigationBarItem(
-                  icon: CircleAvatar(
-                    radius: 14,
-                    backgroundImage: user.profileImage.isNotEmpty
-                        ? NetworkImage(user.profileImage)
-                        : null,
-                    child: user.profileImage.isEmpty
-                        ? const Icon(Icons.person, size: 18)
-                        : null,
-                  ),
-                  label: 'Studio',
-                )
-              else
-                const BottomNavigationBarItem(
-                  icon: FaIcon(FontAwesomeIcons.imagePortrait, size: 24.0),
-                  label: 'Profile',
-                ),
+              const BottomNavigationBarItem(
+                icon: FaIcon(FontAwesomeIcons.imagePortrait, size: 24.0),
+                label: 'Profile',
+              ),
             ],
 
             // iOS
@@ -529,9 +428,25 @@ class _HomePageState extends State<HomePage> {
                 icon: Icon(Icons.explore),
                 label: 'Discover',
               ),
+
+              // PLUS BUTTON - only for creators
+              if (isCreator)
+                BottomNavigationBarItem(
+                  icon: Container(
+                    width: 42,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE50914), // Finishd Red
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.add, color: Colors.white, size: 20),
+                  ),
+                  label: 'Create',
+                ),
+
               const BottomNavigationBarItem(
-                icon: FaIcon(FontAwesomeIcons.userGroup, size: 24.0),
-                label: 'Comms',
+                icon: FaIcon(FontAwesomeIcons.bookmark, size: 24.0),
+                label: 'Watchlist',
               ),
               BottomNavigationBarItem(
                 icon: Consumer<UnreadStateProvider>(
@@ -551,24 +466,10 @@ class _HomePageState extends State<HomePage> {
                 ),
                 label: "Messages",
               ),
-              if (isCreator)
-                BottomNavigationBarItem(
-                  icon: CircleAvatar(
-                    radius: 14,
-                    backgroundImage: user.profileImage.isNotEmpty
-                        ? NetworkImage(user.profileImage)
-                        : null,
-                    child: user.profileImage.isEmpty
-                        ? const Icon(Icons.person, size: 18)
-                        : null,
-                  ),
-                  label: 'Studio',
-                )
-              else
-                const BottomNavigationBarItem(
-                  icon: FaIcon(FontAwesomeIcons.imagePortrait, size: 24.0),
-                  label: 'Profile',
-                ),
+              const BottomNavigationBarItem(
+                icon: FaIcon(FontAwesomeIcons.imagePortrait, size: 24.0),
+                label: 'Profile',
+              ),
             ],
           ],
         ),
