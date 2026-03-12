@@ -197,6 +197,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
       if (!mounted) return;
 
+      if (!context.mounted) return;
+
       if (type == 'image') {
         await context.read<ChatProvider>().sendImageMessage(
           conversationId: widget.chatId,
@@ -239,6 +241,8 @@ class _ChatScreenState extends State<ChatScreen> {
       if (gif == null || !mounted) return;
 
       setState(() => _isUploadingMedia = true);
+
+      if (!context.mounted) return;
 
       await context.read<ChatProvider>().sendGifMessage(
         conversationId: widget.chatId,
@@ -435,9 +439,11 @@ class _ChatScreenState extends State<ChatScreen> {
                                   );
 
                                   navProvider.setTab(0);
-                                  Navigator.of(
-                                    context,
-                                  ).popUntil((route) => route.isFirst);
+                                  if (context.mounted) {
+                                    Navigator.of(
+                                      context,
+                                    ).popUntil((route) => route.isFirst);
+                                  }
                                 }
                               : (message.type == 'video' &&
                                     message.mediaUrl != null)
@@ -477,6 +483,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                   );
 
                                   try {
+                                    if (!context.mounted) return;
                                     final provider = context
                                         .read<CommunityProvider>();
                                     final post = await provider.getPost(postId);
