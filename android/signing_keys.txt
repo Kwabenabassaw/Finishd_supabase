@@ -1,0 +1,13 @@
+# Finishd App Signing Keys
+
+## Upload Key (android/upload-keystore.jks)
+Alias: upload
+SHA-1: FE:86:CE:BB:95:D4:D0:BC:4B:7D:88:F2:5C:45:E8:BA:0D:14:96:74
+SHA-256: 9B:6C:EE:DE:B8:A9:AC:7B:92:8D:7B:9E:82:88:CA:2F:A1:06:C9:9F:CA:90:49:D0:30:93:53:CB:81:87:DC:4D
+
+## Debug Key (~/.android/debug.keystore)
+Alias: androiddebugkey
+SHA-1: 65:53:D9:B4:7B:C1:32:E0:CA:BA:05:59:15:97:FA:2D:FB:63:48:BF
+SHA-256: 2B:96:34:61:DA:E1:C6:91:9F:65:00:F8:9B:7D:33:F2:13:82:CF:78:27:C9:77:F0:75:D9:BF:63:4A:D2:13:71
+
+Note: These SHA keys are required for the Google Cloud/Firebase Console to enable Google Sign-In and other services for the package 'com.finishd'.

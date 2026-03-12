@@ -59,8 +59,20 @@ class _ScheduleSeeAllScreenState extends State<ScheduleSeeAllScreen> {
     _sortedDates.clear();
     _itemCounts.clear();
 
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
     final Map<String, List<ShowRelease>> groupedSchedule = {};
     for (var item in widget.scheduleItems) {
+      // Skip shows with air dates in the past
+      try {
+        final airDate = DateTime.parse(item.date);
+        final airDay = DateTime(airDate.year, airDate.month, airDate.day);
+        if (airDay.isBefore(today)) continue;
+      } catch (_) {
+        // Keep items with unparseable dates
+      }
+
       if (_searchQuery.isNotEmpty &&
           !item.title.toLowerCase().contains(_searchQuery)) {
         continue;
@@ -196,16 +208,11 @@ class _ScheduleSeeAllScreenState extends State<ScheduleSeeAllScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        Icons.search_off_rounded,
-                        size: 64,
-                        color: theme.hintColor.withValues(alpha: 0.3),
-                      ),
+                      Icon(Icons.search_off_rounded, size: 64),
                       const SizedBox(height: 16),
                       Text(
                         "No shows found",
                         style: theme.textTheme.titleMedium?.copyWith(
-                          color: theme.hintColor,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -256,24 +263,14 @@ class _ScheduleSeeAllScreenState extends State<ScheduleSeeAllScreen> {
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).scaffoldBackgroundColor.withValues(alpha: 0.95),
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Theme.of(
-                        context,
-                      ).dividerColor.withValues(alpha: 0.1),
-                      width: 1,
-                    ),
-                  ),
+                  border: Border(bottom: BorderSide(width: 1)),
                 ),
                 child: Text(
                   _currentHeader,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: Theme.of(context).primaryColor, // Highlight color
+
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -290,14 +287,9 @@ class _ScheduleSeeAllScreenState extends State<ScheduleSeeAllScreen> {
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
       child: Text(
         title,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.bold,
-          color:
-              Theme.of(
-                context,
-              ).textTheme.bodyLarge?.color?.withValues(alpha: 0.6) ??
-              Colors.grey,
-        ),
+        style: Theme.of(
+          context,
+        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -318,7 +310,7 @@ class _ScheduleSeeAllScreenState extends State<ScheduleSeeAllScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),

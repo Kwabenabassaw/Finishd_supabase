@@ -56,25 +56,25 @@ class ScheduleSection extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.04),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.04),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
+                    children: [
                       Text(
                         "See All",
                         style: TextStyle(
                           fontSize: 11,
-                          color: Colors.green,
+                          color: Theme.of(context).colorScheme.primary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      SizedBox(width: 4),
+                      const SizedBox(width: 4),
                       Icon(
                         Icons.arrow_forward_ios_rounded,
                         size: 10,
-                        color: Colors.green,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ],
                   ),
@@ -159,7 +159,7 @@ class ScheduleSection extends StatelessWidget {
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white10),
+          border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),

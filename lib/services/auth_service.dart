@@ -247,7 +247,7 @@ class AuthService {
       final idToken = googleAuth.idToken;
 
       final authorization = await googleUser.authorizationClient
-          .authorizationForScopes([]);
+          .authorizationForScopes(['email']);
       final accessToken = authorization?.accessToken;
 
       if (idToken == null) {

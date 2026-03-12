@@ -138,11 +138,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
         () => movieApi.TopRatedTv(),
       );
 
-      // Fetch SIMKL Schedule
+      // Fetch SIMKL Schedule (filtered to today + future only)
       try {
         await _scheduleRepo.init();
-        final schedule = await _scheduleRepo.getSchedule();
-        _scheduleItems = schedule.shows;
+        _scheduleItems = await _scheduleRepo.getUpcomingShows();
       } catch (e) {
         debugPrint("Error loading schedule: $e");
         _scheduleItems = [];

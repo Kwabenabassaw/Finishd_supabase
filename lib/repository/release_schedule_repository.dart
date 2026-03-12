@@ -105,4 +105,22 @@ class ReleaseScheduleRepository {
     // Filter calendar shows for today's date
     return schedule.shows.where((s) => s.date.startsWith(todayStr)).toList();
   }
+
+  /// Get only upcoming shows (air date >= today).
+  /// Removes any show whose air date is strictly before today.
+  Future<List<ShowRelease>> getUpcomingShows() async {
+    final schedule = await getSchedule();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    return schedule.shows.where((s) {
+      try {
+        final airDate = DateTime.parse(s.date);
+        final airDay = DateTime(airDate.year, airDate.month, airDate.day);
+        return !airDay.isBefore(today); // keep today + future
+      } catch (_) {
+        return true; // keep items with unparseable dates
+      }
+    }).toList();
+  }
 }
