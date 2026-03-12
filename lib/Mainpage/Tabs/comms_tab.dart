@@ -64,49 +64,66 @@ class _CommsTabState extends State<CommsTab> {
     final searchState = provider.searchState;
     final isSearching = searchState.query.isNotEmpty;
 
-    return RefreshIndicator(
-      onRefresh: () async {
-        if (isSearching) {
-          await provider.searchCommunities(searchState.query);
-        } else {
-          await Future.wait([
-            provider.fetchMyCommunities(),
-            provider.fetchTrendingCommunities(),
-            provider.fetchRecommendedCommunities(),
-            provider.fetchDiscoverContent(),
-          ]);
-        }
-      },
-      color: primaryGreen,
-      child: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-
-        slivers: [
-          // 1. My Communities (Horizontal Avatars)
-          if (!isSearching &&
-              !provider.isLoadingMyCommunities &&
-              provider.myCommunities.isNotEmpty) ...[
-            _buildSectionHeader(
-              context,
-              'My Communities',
-              'See all',
-              onSeeAll: () => Navigator.push(
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        title: Text(
+          "Comms",
+          style: TextStyle(
+            color: theme.brightness == Brightness.dark ? Colors.white : Colors.black,
+            fontWeight: FontWeight.w800,
+            fontSize: 22,
+            letterSpacing: -0.5,
+          ),
+        ),
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          if (isSearching) {
+            await provider.searchCommunities(searchState.query);
+          } else {
+            await Future.wait([
+              provider.fetchMyCommunities(),
+              provider.fetchTrendingCommunities(),
+              provider.fetchRecommendedCommunities(),
+              provider.fetchDiscoverContent(),
+            ]);
+          }
+        },
+        color: primaryGreen,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            // 1. My Communities (Card List)
+            if (!isSearching &&
+                !provider.isLoadingMyCommunities &&
+                provider.myCommunities.isNotEmpty) ...[
+              _buildSectionHeader(
                 context,
-                MaterialPageRoute(builder: (_) => const AllCommunitiesScreen()),
+                'My Communities',
+                'See all',
+                onSeeAll: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AllCommunitiesScreen()),
+                ),
+                badgeCount: provider.myCommunities.length,
               ),
-              badgeCount: provider.myCommunities.length,
-            ),
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 100,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  itemCount: provider.myCommunities.length,
-                  itemBuilder: (context, index) => _buildMyCommunityAvatar(
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _buildCommunityPremiumCard(
                     context,
                     provider.myCommunities[index],
+                    theme,
+                    primaryGreen,
                   ),
+                  childCount: provider.myCommunities.length > 3 
+                      ? 3 // Show top 3 in the main feed
+                      : provider.myCommunities.length,
                 ),
               ),
             ),
@@ -327,8 +344,9 @@ class _CommsTabState extends State<CommsTab> {
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildSectionHeader(
     BuildContext context,
@@ -574,6 +592,180 @@ class _CommsTabState extends State<CommsTab> {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCommunityPremiumCard(
+    BuildContext context,
+    Community item,
+    ThemeData theme,
+    Color primaryGreen,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(
+              theme.brightness == Brightness.dark ? 0.3 : 0.08,
+            ),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CommunityDetailScreen(
+                showId: item.showId,
+                showTitle: item.title,
+                posterPath: item.posterPath,
+                mediaType: item.mediaType,
+              ),
+            ),
+          ),
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Hero(
+                  tag: 'comm_poster_${item.showId}',
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 8,
+                          offset: const Offset(2, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: item.posterUrl != null
+                          ? Image.network(
+                              item.posterUrl!,
+                              width: 70,
+                              height: 100,
+                              fit: BoxFit.cover,
+                            )
+                          : Container(
+                              width: 70,
+                              height: 100,
+                              color: theme.hintColor.withOpacity(0.1),
+                              child: Icon(
+                                Icons.broken_image_rounded,
+                                color: theme.hintColor,
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: primaryGreen.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              item.mediaType.toUpperCase(),
+                              style: TextStyle(
+                                color: primaryGreen,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${item.memberCount}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.people_alt_rounded,
+                            size: 14,
+                            color: theme.hintColor,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        item.title,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        item.recentPostContent != null && item.recentPostContent!.isNotEmpty
+                            ? item.recentPostContent!
+                            : 'Join the community discussion!',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.hintColor,
+                          height: 1.3,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.forum_rounded,
+                            size: 14,
+                            color: primaryGreen,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Open Community',
+                            style: TextStyle(
+                              color: primaryGreen,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const Spacer(),
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 12,
+                            color: theme.hintColor.withOpacity(0.5),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

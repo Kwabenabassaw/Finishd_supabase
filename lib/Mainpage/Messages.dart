@@ -18,6 +18,7 @@ class Messages extends StatefulWidget {
 class _MessagesState extends State<Messages>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  static int _persistedTabIndex = 2; // Persisted across navigations
   int _lastNavIndex = 3;
 
   @override
@@ -26,7 +27,7 @@ class _MessagesState extends State<Messages>
     _tabController = TabController(
       length: 3,
       vsync: this,
-      initialIndex: 2, // Default to Convos
+      initialIndex: _persistedTabIndex, // Use persisted index
     );
     _tabController.addListener(_handleTabSelection);
   }
@@ -38,15 +39,8 @@ class _MessagesState extends State<Messages>
     // Listen to global app navigation changes
     final nav = Provider.of<AppNavigationProvider>(context);
     
-    // If we just navigated TO the Inbox tab (index 3), reset internal tab to Convos (index 2)
-    if (nav.currentIndex == 3 && _lastNavIndex != 3) {
-      if (_tabController.index != 2) {
-        // Schedule tab change after build phase completes
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _tabController.animateTo(2);
-        });
-      }
-    }
+    // Removed automatic reset to Convos (index 2). 
+    // Tab persistence is now handled via _persistedTabIndex.
     
     _lastNavIndex = nav.currentIndex;
   }
@@ -55,7 +49,8 @@ class _MessagesState extends State<Messages>
     if (_tabController.indexIsChanging) {
       setState(() {});
     } else {
-      // Also update when animation finishes to be sure
+      // Update persisted index when selection stabilizes
+      _persistedTabIndex = _tabController.index;
       setState(() {});
     }
   }
@@ -141,7 +136,7 @@ class _MessagesState extends State<Messages>
           ),
           floatingActionButton: _tabController.index == 2
               ? Padding(
-                  padding: const EdgeInsets.only(bottom: 85.0),
+                  padding: const EdgeInsets.only(bottom: 35.0), // Reduced by 50 (was 85)
                   child: FloatingActionButton(
                     backgroundColor: const Color(0xFF1A8927),
                     child: const Icon(Icons.add, color: Colors.white),
