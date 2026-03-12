@@ -92,26 +92,29 @@ class _FeedTabsWrapperState extends State<FeedTabsWrapper> {
                 children: [
                   Row(
                     children: [
-                      Builder(
-                        builder: (context) {
-                          return GestureDetector(
-                            onTap: () {
-                              Scaffold.of(context).openDrawer();
-                            },
-                            child: CircleAvatar(
-                              radius: 16,
-                              backgroundColor: Colors.white24,
-                              backgroundImage: (user != null && user.profileImage.isNotEmpty)
+                      if (isCreator) ...[
+                        Builder(
+                          builder: (context) {
+                            return GestureDetector(
+                              onTap: () {
+                                Scaffold.of(context).openDrawer();
+                              },
+                              child: CircleAvatar(
+                                radius: 16,
+                                backgroundColor: Colors.white24,
+                                backgroundImage: user!.profileImage.isNotEmpty
                                   ? NetworkImage(user.profileImage)
                                   : null,
-                              child: (user == null || user.profileImage.isEmpty)
-                                  ? const Icon(Icons.person, size: 20, color: Colors.white)
+                              child: user.profileImage.isEmpty
+                                  ? const Icon(Icons.person,
+                                      size: 20, color: Colors.white)
                                   : null,
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(width: 8),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                      ],
                       IconButton(
                         icon: const Icon(
                           Icons.notifications_none,

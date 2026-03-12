@@ -1,6 +1,6 @@
 {
-    "name": "finishd",
-    "short_name": "finishd",
+    "name": "Finishd",
+    "short_name": "Finishd",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
