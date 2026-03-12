@@ -7,6 +7,9 @@ import 'package:finishd/services/user_service.dart';
 import 'package:finishd/Widget/user_avatar.dart';
 import 'package:finishd/profile/profileScreen.dart';
 import 'package:finishd/LoadingWidget/LogoLoading.dart';
+import 'package:finishd/Chat/chatScreen.dart';
+import 'package:finishd/services/chat_service.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class FriendsTab extends StatefulWidget {
   const FriendsTab({super.key});
@@ -299,29 +302,63 @@ class _FriendsTabState extends State<FriendsTab> {
                   '@${user.username}',
                   style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600], fontSize: 13),
                 ),
-                trailing: SizedBox(
-                  width: 100, // Fixed width to prevent jumping
-                  child: ElevatedButton(
-                    onPressed: () => _toggleFollow(user.uid),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isFollowing
-                          ? (isDark ? Colors.grey[800] : Colors.grey[300])
-                          : const Color.fromARGB(255, 3, 130, 7),
-                      foregroundColor: isFollowing
-                          ? (isDark ? Colors.white : Colors.black)
-                          : Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isFollowing) ...[
+                      IconButton(
+                        onPressed: () async {
+                          final chatService = ChatService();
+                          final chatId = await chatService.createChat(
+                            _currentUserId,
+                            user.uid,
+                          );
+                          if (context.mounted) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ChatScreen(
+                                  chatId: chatId,
+                                  otherUser: user,
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        icon: Icon(
+                          FontAwesomeIcons.message,
+                          size: 18,
+                          color: isDark ? Colors.white70 : Colors.black54,
+                        ),
+                        constraints: const BoxConstraints(),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-                      minimumSize: const Size(80, 32),
+                    ],
+                    SizedBox(
+                      width: 90,
+                      child: ElevatedButton(
+                        onPressed: () => _toggleFollow(user.uid),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isFollowing
+                              ? (isDark ? Colors.grey[800] : Colors.grey[300])
+                              : const Color.fromARGB(255, 3, 130, 7),
+                          foregroundColor: isFollowing
+                              ? (isDark ? Colors.white : Colors.black)
+                              : Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                          minimumSize: const Size(80, 32),
+                        ),
+                        child: Text(
+                          isFollowing ? 'Following' : 'Follow',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      ),
                     ),
-                    child: Text(
-                      isFollowing ? 'Following' : 'Follow',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                    ),
-                  ),
+                  ],
                 ),
               );
             },
