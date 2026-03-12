@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:finishd/provider/youtube_feed_provider.dart';
+import 'package:finishd/provider/user_provider.dart';
 import 'package:finishd/services/api_client.dart';
 import 'package:finishd/Feed/creators_feed_screen.dart';
 import 'package:finishd/Feed/trailers_discovery_screen.dart';
@@ -27,6 +28,12 @@ class _FeedTabsWrapperState extends State<FeedTabsWrapper> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<YoutubeFeedProvider>();
+    final userProvider = context.watch<UserProvider>();
+    final user = userProvider.currentUser;
+    final isCreator = user != null &&
+        user.role == 'creator' &&
+        user.creatorStatus == 'approved';
+
     // Force dark mode for the top area since videos are rendered on black backgrounds.
     final isDark = true;
 
@@ -83,14 +90,38 @@ class _FeedTabsWrapperState extends State<FeedTabsWrapper> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  IconButton(
-                    icon: const Icon(
-                      Icons.notifications_none,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                    onPressed: () =>
-                        Navigator.pushNamed(context, 'notification'),
+                  Row(
+                    children: [
+                      Builder(
+                        builder: (context) {
+                          return GestureDetector(
+                            onTap: () {
+                              Scaffold.of(context).openDrawer();
+                            },
+                            child: CircleAvatar(
+                              radius: 16,
+                              backgroundColor: Colors.white24,
+                              backgroundImage: (user != null && user.profileImage.isNotEmpty)
+                                  ? NetworkImage(user.profileImage)
+                                  : null,
+                              child: (user == null || user.profileImage.isEmpty)
+                                  ? const Icon(Icons.person, size: 20, color: Colors.white)
+                                  : null,
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.notifications_none,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                        onPressed: () =>
+                            Navigator.pushNamed(context, 'notification'),
+                      ),
+                    ],
                   ),
                   _buildTabBar(context, selectedIndex, isDark, provider),
                   IconButton(

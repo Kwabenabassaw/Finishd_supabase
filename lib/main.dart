@@ -430,12 +430,6 @@ class _HomePageState extends State<HomePage> {
           type: BottomNavigationBarType.fixed,
           currentIndex: internalIndex,
           onTap: (index) async {
-            // Handle Creator Avatar Tap (Index 4) -> Open Drawer instead of page
-            if (isCreator && index == 4) {
-              _scaffoldKey.currentState?.openDrawer();
-              return;
-            }
-
             final feedProvider = context.read<YoutubeFeedProvider>();
             if (index != 0) {
               feedProvider.pauseAll();
@@ -499,24 +493,10 @@ class _HomePageState extends State<HomePage> {
                 ),
                 label: "Messages",
               ),
-              if (isCreator)
-                BottomNavigationBarItem(
-                  icon: CircleAvatar(
-                    radius: 14,
-                    backgroundImage: user.profileImage.isNotEmpty
-                        ? NetworkImage(user.profileImage)
-                        : null,
-                    child: user.profileImage.isEmpty
-                        ? const Icon(Icons.person, size: 18)
-                        : null,
-                  ),
-                  label: 'Studio',
-                )
-              else
-                const BottomNavigationBarItem(
-                  icon: FaIcon(FontAwesomeIcons.imagePortrait, size: 24.0),
-                  label: 'Profile',
-                ),
+              const BottomNavigationBarItem(
+                icon: FaIcon(FontAwesomeIcons.imagePortrait, size: 24.0),
+                label: 'Profile',
+              ),
             ],
 
             // iOS
@@ -551,24 +531,10 @@ class _HomePageState extends State<HomePage> {
                 ),
                 label: "Messages",
               ),
-              if (isCreator)
-                BottomNavigationBarItem(
-                  icon: CircleAvatar(
-                    radius: 14,
-                    backgroundImage: user.profileImage.isNotEmpty
-                        ? NetworkImage(user.profileImage)
-                        : null,
-                    child: user.profileImage.isEmpty
-                        ? const Icon(Icons.person, size: 18)
-                        : null,
-                  ),
-                  label: 'Studio',
-                )
-              else
-                const BottomNavigationBarItem(
-                  icon: FaIcon(FontAwesomeIcons.imagePortrait, size: 24.0),
-                  label: 'Profile',
-                ),
+              const BottomNavigationBarItem(
+                icon: FaIcon(FontAwesomeIcons.imagePortrait, size: 24.0),
+                label: 'Profile',
+              ),
             ],
           ],
         ),
