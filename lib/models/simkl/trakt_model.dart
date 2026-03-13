@@ -1,7 +1,5 @@
 import 'package:hive/hive.dart';
 
-// Actually, since we're writing adapters manually, we can define the classes directly and their adapters in a separate file or inline.
-
 class ShowRelease {
   final String title;
   final int? season;
@@ -9,6 +7,7 @@ class ShowRelease {
   final String date;
   final int? tmdbId;
   final bool isMovie;
+  final String? posterPath;
 
   ShowRelease({
     required this.title,
@@ -17,6 +16,7 @@ class ShowRelease {
     required this.date,
     this.tmdbId,
     this.isMovie = false,
+    this.posterPath,
   });
 
   factory ShowRelease.fromJson(Map<String, dynamic> json, {bool isMovie = false}) {
@@ -35,6 +35,7 @@ class ShowRelease {
       date: date,
       tmdbId: tmdbId,
       isMovie: isMovie,
+      posterPath: json['poster_path'],
     );
   }
 
@@ -46,7 +47,21 @@ class ShowRelease {
       'date': date,
       'tmdbId': tmdbId,
       'isMovie': isMovie,
+      'poster_path': posterPath,
     };
+  }
+
+  /// Create a copy with an updated posterPath
+  ShowRelease copyWith({String? posterPath}) {
+    return ShowRelease(
+      title: title,
+      season: season,
+      episode: episode,
+      date: date,
+      tmdbId: tmdbId,
+      isMovie: isMovie,
+      posterPath: posterPath ?? this.posterPath,
+    );
   }
 }
 
@@ -56,13 +71,30 @@ class ShowReleaseAdapter extends TypeAdapter<ShowRelease> {
 
   @override
   ShowRelease read(BinaryReader reader) {
+    final title = reader.readString();
+    final season = reader.read(); // int?
+    final episode = reader.read(); // int?
+    final date = reader.readString();
+    final tmdbId = reader.read(); // int?
+    final isMovie = reader.readBool();
+
+    // Read posterPath (backwards compatible — old cache won't have it)
+    String? posterPath;
+    if (reader.availableBytes > 0) {
+      final raw = reader.read();
+      if (raw is String) {
+        posterPath = raw;
+      }
+    }
+
     return ShowRelease(
-      title: reader.readString(),
-      season: reader.read(), // int?
-      episode: reader.read(), // int?
-      date: reader.readString(),
-      tmdbId: reader.read(), // int?
-      isMovie: reader.readBool(),
+      title: title,
+      season: season,
+      episode: episode,
+      date: date,
+      tmdbId: tmdbId,
+      isMovie: isMovie,
+      posterPath: posterPath,
     );
   }
 
@@ -74,6 +106,7 @@ class ShowReleaseAdapter extends TypeAdapter<ShowRelease> {
     writer.writeString(obj.date);
     writer.write(obj.tmdbId);
     writer.writeBool(obj.isMovie);
+    writer.write(obj.posterPath); // nullable String
   }
 }
 

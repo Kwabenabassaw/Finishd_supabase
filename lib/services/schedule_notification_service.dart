@@ -1,6 +1,6 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:finishd/models/simkl/simkl_models.dart';
+import 'package:finishd/models/simkl/trakt_model.dart';
 
 class ScheduleNotificationService {
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =

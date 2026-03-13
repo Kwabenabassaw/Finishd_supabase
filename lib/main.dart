@@ -52,7 +52,7 @@ import 'package:finishd/services/seen_sync_service.dart'; // Video deduplication
 import 'package:finishd/services/moderation_listener_service.dart'; // Real-time moderation
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:workmanager/workmanager.dart';
-import 'package:finishd/models/simkl/simkl_models.dart';
+import 'package:finishd/models/simkl/trakt_model.dart';
 import 'package:finishd/workers/schedule_worker.dart';
 import 'package:finishd/services/moderation_notification_handler.dart'; // Moderation warnings
 import 'package:finishd/screens/video_upload_screen.dart';

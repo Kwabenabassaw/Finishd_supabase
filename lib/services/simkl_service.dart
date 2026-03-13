@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:finishd/models/simkl/simkl_models.dart';
+import 'package:finishd/models/simkl/trakt_model.dart';
 import 'package:finishd/config/env.dart';
 
 class SimklService {

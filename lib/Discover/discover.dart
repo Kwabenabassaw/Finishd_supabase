@@ -20,7 +20,7 @@ import 'package:finishd/Discover/see_all_screen.dart';
 import 'package:finishd/services/genre_discover_service.dart';
 import 'package:finishd/services/social_discovery_service.dart';
 import 'package:finishd/repository/release_schedule_repository.dart';
-import 'package:finishd/models/simkl/simkl_models.dart';
+import 'package:finishd/models/simkl/trakt_model.dart';
 import 'package:finishd/Discover/schedule_section.dart';
 
 final Trending movieApi = Trending();

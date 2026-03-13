@@ -1,5 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:finishd/models/simkl/simkl_models.dart';
+import 'package:finishd/models/simkl/trakt_model.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:finishd/services/trakt_service.dart';
 
@@ -27,8 +27,11 @@ class ReleaseScheduleRepository {
 
     if (cached != null) {
       final difference = DateTime.now().difference(cached.lastFetched).inDays;
-      if (difference < 3) {
-        return cached; // Cache is still fresh
+      // Also invalidate if cached data lacks posterPath (old format)
+      final hasPosterData = cached.shows.isEmpty ||
+          cached.shows.any((s) => s.posterPath != null);
+      if (difference < 3 && hasPosterData) {
+        return cached; // Cache is still fresh and has poster data
       }
     }
 

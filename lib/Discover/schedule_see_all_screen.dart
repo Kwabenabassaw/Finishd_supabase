@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:finishd/models/simkl/simkl_models.dart';
+import 'package:finishd/models/simkl/trakt_model.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:finishd/Model/tvdetail.dart';
 import 'package:finishd/MovieDetails/Tvshowscreen.dart';
@@ -303,6 +303,11 @@ class _ScheduleSeeAllScreenState extends State<ScheduleSeeAllScreen> {
       episodeText = "Series Premiere / TBA";
     }
 
+    // Construct proper TMDB poster URL from posterPath
+    final String? posterUrl = item.posterPath != null
+        ? "https://image.tmdb.org/t/p/w200${item.posterPath}"
+        : null;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
@@ -327,7 +332,7 @@ class _ScheduleSeeAllScreenState extends State<ScheduleSeeAllScreen> {
               name: item.title,
               originalName: item.title,
               overview: '',
-              posterPath: null,
+              posterPath: item.posterPath,
               backdropPath: null,
               firstAirDate: item.date,
               inProduction: false,
@@ -361,10 +366,9 @@ class _ScheduleSeeAllScreenState extends State<ScheduleSeeAllScreen> {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: item.tmdbId != null
+            child: posterUrl != null
                 ? CachedNetworkImage(
-                    imageUrl:
-                        "https://image.tmdb.org/t/p/w200/${item.tmdbId}", // Small resolution avatar
+                    imageUrl: posterUrl,
                     fit: BoxFit.cover,
                     placeholder: (context, url) => Center(
                       child: Icon(

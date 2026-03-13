@@ -128,8 +128,9 @@ class _LoginState extends State<Login> {
         // Check moderation status before allowing access
         if (await _checkModerationAndNavigate(authService)) return;
 
-        // If new user (auto-created), go to onboarding
-        if (result['isNewUser'] == true) {
+        // Check if onboarding is completed
+        if (result['onboardingCompleted'] != true) {
+          // New or incomplete user — send to onboarding
           Navigator.pushReplacementNamed(context, 'genre');
         } else {
           // Initialize UserProvider with following IDs
@@ -139,7 +140,7 @@ class _LoginState extends State<Login> {
               listen: false,
             ).fetchCurrentUser(authService.currentUser!.id);
           }
-          // Existing user, go to homepage
+          // Existing user with completed onboarding, go to homepage
           TextInput.finishAutofillContext(); // Trigger Credential Save
           Navigator.pushReplacementNamed(context, 'homepage');
         }

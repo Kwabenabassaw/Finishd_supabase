@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Define the primary green color
 const Color primaryGreen = Color(0xFF1A8927);
@@ -35,7 +36,18 @@ class _CompletionScreenState extends State<CompletionScreen> {
     // Cancel the timer if we are navigating manually to avoid double navigation
     _timer?.cancel();
 
-    print('Navigating to Home Screen');
+    // Mark onboarding as complete in the DB (safety net)
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user != null) {
+      Supabase.instance.client
+          .from('profiles')
+          .update({'onboarding_completed': true})
+          .eq('id', user.id)
+          .then((_) => debugPrint('Onboarding marked complete'))
+          .catchError((e) => debugPrint('Error marking onboarding: $e'));
+    }
+
+    debugPrint('Navigating to Home Screen');
     Navigator.of(context).pushNamedAndRemoveUntil(
       'homepage', // The route name you want to go to
       (Route<dynamic> route) =>

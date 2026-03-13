@@ -1,7 +1,7 @@
 import 'package:workmanager/workmanager.dart';
 import 'package:finishd/repository/release_schedule_repository.dart';
 import 'package:finishd/services/schedule_notification_service.dart';
-import 'package:finishd/models/simkl/simkl_models.dart';
+import 'package:finishd/models/simkl/trakt_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 

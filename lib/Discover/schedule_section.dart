@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:finishd/models/simkl/simkl_models.dart';
+import 'package:finishd/models/simkl/trakt_model.dart';
 import 'package:finishd/Discover/schedule_see_all_screen.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:finishd/Model/tvdetail.dart';
@@ -117,10 +117,10 @@ class ScheduleSection extends StatelessWidget {
           "S${item.season.toString().padLeft(2, '0')}E${item.episode.toString().padLeft(2, '0')}";
     }
 
-    // Construct TMDB poster URL if tmdbId is available
-    final String posterUrl = item.tmdbId != null
-        ? "https://image.tmdb.org/t/p/w500/${item.tmdbId}" // Fallback image resolution
-        : "";
+    // Construct TMDB poster URL if posterPath is available
+    final String? posterUrl = item.posterPath != null
+        ? "https://image.tmdb.org/t/p/w500${item.posterPath}"
+        : null;
 
     return GestureDetector(
       onTap: () {
@@ -130,7 +130,7 @@ class ScheduleSection extends StatelessWidget {
             name: item.title,
             originalName: item.title,
             overview: '',
-            posterPath: null,
+            posterPath: item.posterPath,
             backdropPath: null,
             firstAirDate: item.date,
             inProduction: false,
@@ -167,16 +167,12 @@ class ScheduleSection extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               // Backend Image Layer
-              if (item.tmdbId != null)
+              if (posterUrl != null)
                 CachedNetworkImage(
-                  // In a perfect scenario, we would need to map the tmdbId to a full movie/show details
-                  // to get the actual `poster_path`. Since TMDB's generic image endpoint just takes the
-                  // hash string (e.g., /abc123xyz.jpg), we technically can't pull an image JUST from the ID directly
-                  // without pinging the API first. However, to keep it sync and fast, we will try fetching
-                  // from a generic placeholder or wait for a full TMDB pass if the UI demands it.
-                  // For now, drawing a sleek degraded background.
                   imageUrl: posterUrl,
                   fit: BoxFit.cover,
+                  placeholder: (context, url) =>
+                      Container(color: Theme.of(context).cardColor),
                   errorWidget: (context, url, error) =>
                       Container(color: Theme.of(context).cardColor),
                 ),

@@ -14,7 +14,7 @@ class UserPreferencesService {
           .from('profiles')
           .update({
             'preferences': preferences.toJson(),
-            // 'onboarding_completed': true, // Assuming column exists or handled elsewhere
+            'onboarding_completed': true,
           })
           .eq('id', userId);
     } catch (e) {
