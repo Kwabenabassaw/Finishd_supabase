@@ -355,10 +355,19 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                               )
                             else
                               ElevatedButton(
-                                onPressed: () => provider.joinCommunity(
-                                  widget.showId,
-                                  community,
-                                ),
+                                onPressed: () async {
+                                  await provider.joinCommunity(
+                                    widget.showId,
+                                    community,
+                                  );
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Joined community'),
+                                      ),
+                                    );
+                                  }
+                                },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: primaryGreen,
                                   foregroundColor: Colors.white,
@@ -1259,8 +1268,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
 
                 if (isFav) {
                   await dbHelper.removeFavoritePost(post.id);
+                  if (!mounted) return;
                   setState(() => _favoritePosts.remove(post.id));
-                  if (mounted) {
+                  if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Removed from favorites'),
@@ -1270,8 +1280,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                   }
                 } else {
                   await dbHelper.addFavoritePost(post.id, widget.showId);
+                  if (!mounted) return;
                   setState(() => _favoritePosts.add(post.id));
-                  if (mounted) {
+                  if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Added to favorites'),
@@ -1362,11 +1373,12 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
             onPressed: () async {
               Navigator.pop(context); // Close dialog
               final result = await provider.deletePost(post.id, widget.showId);
-              if (result && mounted) {
+              if (!mounted) return;
+              if (result && context.mounted) {
                 ScaffoldMessenger.of(
                   context,
                 ).showSnackBar(const SnackBar(content: Text('Post deleted')));
-              } else if (mounted) {
+              } else if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Failed to delete post')),
                 );
@@ -1669,7 +1681,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
             onPressed: () async {
               Navigator.pop(context);
               await provider.leaveCommunity(community.showId);
-              if (mounted) {
+              if (context.mounted) {
                 Navigator.pop(
                   context,
                 ); // Go back to discover or previous screen
@@ -1709,12 +1721,13 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
             onPressed: () async {
               Navigator.pop(context);
               final result = await provider.deleteCommunity(community.showId);
-              if (result && mounted) {
+              if (!mounted) return;
+              if (result && context.mounted) {
                 Navigator.pop(context); // Go back
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Community deleted')),
                 );
-              } else if (mounted) {
+              } else if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Failed to delete community')),
                 );

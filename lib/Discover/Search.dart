@@ -5,10 +5,9 @@ import 'package:finishd/Model/trending.dart';
 import 'package:finishd/MovieDetails/movie_details_screen.dart';
 import 'package:finishd/Widget/interactive_media_poster.dart';
 import 'package:finishd/provider/MovieProvider.dart';
-import 'package:finishd/tmbd/Search.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:finishd/screens/actor_profile_screen.dart';
-import 'package:finishd/services/feed_search_service.dart';
+import 'package:finishd/services/unified_search_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -16,8 +15,7 @@ import 'dart:async';
 import 'package:provider/provider.dart';
 
 Trending api = Trending();
-SearchDiscover searchApi = SearchDiscover();
-FeedSearchService feedSearchService = FeedSearchService();
+UnifiedSearchService unifiedSearchService = UnifiedSearchService();
 
 // Utility for TMDB image URLs
 String getTmdbImageUrl(String? path, {String size = 'w500'}) {
@@ -111,36 +109,7 @@ class _SearchScreenState extends State<SearchScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Search both sources in parallel for speed
-      final results = await Future.wait([
-        // 1. Feed backend (curated, fast)
-        feedSearchService.search(trimmedQuery, limit: 20),
-        // 2. TMDB (broader coverage)
-        searchApi.getSearchitem(trimmedQuery),
-      ]);
-
-      final feedResults = results[0];
-      final tmdbResults = results[1];
-
-      // Merge results: feed first, then TMDB (deduplicated by ID)
-      final seenIds = <int>{};
-      final mergedResults = <Result>[];
-
-      // Add feed results first (higher priority - curated content)
-      for (final item in feedResults) {
-        if (item.id != null && !seenIds.contains(item.id)) {
-          seenIds.add(item.id!);
-          mergedResults.add(item);
-        }
-      }
-
-      // Add TMDB results (broader coverage)
-      for (final item in tmdbResults) {
-        if (item.id != null && !seenIds.contains(item.id)) {
-          seenIds.add(item.id!);
-          mergedResults.add(item);
-        }
-      }
+      final mergedResults = await unifiedSearchService.searchAll(trimmedQuery);
 
       if (mounted) {
         setState(() {

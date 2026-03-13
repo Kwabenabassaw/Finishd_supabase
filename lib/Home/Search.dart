@@ -5,8 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:finishd/Model/Searchdiscover.dart';
 import 'package:finishd/MovieDetails/movie_details_screen.dart';
 import 'package:finishd/provider/MovieProvider.dart';
-import 'package:finishd/services/feed_search_service.dart';
-import 'package:finishd/tmbd/Search.dart';
+import 'package:finishd/services/unified_search_service.dart';
 import 'package:finishd/tmbd/fetchtrending.dart';
 import 'package:finishd/Model/trending.dart';
 import 'package:provider/provider.dart';
@@ -29,8 +28,7 @@ class SearchScreenHome extends StatefulWidget {
 class _SearchScreenHomeState extends State<SearchScreenHome> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
-  final FeedSearchService _feedSearchService = FeedSearchService();
-  final SearchDiscover _tmdbSearchApi = SearchDiscover();
+  final UnifiedSearchService _unifiedSearchService = UnifiedSearchService();
   final Trending _trendingApi = Trending();
 
   List<Result> _results = [];
@@ -119,32 +117,10 @@ class _SearchScreenHomeState extends State<SearchScreenHome> {
     setState(() => _isLoading = true);
 
     try {
-      // Search both sources in parallel
-      final results = await Future.wait([
-        _feedSearchService.search(trimmedQuery, limit: 15),
-        _tmdbSearchApi.getSearchitem(trimmedQuery),
-      ]);
-
-      final feedResults = results[0];
-      final tmdbResults = results[1];
-
-      // Merge: feed first (curated), then TMDB (deduplicated)
-      final seenIds = <int>{};
-      final mergedResults = <Result>[];
-
-      for (final item in feedResults) {
-        if (item.id != null && !seenIds.contains(item.id)) {
-          seenIds.add(item.id!);
-          mergedResults.add(item);
-        }
-      }
-
-      for (final item in tmdbResults) {
-        if (item.id != null && !seenIds.contains(item.id)) {
-          seenIds.add(item.id!);
-          mergedResults.add(item);
-        }
-      }
+      final mergedResults = await _unifiedSearchService.searchAll(
+        trimmedQuery,
+        feedLimit: 15,
+      );
 
       if (mounted) {
         setState(() {
