@@ -60,6 +60,7 @@ import 'package:finishd/provider/video_upload_provider.dart';
 import 'package:finishd/widgets/upload_progress_overlay.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:finishd/config/env.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 // GLOBAL ROUTE OBSERVER
 final RouteObserver<ModalRoute<void>> routeObserver =
@@ -72,7 +73,15 @@ void main() async {
 
     // Initialize dotenv
     debugPrint('DEBUG: Loading .env file');
-    await dotenv.load(fileName: ".env");
+    try {
+      await dotenv.load(fileName: ".env");
+      debugPrint('DEBUG: .env loaded successfully');
+    } catch (e) {
+      debugPrint(
+        'WARNING: .env file not found or failed to load. '
+        'Falling back to dart-define/environment defaults. Error: $e',
+      );
+    }
 
     // Feed-safe image cache limits (avoid bitmap growth during long scroll sessions).
     PaintingBinding.instance.imageCache.maximumSize = 150;
@@ -179,6 +188,12 @@ void main() async {
   } catch (e, stackTrace) {
     debugPrint('App initialization error: $e');
     debugPrint('Stack trace: $stackTrace');
+    FlutterNativeSplash.remove();
+    final stackTraceString = stackTrace.toString();
+    final stackPreview = stackTraceString.length > 500
+        ? '${stackTraceString.substring(0, 500)}...'
+        : stackTraceString;
+
     // Show the actual error on screen for debugging
     runApp(
       MaterialApp(
@@ -200,7 +215,7 @@ void main() async {
                   const SizedBox(height: 16),
                   Text('Error: $e'),
                   const SizedBox(height: 16),
-                  Text('Stack: ${stackTrace.toString().substring(0, 500)}...'),
+                  Text('Stack: $stackPreview'),
                 ],
               ),
             ),
