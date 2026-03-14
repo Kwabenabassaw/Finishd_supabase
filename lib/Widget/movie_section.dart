@@ -117,6 +117,7 @@ class MovieSection extends StatelessWidget {
                 typeBuilder: (m) => limited.join(", "),
                 width: cardWidth,
                 imageHeight: imgHeight,
+                heroPrefix: title,
                 onActionMenuTap: () {
                   // Convert MediaItem to MovieListItem
                   final movieListItem = MovieListItem(

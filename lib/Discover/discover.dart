@@ -310,13 +310,14 @@ class _ExploreScreenState extends State<ExploreScreen> {
     final provider = Provider.of<MovieProvider>(context);
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text(
           'Discover',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         elevation: 0,
-        backgroundColor: Colors.transparent,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         actions: [
           IconButton(
             icon: const Icon(Icons.search_rounded, size: 28),

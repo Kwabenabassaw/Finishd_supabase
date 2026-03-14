@@ -1,6 +1,8 @@
 
 import 'package:finishd/Discover/discover.dart';
 import 'package:flutter/material.dart';
+import 'package:finishd/Widget/animated_wallpaper.dart';
+
 class Discover extends StatefulWidget {
   const Discover({super.key});
 
@@ -11,6 +13,8 @@ class Discover extends StatefulWidget {
 class _DiscoverState extends State<Discover> {
   @override
   Widget build(BuildContext context) {
-    return ExploreScreen();
+    return AnimatedWallpaper(
+      child: ExploreScreen(),
+    );
   }
 }

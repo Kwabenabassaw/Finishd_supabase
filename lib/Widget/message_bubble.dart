@@ -30,6 +30,7 @@ class MessageBubble extends StatelessWidget {
   final String? postAuthorName;
   final String? postShowTitle;
   final VoidCallback? onPostTap;
+  final String? messageId; // Unique ID for Hero tags
 
   const MessageBubble({
     super.key,
@@ -57,6 +58,7 @@ class MessageBubble extends StatelessWidget {
     this.postAuthorName,
     this.postShowTitle,
     this.onPostTap,
+    this.messageId,
   });
 
   bool get _isVideoLink => type == 'video_link' && videoId != null;
@@ -171,7 +173,7 @@ class MessageBubble extends StatelessWidget {
                 maxHeight: 300,
               ),
               child: Hero(
-                tag: mediaUrl!,
+                tag: 'media_${messageId ?? mediaUrl!}',
                 child: Image.network(
                   mediaUrl!,
                   fit: BoxFit.contain, // GIFs should show full content usually
@@ -418,7 +420,7 @@ class MessageBubble extends StatelessWidget {
                   maxHeight: 300,
                 ),
                 child: Hero(
-                  tag: mediaUrl!,
+                  tag: 'media_${messageId ?? mediaUrl!}',
                   child: Image.network(
                     mediaUrl!,
                     fit: BoxFit.cover,
@@ -500,7 +502,7 @@ class MessageBubble extends StatelessWidget {
                       maxHeight: 250,
                     ),
                     child: Hero(
-                      tag: mediaUrl!,
+                      tag: 'media_${messageId ?? mediaUrl!}',
                       child: Image.network(
                         thumbnailUrl,
                         fit: BoxFit.cover,

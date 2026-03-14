@@ -6,7 +6,10 @@ import 'package:finishd/theme/app_theme.dart';
 import 'package:finishd/provider/chat_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:io';import 'package:finishd/provider/app_navigation_provider.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'dart:io';
+import 'package:finishd/provider/app_navigation_provider.dart';
+import 'package:finishd/Widget/animated_wallpaper.dart';
 
 class Messages extends StatefulWidget {
   const Messages({super.key});
@@ -75,85 +78,87 @@ class _MessagesState extends State<Messages>
           (sum, conv) => sum + conv.unreadCount,
         );
 
-        return Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          appBar: AppBar(
+        return AnimatedWallpaper(
+          child: Scaffold(
             backgroundColor: Colors.transparent,
-            elevation: 0,
-            centerTitle: true,
-            title: isIOS
-                ? _buildCustomSegmentedControl(isDark, totalUnread)
-                : Text(
-                    "Messages",
-                    style: TextStyle(
-                      color: isDark ? Colors.white : Colors.black,
-                      fontWeight: FontWeight.bold,
+            appBar: AppBar(
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              elevation: 0,
+              centerTitle: true,
+              title: isIOS
+                  ? _buildCustomSegmentedControl(isDark, totalUnread)
+                  : Text(
+                      "Messages",
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-            bottom: !isIOS
-                ? TabBar(
-                    controller: _tabController,
-                    indicatorColor: AppTheme.primaryGreen,
-                    labelColor: isDark ? Colors.white : Colors.black,
-                    unselectedLabelColor: Colors.grey,
-                    indicatorWeight: 3,
-                    labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-                    tabs: [
-                      const Tab(text: 'Recs'),
-                      const Tab(text: 'Friends'),
-                      Tab(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text('Convos'),
-                            if (totalUnread > 0) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.red,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  totalUnread > 99 ? '99+' : '$totalUnread',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
+              bottom: !isIOS
+                  ? TabBar(
+                      controller: _tabController,
+                      indicatorColor: Theme.of(context).colorScheme.primary,
+                      labelColor: Theme.of(context).colorScheme.onSurface,
+                      unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                      indicatorWeight: 3,
+                      labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+                      tabs: [
+                        const Tab(text: 'Recs'),
+                        const Tab(text: 'Friends'),
+                        Tab(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('Convos'),
+                              if (totalUnread > 0) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    totalUnread > 99 ? '99+' : '$totalUnread',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
-                              ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    )
+                  : null,
+            ),
+            floatingActionButton: _tabController.index == 2
+                ? Padding(
+                    padding: const EdgeInsets.only(bottom: 35.0),
+                    child: FloatingActionButton(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      child: Icon(LucideIcons.plus, color: Theme.of(context).colorScheme.onPrimary),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const NewChatListScreen(),
+                          ),
+                        );
+                      },
+                    ),
                   )
                 : null,
-          ),
-          floatingActionButton: _tabController.index == 2
-              ? Padding(
-                  padding: const EdgeInsets.only(bottom: 35.0), // Reduced by 50 (was 85)
-                  child: FloatingActionButton(
-                    backgroundColor: const Color(0xFF1A8927),
-                    child: const Icon(Icons.add, color: Colors.white),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const NewChatListScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                )
-              : null,
-          body: TabBarView(
-            controller: _tabController,
-            children: [const RecsTab(), const FriendsTab(), const ChatListScreen()],
+            body: TabBarView(
+              controller: _tabController,
+              children: [const RecsTab(), const FriendsTab(), const ChatListScreen()],
+            ),
           ),
         );
       },
@@ -161,13 +166,14 @@ class _MessagesState extends State<Messages>
   }
 
   Widget _buildCustomSegmentedControl(bool isDark, int unreadCount) {
+    final theme = Theme.of(context);
     return Container(
       height: 40,
       width: 240,
       decoration: BoxDecoration(
         color: isDark
-            ? Colors.white.withOpacity(0.08)
-            : Colors.black.withOpacity(0.05),
+            ? theme.colorScheme.onSurface.withOpacity(0.08)
+            : theme.colorScheme.onSurface.withOpacity(0.05),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Stack(
@@ -184,7 +190,7 @@ class _MessagesState extends State<Messages>
               margin: const EdgeInsets.all(2),
               width: 75,
               decoration: BoxDecoration(
-                color: isDark ? Colors.white : AppTheme.primaryGreen,
+                color: isDark ? theme.colorScheme.surface : theme.colorScheme.primary,
                 borderRadius: BorderRadius.circular(18),
                 boxShadow: [
                   BoxShadow(
@@ -215,6 +221,7 @@ class _MessagesState extends State<Messages>
     int badgeCount = 0,
   }) {
     bool isActive = _tabController.index == index;
+    final theme = Theme.of(context);
     return Expanded(
       child: GestureDetector(
         onTap: () => _tabController.animateTo(index),
@@ -228,8 +235,8 @@ class _MessagesState extends State<Messages>
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                   color: isActive
-                      ? (isDark ? Colors.black : Colors.white)
-                      : (isDark ? Colors.white70 : Colors.black54),
+                      ? (isDark ? theme.colorScheme.onSurface : theme.colorScheme.onPrimary)
+                      : (theme.colorScheme.onSurface.withOpacity(isDark ? 0.7 : 0.54)),
                 ),
               ),
               if (badgeCount > 0) ...[

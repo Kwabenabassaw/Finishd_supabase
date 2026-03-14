@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:finishd/Widget/user_avatar.dart';
 import 'package:provider/provider.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Offline-first Chat List Screen.
 ///
@@ -73,10 +74,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
       return const Center(child: Text('Please log in to see messages'));
     }
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white : Colors.black87;
-    final hintColor = isDark ? Colors.grey[400] : Colors.grey[500];
-    final fillColor = isDark ? Colors.grey[800] : Colors.grey[50];
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textColor = colorScheme.onSurface;
+    final hintColor = colorScheme.onSurface.withOpacity(0.5);
+    final isDark = theme.brightness == Brightness.dark;
+    final fillColor = colorScheme.surfaceVariant ?? (isDark ? Colors.grey[800]! : Colors.grey[100]!);
 
     return Scaffold(
       body: Consumer<ChatProvider>(
@@ -113,25 +116,25 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.orange,
+                                  color: colorScheme.error,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const SizedBox(
+                                    SizedBox(
                                       width: 12,
                                       height: 12,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        color: Colors.white,
+                                        color: colorScheme.onError,
                                       ),
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
                                       '${chatProvider.pendingCount}',
-                                      style: const TextStyle(
-                                        color: Colors.white,
+                                      style: TextStyle(
+                                        color: colorScheme.onError,
                                         fontSize: 12,
                                       ),
                                     ),
@@ -146,7 +149,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           decoration: InputDecoration(
                             hintText: "Search for people...",
                             hintStyle: TextStyle(color: hintColor),
-                            prefixIcon: Icon(Icons.search, color: hintColor),
+                            prefixIcon: Icon(LucideIcons.search, color: hintColor),
                             filled: true,
                             fillColor: fillColor,
                             border: OutlineInputBorder(
@@ -174,7 +177,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       child: Text(
                         "Friends",
                         style: TextStyle(
-                          color: Colors.grey,
+                          color: colorScheme.onSurface.withOpacity(0.6),
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.0,
@@ -321,8 +324,9 @@ class _ConversationTileState extends State<_ConversationTile> {
       }
     }
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white : Colors.black87;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textColor = colorScheme.onSurface;
 
     final isUnread = widget.conversation.unreadCount > 0;
     final timeString = _formatTime(widget.conversation.lastMessageAt);
@@ -374,7 +378,7 @@ class _ConversationTileState extends State<_ConversationTile> {
                             timeString,
                             style: TextStyle(
                               fontSize: 13,
-                              color: isUnread ? textColor : Colors.grey,
+                              color: isUnread ? textColor : colorScheme.onSurface.withOpacity(0.5),
                               fontWeight: isUnread
                                   ? FontWeight.bold
                                   : FontWeight.normal,
@@ -391,7 +395,7 @@ class _ConversationTileState extends State<_ConversationTile> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                color: isUnread ? textColor : Colors.grey[600],
+                                color: isUnread ? textColor : colorScheme.onSurface.withOpacity(0.6),
                                 fontSize: 14,
                                 fontWeight: isUnread
                                     ? FontWeight.w600
@@ -404,8 +408,8 @@ class _ConversationTileState extends State<_ConversationTile> {
                             Container(
                               width: 10,
                               height: 10,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF1A8927),
+                              decoration: BoxDecoration(
+                                color: colorScheme.primary,
                                 shape: BoxShape.circle,
                               ),
                             ),

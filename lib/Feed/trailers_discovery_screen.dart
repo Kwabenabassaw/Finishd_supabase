@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../provider/trailers_feed_provider.dart';
 import '../models/trailer_item.dart';
 import 'trailer_detail_screen.dart';
+import '../Widget/animated_wallpaper.dart';
 
 class TrailersDiscoveryScreen extends StatefulWidget {
   const TrailersDiscoveryScreen({Key? key}) : super(key: key);
@@ -136,8 +137,10 @@ class _TrailersDiscoveryScreenState extends State<TrailersDiscoveryScreen> {
               }
               return false;
             },
-            child: ListView(
-              controller: _mainScrollController,
+            child: AnimatedWallpaper(
+              forceDarkMode: true,
+              child: ListView(
+                controller: _mainScrollController,
               padding: EdgeInsets.only(
                 top:
                     MediaQuery.of(context).padding.top +
@@ -173,13 +176,14 @@ class _TrailersDiscoveryScreenState extends State<TrailersDiscoveryScreen> {
                 provider.newTvShows,
               ),
               _buildHorizontalSection(context, 'Lastest', provider.lastest)
-            ],
+                ],
+              ),
+            ),
           ),
-        ),
-      );
-    },
-  );
-}
+        );
+      },
+    );
+  }
 
   Widget _buildHorizontalSection(
     BuildContext context,

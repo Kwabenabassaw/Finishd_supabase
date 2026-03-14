@@ -126,6 +126,7 @@ flutter:
     - assets/landing/Interstellar.webp
     - assets/landing/Witcher.webp
     - assets/FINISHD.png
+    - .env
 
 
   fonts:

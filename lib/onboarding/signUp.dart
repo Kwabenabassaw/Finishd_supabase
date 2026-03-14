@@ -109,9 +109,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   Future<void> _register() async {
-    if (_emailController.text.isEmpty ||
-        _passwordController.text.isEmpty ||
-        _firstNameController.text.trim().isEmpty) {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final firstName = _firstNameController.text.trim();
+    final lastName = _lastNameController.text.trim();
+
+    if (email.isEmpty || password.isEmpty || firstName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all required fields')),
       );
@@ -131,10 +134,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
     try {
       final result = await Provider.of<AuthService>(context, listen: false)
           .signUpWithEmailAndPassword(
-            email: _emailController.text.trim(),
-            password: _passwordController.text.trim(),
-            firstName: NameUtils.capitalizeName(_firstNameController.text),
-            lastName: NameUtils.capitalizeName(_lastNameController.text),
+            email: email,
+            password: password,
+            firstName: NameUtils.capitalizeName(firstName),
+            lastName: NameUtils.capitalizeName(lastName),
           );
 
       if (mounted) {

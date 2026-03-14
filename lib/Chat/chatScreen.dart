@@ -421,6 +421,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           videoTitle: message.videoTitle,
                           videoThumbnail: message.videoThumbnail,
                           videoChannel: message.videoChannel,
+                          messageId: message.localId.toString(),
 
                           // ... inside build method
                           onVideoTap: message.isVideoLink
@@ -530,7 +531,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                       builder: (context) =>
                                           FullscreenImagePreview(
                                             imageUrl: message.mediaUrl!,
-                                            heroTag: message.mediaUrl!,
+                                            heroTag: 'media_${message.localId}',
                                             caption: message.content,
                                           ),
                                     ),

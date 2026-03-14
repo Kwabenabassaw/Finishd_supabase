@@ -159,6 +159,16 @@ void main() async {
     DeepLinkService().initialize(navigatorKey);
     debugPrint('DEBUG: All services initialized, running app...');
 
+    // Ensure edge-to-edge drawing and transparent status bar globally
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent, // Make it transparent
+        systemNavigationBarColor: Colors.transparent, // Optionally transparent
+        statusBarIconBrightness: Brightness.dark, // Default for light themes, will be overridden by theme usually
+      ),
+    );
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: SystemUiOverlay.values);
+
     runApp(
       MultiProvider(
         providers: [
@@ -245,19 +255,32 @@ class MyApp extends StatelessWidget {
               theme: AppTheme.lightTheme,
               darkTheme: AppTheme.darkTheme,
               themeMode: themeProvider.themeMode,
-              navigatorObservers: [
-                routeObserver,
-                // Add the two analytics observers
-                AnalyticsService()
-                    .getAnalyticsObserver(), // For standard screen_view events
-                ScreenTimeObserver(), // For our custom screen_view_duration events
-              ],
-              initialRoute: '/',
+              // Configure top-level builders to handle both System UI and Upload Overlays
               builder: (context, child) {
-                return UploadProgressOverlay(
-                  child: child ?? const SizedBox.shrink(),
+                final brightness = Theme.of(context).brightness;
+                final isDark = brightness == Brightness.dark;
+                
+                return AnnotatedRegion<SystemUiOverlayStyle>(
+                  value: SystemUiOverlayStyle(
+                    statusBarColor: Colors.transparent,
+                    // Android: Dark icons if theme is light, Light icons if theme is dark
+                    statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+                    // iOS: Light bar if theme is light (dark icons), Dark bar if theme is dark (light icons)
+                    statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+                    systemNavigationBarColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                    systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+                  ),
+                  child: UploadProgressOverlay(
+                    child: child ?? const SizedBox.shrink(),
+                  ),
                 );
               },
+              navigatorObservers: [
+                routeObserver,
+                AnalyticsService().getAnalyticsObserver(),
+                ScreenTimeObserver(),
+              ],
+              initialRoute: '/',
               routes: {
                 '/': (context) => const SplashScreen(),
                 '/home': (context) => LandingScreen(),

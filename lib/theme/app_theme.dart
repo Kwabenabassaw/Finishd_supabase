@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'app_colors.dart';
 
 class AppTheme {
@@ -10,11 +11,17 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      scaffoldBackgroundColor: AppColors.background,
+      scaffoldBackgroundColor: AppColors.backgroundLight,
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primary,
         primary: AppColors.primary,
-        surface: AppColors.background,
+        onPrimary: Colors.white,
+        secondary: AppColors.primaryDark,
+        onSecondary: Colors.white,
+        error: AppColors.error,
+        onError: Colors.white,
+        surface: AppColors.surfaceLight,
+        onSurface: AppColors.textDark,
         brightness: Brightness.light,
       ),
 
@@ -68,7 +75,7 @@ class AppTheme {
 
       // Card Theme
       cardTheme: CardThemeData(
-        color: AppColors.cardGray,
+        color: AppColors.cardGrayLight,
         elevation:
             0, // Very light shadow handled by custom decoration usually, or minimal elevation
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -78,25 +85,25 @@ class AppTheme {
       // Input Decoration Theme
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
+        fillColor: Colors.black.withOpacity(0.05),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 16,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.borderGray),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.borderGray),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.primary, width: 2),
         ),
-        hintStyle: const TextStyle(
-          color: AppColors.textLightGray,
+        hintStyle: TextStyle(
+          color: AppColors.primary.withOpacity(0.5),
           fontSize: 16,
         ),
       ),
@@ -104,12 +111,17 @@ class AppTheme {
       // Progress Indicator Theme
       progressIndicatorTheme: const ProgressIndicatorThemeData(
         color: AppColors.progressGreen,
-        linearTrackColor: AppColors.borderGray,
+        linearTrackColor: AppColors.borderGrayLight,
       ),
 
       // AppBar Theme
       appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.backgroundLight,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark, // Dark icons for light background
+          statusBarBrightness: Brightness.light, // For iOS
+        ),
         elevation: 0,
         centerTitle: true,
         iconTheme: IconThemeData(color: AppColors.textDark),
@@ -122,7 +134,7 @@ class AppTheme {
 
       // Bottom Sheet Theme
       bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.surfaceLight,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
@@ -130,7 +142,7 @@ class AppTheme {
 
       // Divider Theme
       dividerTheme: const DividerThemeData(
-        color: AppColors.borderGray,
+        color: AppColors.borderGrayLight,
         thickness: 1,
         space: 1,
       ),
@@ -142,11 +154,17 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: const Color(0xFF121212),
+      scaffoldBackgroundColor: AppColors.backgroundDark,
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primary,
         primary: AppColors.primary,
-        surface: const Color(0xFF121212),
+        onPrimary: Colors.white,
+        secondary: AppColors.primaryDark,
+        onSecondary: Colors.white,
+        error: AppColors.error,
+        onError: Colors.white,
+        surface: AppColors.surfaceDark,
+        onSurface: AppColors.textWhite,
         brightness: Brightness.dark,
       ),
 
@@ -155,29 +173,29 @@ class AppTheme {
         headlineLarge: TextStyle(
           fontSize: 32,
           fontWeight: FontWeight.bold,
-          color: Colors.white,
+          color: AppColors.textWhite,
         ),
         headlineMedium: TextStyle(
           fontSize: 26,
           fontWeight: FontWeight.bold,
-          color: Colors.white,
+          color: AppColors.textWhite,
         ),
         titleLarge: TextStyle(
           fontSize: 22,
           fontWeight: FontWeight.w600,
-          color: Colors.white,
+          color: AppColors.textWhite,
         ),
         titleMedium: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w500,
-          color: Colors.white,
+          color: AppColors.textWhite,
         ),
-        bodyLarge: TextStyle(fontSize: 16, color: Colors.white70),
-        bodyMedium: TextStyle(fontSize: 14, color: Colors.white70),
+        bodyLarge: TextStyle(fontSize: 16, color: AppColors.textDarkGray),
+        bodyMedium: TextStyle(fontSize: 14, color: AppColors.textDarkGray),
         labelLarge: TextStyle(
           fontSize: 15,
           fontWeight: FontWeight.w600,
-          color: Colors.white,
+          color: AppColors.textWhite,
         ),
       ),
 
@@ -199,7 +217,7 @@ class AppTheme {
 
       // Card Theme
       cardTheme: CardThemeData(
-        color: const Color(0xFF1E1E1E),
+        color: AppColors.cardGrayDark,
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         margin: EdgeInsets.zero,
@@ -208,48 +226,56 @@ class AppTheme {
       // Input Decoration Theme
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFF1E1E1E),
+        fillColor: Colors.white.withOpacity(0.1),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 16,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.white24),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.white24),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.primary, width: 2),
         ),
-        hintStyle: const TextStyle(color: Colors.white38, fontSize: 16),
+        hintStyle: TextStyle(
+          color: AppColors.primary.withOpacity(0.5), 
+          fontSize: 16
+        ),
       ),
 
       // Progress Indicator Theme
       progressIndicatorTheme: const ProgressIndicatorThemeData(
         color: AppColors.progressGreen,
-        linearTrackColor: Colors.white24,
+        linearTrackColor: AppColors.borderGrayDark,
       ),
 
       // AppBar Theme
       appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF121212),
+        backgroundColor: AppColors.backgroundDark,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light, // Light icons for dark background
+          statusBarBrightness: Brightness.dark, // For iOS
+        ),
         elevation: 0,
         centerTitle: true,
-        iconTheme: IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(color: AppColors.textWhite),
         titleTextStyle: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w600,
-          color: Colors.white,
+          color: AppColors.textWhite,
         ),
       ),
 
       // Bottom Sheet Theme
       bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: Color(0xFF1E1E1E),
+        backgroundColor: AppColors.surfaceDark,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
@@ -257,7 +283,7 @@ class AppTheme {
 
       // Divider Theme
       dividerTheme: const DividerThemeData(
-        color: Colors.white24,
+        color: AppColors.borderGrayDark,
         thickness: 1,
         space: 1,
       ),

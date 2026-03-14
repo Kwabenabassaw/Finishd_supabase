@@ -12,6 +12,7 @@ class GenericMovieCard<T> extends StatelessWidget {
   final VoidCallback? onActionMenuTap;
   final double? width;
   final double? imageHeight;
+  final String? heroPrefix;
 
   const GenericMovieCard({
     super.key,
@@ -23,6 +24,7 @@ class GenericMovieCard<T> extends StatelessWidget {
     this.onActionMenuTap,
     this.width,
     this.imageHeight,
+    this.heroPrefix,
   });
 
   @override
@@ -69,8 +71,8 @@ class GenericMovieCard<T> extends StatelessWidget {
                       ),
                       child: Hero(
                         tag: item is MediaItem
-                            ? 'poster_${(item as MediaItem).id}'
-                            : 'poster_${item.hashCode}',
+                            ? '${heroPrefix ?? ''}poster_${(item as MediaItem).id}'
+                            : '${heroPrefix ?? ''}poster_${item.hashCode}',
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(20),
                           child: CachedNetworkImage(

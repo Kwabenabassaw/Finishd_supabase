@@ -6,6 +6,7 @@ import 'package:finishd/Community/community_detail_screen.dart';
 import 'package:finishd/Community/all_communities_screen.dart';
 import 'package:finishd/provider/community_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:finishd/Widget/animated_wallpaper.dart';
 
 /// Community tab for the Messages screen - shows user's communities and discovery
 class CommsTab extends StatefulWidget {
@@ -64,11 +65,12 @@ class _CommsTabState extends State<CommsTab> {
     final searchState = provider.searchState;
     final isSearching = searchState.query.isNotEmpty;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
+    return AnimatedWallpaper(
+      child: Scaffold(
         backgroundColor: Colors.transparent,
-        elevation: 0,
+        appBar: AppBar(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          elevation: 0,
         centerTitle: true,
         title: Text(
           "Comms",
@@ -345,6 +347,7 @@ class _CommsTabState extends State<CommsTab> {
         ],
       ),
     ),
+      ),
   );
 }
 

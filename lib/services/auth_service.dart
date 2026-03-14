@@ -114,13 +114,23 @@ class AuthService {
     ];
 
     for (String suggestion in suggestions) {
-      final response = await _supabase
-          .from('profiles')
-          .select('username')
-          .eq('username', suggestion)
-          .maybeSingle();
-      if (response == null) {
-        return suggestion;
+      if (suggestion.trim().isEmpty) continue;
+
+      try {
+        final response = await _supabase
+            .from('profiles')
+            .select('username')
+            .eq('username', suggestion)
+            .maybeSingle();
+        if (response == null) {
+          return suggestion;
+        }
+      } catch (e) {
+        print('Error checking username suggestion "$suggestion": $e');
+        // If it's a "No URI/host specified" error, rethrow to be caught by caller
+        if (e.toString().contains('No URI/host specified')) {
+          rethrow;
+        }
       }
     }
 
